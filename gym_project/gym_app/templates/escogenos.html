@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Por qué escogernos{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilos_escogenos.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="choose-page public-page" style="--page-bg: url('../img/generated/why-choose-pro.png')">
+    <section class="public-hero choose-hero" data-motion="rise">
+        <div class="hero-copy">
+            <span class="eyebrow">Entrenar aquí se siente diferente</span>
+            <h1>¿Por qué escogernos?</h1>
+            <p>Porque MaikerGym te guía desde el primer paso: objetivo, dieta, foto y datos personales antes de entrar a tu cuenta. Todo claro, ordenado y pensado para que avances.</p>
+            <div class="public-actions">
+                {% if user.is_authenticated %}
+                    <button class="unete" onclick="window.location.href='{% url 'cuenta' %}'">Ver mi cuenta</button>
+                {% else %}
+                    <button class="unete" onclick="window.location.href='{% url 'registrarse' %}'">Empezar ahora</button>
+                {% endif %}
+                <button class="ghost-btn" onclick="window.location.href='{% url 'precios' %}'">Ver precios</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="choose-grid" aria-label="Razones para escoger MaikerGym">
+        <article class="choose-card">
+            <span class="card-number">01</span>
+            <h2>Accesible para todos</h2>
+            <p>Rutas claras para iniciar, entrenar y progresar sin sentirse perdido.</p>
+        </article>
+        <article class="choose-card">
+            <span class="card-number">02</span>
+            <h2>Motivador y cercano</h2>
+            <p>Una experiencia visual con movimiento suave, objetivos visibles y navegación fácil.</p>
+        </article>
+        <article class="choose-card">
+            <span class="card-number">03</span>
+            <h2>Saludable y medible</h2>
+            <p>Personalización con dieta, objetivo, peso, edad, género y foto de perfil.</p>
+        </article>
+    </section>
+</main>
+{% endblock %}

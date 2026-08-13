@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Iniciar sesi&oacute;n{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilos_inicio_sesion.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="login-page">
+    <section class="login-copy" data-motion="rise">
+        <span class="eyebrow">Bienvenido de vuelta</span>
+        <h1>Iniciar sesi&oacute;n</h1>
+        <p>Accede a tu cuenta para continuar con tu objetivo, dieta y progreso personalizado.</p>
+    </section>
+
+    <section class="box">
+        {% if error %}
+            <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <label class="form-label">Correo</label>
+            <input type="email" name="email" placeholder="Correo electr&oacute;nico" required>
+
+            <label class="form-label">Contrase&ntilde;a</label>
+            <input type="password" name="password" placeholder="Contrase&ntilde;a" required>
+
+            <label class="form-label">Perfil</label>
+            <select name="rol" required>
+                <option value="usuario">Usuario</option>
+                <option value="moderador">Moderador</option>
+                <option value="admin">Administrador</option>
+            </select>
+
+            <button type="submit" class="btn">Iniciar sesi&oacute;n</button>
+        </form>
+
+        <button class="btn secondary" onclick="window.location.href='{% url 'inicio' %}'">Recuperar contrase&ntilde;a</button>
+    </section>
+</main>
+{% endblock %}

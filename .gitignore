@@ -1,0 +1,45 @@
+# Credenciales y configuraciones privadas
+.env
+.env.*
+!.env.example
+
+# Bases de datos locales
+db.sqlite3
+*.sqlite3
+
+# Fotografías y archivos privados de usuarios
+media/
+
+# Archivos temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Archivos generados por Django
+staticfiles/
+
+# Registros de ejecución
+*.log
+
+# Configuraciones personales del editor
+.vscode/
+.idea/
+
+# Respaldos y elementos antiguos
+codex_backups/
+legacy_assets/
+
+# Librerías duplicadas que no utiliza la aplicación
+gym_project/gym_app/static/css/bootstrap-4.0.0/
+gym_project/gym_app/static/css/design-dev-icons/
+gym_project/gym_app/static/design-dev-icons/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Inicio{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo inicio.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="inicio-main page-shell" style="--page-bg: url('../img/generated/hero-gym.png')">
+    <section class="inicio-hero">
+        <div class="info-box" data-motion="rise">
+            <span class="inicio-badge">Entrena con propósito</span>
+            <h1>Más que un gimnasio, una experiencia de evolución.</h1>
+            <p>Lleva tu entrenamiento al siguiente nivel con objetivos guiados, personalización real y una experiencia visual pensada para avanzar sin perder foco.</p>
+            <div class="inicio-actions">
+                {% if user.is_authenticated %}
+                    <button class="unete" onclick="window.location.href='{% url 'cuenta' %}'">Ir a mi cuenta</button>
+                    <button class="ghost-btn" onclick="window.location.href='{% url 'objetivo' %}'">Ajustar objetivo</button>
+                {% else %}
+                    <button class="unete" onclick="window.location.href='{% url 'registrarse' %}'">¡Únete!</button>
+                    <button class="ghost-btn" onclick="window.location.href='{% url 'escogenos' %}'">Conoce el método</button>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="pro-stats" data-motion="rise">
+        <article><strong data-count-to="3">0</strong><span>pasos para personalizar tu cuenta</span></article>
+        <article><strong data-count-to="5">0</strong><span>objetivos de entrenamiento</span></article>
+        <article><strong data-count-to="100">0</strong><span>% enfoque en progreso real</span></article>
+    </section>
+</main>
+{% endblock %}

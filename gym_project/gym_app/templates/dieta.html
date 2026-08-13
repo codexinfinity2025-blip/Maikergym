@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Dieta{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_dieta.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="dieta-page">
+    <section class="dieta-hero" data-motion="rise">
+        <div class="hero-copy">
+            <span class="step-pill">Paso 2 de 3</span>
+            <h1>{{ dieta.titulo }}</h1>
+            <p>{{ dieta.descripcion }}</p>
+        </div>
+        <div class="plate-card">
+            <img src="{% static 'img/generated/diet-pro.png' %}" alt="Plan nutricional MaikerGym">
+        </div>
+    </section>
+
+    <section class="dieta-board">
+        <article class="nutrition-card">
+            <h2>Tu enfoque</h2>
+            <ul>
+                <li>Horarios más ordenados.</li>
+                <li>Proteína, hidratación y alimentos reales.</li>
+                <li>Porciones ajustadas al progreso.</li>
+            </ul>
+        </article>
+
+        <article class="nutrition-card center-card">
+            <h2>Lo importante</h2>
+            <p>Esta recomendación es el punto de partida. Luego tus datos personales ayudan a completar tu perfil.</p>
+        </article>
+
+        <article class="accept-card">
+            {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+            <h2>Confirma para continuar</h2>
+            <p>Al aceptar, pasas a completar foto, género, peso y edad.</p>
+            <form method="POST">
+                {% csrf_token %}
+                <label class="accept-check">
+                    <input type="checkbox" name="acepta_dieta" required>
+                    Acepto la dieta recomendada para mi objetivo.
+                </label>
+                <button class="continue-btn" type="submit">Continuar</button>
+            </form>
+        </article>
+    </section>
+</main>
+{% endblock %}

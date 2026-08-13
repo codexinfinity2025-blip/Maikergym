@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Hipertrofia{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_hipertrofia .css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="hipertrofia-page">
+    <div class="container text-center mt-3">
+        <h1 class="display-5 box">Hipertrofia</h1>
+    </div>
+    <div class="contenedor-principal">
+        <section class="inicio-features">
+            <article class="inicio-feature box" style="padding:1.4rem;">
+                <h3>¿Qué es la hipertrofia?</h3>
+                <p>La hipertrofia en el entrenamiento físico es el enfoque que busca aumentar el tamaño de los músculos mediante ejercicio, alimentación y descanso.</p>
+            </article>
+            <article class="inicio-feature">
+                <img style="height: 310px; width: 730px;" src="{% static 'css/img/musculos.png' %}" alt="">
+            </article>
+        </section>
+        <aside class="inicio-features right">
+            <article class="inicio-feature box">
+                <h3>¿Por qué es buena opción?</h3>
+                <p>La hipertrofia en el entrenamiento físico busca aumentar el tamaño de los músculos mediante ejercicio, alimentación y descanso.</p>
+            </article>
+            <article class="inicio-feature">
+                <img style="height: 310px; width: 730px; margin: -30px 0px;" src="{% static 'css/img/fuerte.png' %}" alt="">
+                <div>
+                    <button style="margin: 3rem -10rem 0rem -5rem; width:7rem; height: 4rem; font-size: 1.25rem;" class="display-5 box" onclick="window.location.href='{% url 'nutricion' %}'">Aceptar</button>
+                </div>
+            </article>
+        </aside>
+    </div>
+</main>
+{% endblock %}

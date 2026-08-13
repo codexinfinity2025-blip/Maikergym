@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Datos personales{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="page profile-setup-page">
+    <section class="profile-visual" data-motion="float">
+        <img src="{% static 'img/generated/profile-setup.png' %}" alt="Preparación de perfil fitness">
+        <div class="profile-visual-note">Último paso antes de entrar a tu cuenta</div>
+    </section>
+
+    <section class="register-panel">
+        <h2 class="panel-title">Personaliza tu cuenta</h2>
+        {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+        <form method="POST" enctype="multipart/form-data" class="register-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Foto de perfil</label>
+                <input class="form-control" type="file" name="foto" accept="image/*" capture="user">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Género</label>
+                <select class="form-control" name="genero" required>
+                    <option value="">Selecciona</option>
+                    <option value="femenino">Femenino</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="otro">Otro</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Peso (kg)</label>
+                <input class="form-control" type="number" name="peso" min="1" step="0.01" required>
+            </div>
+            {% if not perfil.fecha_nacimiento %}
+            <div class="form-group">
+                <label class="form-label">Fecha de nacimiento</label>
+                <input class="form-control" type="date" name="fecha_nacimiento" required>
+            </div>
+            {% else %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Fecha de nacimiento</label>
+                    <input class="form-control" type="date" value="{{ perfil.fecha_nacimiento }}" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Edad calculada</label>
+                    <input class="form-control" type="text" value="{{ perfil.edad }} años" readonly>
+                </div>
+            </div>
+            {% endif %}
+            <button class="register-submit" type="submit">Entrar a mi cuenta</button>
+        </form>
+    </section>
+</main>
+{% endblock %}

@@ -1,0 +1,21 @@
+﻿{% load static %}
+<header class="mg-nav">
+    <button class="mg-brand" onclick="window.location.href='{% url 'inicio' %}'">MaikerGym</button>
+    <nav class="mg-nav-links">
+        <button class="icon-link" onclick="window.location.href='{% url 'inicio' %}'">
+            <img class="nav-mini-icon" src="{% static 'icons/home.svg' %}" alt="">Inicio
+        </button>
+        <button class="icon-link" onclick="window.location.href='{% url 'objetivo' %}'">
+            <img class="nav-mini-icon" src="{% static 'icons/objetivos.svg' %}" alt="">Objetivo
+        </button>
+        <button class="icon-link" onclick="window.location.href='{% url 'precios' %}'">
+            <img class="nav-mini-icon" src="{% static 'icons/planes.svg' %}" alt="">Precios
+        </button>
+        <button class="icon-link" onclick="window.location.href='{% url 'cuenta' %}'">
+            <img class="nav-mini-icon" src="{% static 'icons/usuarios.svg' %}" alt="">Mi cuenta
+        </button>
+        <button class="icon-link logout-link" onclick="window.location.href='{% url 'logout' %}'">
+            <img class="nav-mini-icon" src="{% static 'icons/logout.svg' %}" alt="">Salir
+        </button>
+    </nav>
+</header>

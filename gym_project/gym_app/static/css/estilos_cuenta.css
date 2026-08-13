@@ -1,0 +1,654 @@
+body{
+    min-height:100vh;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.68), rgba(0,0,0,.22)),
+        url(../img/generated/account-pro.png);
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
+    color:#111;
+}
+
+.cuenta-page{
+    width:min(1180px,92%);
+    margin:0 auto;
+    padding:2.4rem 0 4rem;
+}
+
+.account-stage{
+    min-height:255px;
+    position:relative;
+    display:grid;
+    grid-template-columns:170px minmax(0,1fr) 350px;
+    gap:1.4rem;
+    align-items:center;
+    padding:2.2rem 2rem;
+    border-radius:10px 10px 0 0;
+    background:linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,255,255,.82));
+    border:1px solid rgba(255,255,255,.66);
+    box-shadow:0 18px 38px rgba(0,0,0,.28);
+    overflow:hidden;
+}
+
+.account-stage::after{
+    content:"";
+    position:absolute;
+    right:-100px;
+    bottom:-130px;
+    width:310px;
+    height:310px;
+    border-radius:50%;
+    background:rgba(245,160,0,.2);
+    animation:soft-pulse 5s ease-in-out infinite;
+}
+
+.stage-actions{
+    position:absolute;
+    top:18px;
+    right:2rem;
+    z-index:3;
+    display:flex;
+    gap:.8rem;
+    align-items:center;
+}
+
+.action-btn{
+    min-width:158px;
+    min-height:44px;
+    border:1px solid rgba(255,255,255,.42);
+    border-radius:999px;
+    color:#fff;
+    font-size:15px;
+    font-weight:900;
+    letter-spacing:0;
+    box-shadow:0 14px 26px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.22);
+    cursor:pointer;
+    backdrop-filter:blur(8px);
+}
+
+.delete-btn{
+    background:linear-gradient(135deg, #5f1111, #b42323);
+}
+.update-btn{
+    background:linear-gradient(135deg, #0f5132, #1fa463);
+}
+
+.photo-box{
+    position:relative;
+    z-index:2;
+    width:148px;
+    display:grid;
+    gap:.7rem;
+    align-self:end;
+}
+
+.photo-preview{
+    width:148px;
+    aspect-ratio:1;
+    display:grid;
+    place-items:center;
+    background:#fff;
+    border:4px solid #111;
+    border-radius:10px;
+    cursor:pointer;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 14px 24px rgba(0,0,0,.22);
+}
+
+.photo-preview::before,
+.photo-preview::after{
+    content:"";
+    position:absolute;
+    left:-20px;
+    top:70px;
+    width:190px;
+    height:3px;
+    background:#2c2c2c;
+}
+
+.photo-preview::before{transform:rotate(45deg);}
+.photo-preview::after{transform:rotate(-45deg);}
+.photo-preview.has-preview::before,
+.photo-preview.has-preview::after{display:none;}
+
+.photo-preview img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    position:relative;
+    z-index:1;
+}
+
+.photo-preview span{
+    position:relative;
+    z-index:1;
+    font-size:48px;
+    font-weight:900;
+}
+
+.photo-box input{
+    width:1px;
+    height:1px;
+    opacity:0;
+    position:absolute;
+}
+
+.photo-box button{
+    width:148px;
+    border:0;
+    border-radius:8px;
+    background:#111;
+    color:#fff;
+    padding:.65rem .5rem;
+    font-weight:900;
+    cursor:pointer;
+}
+
+.stage-title{
+    position:relative;
+    z-index:2;
+    align-self:end;
+    padding-right:1rem;
+}
+
+.stage-title .eyebrow{
+    margin-bottom:.7rem;
+}
+
+.stage-title h1{
+    max-width:720px;
+    margin:.35rem 0 .55rem;
+    font-size:clamp(34px,4vw,52px);
+    line-height:1.02;
+    color:#050505;
+    text-shadow:0 1px 1px rgba(0,0,0,.1);
+    overflow-wrap:break-word;
+}
+
+.stage-title p{
+    max-width:650px;
+    margin:0;
+    font-size:clamp(18px,2vw,25px);
+    font-weight:900;
+    line-height:1.25;
+}
+
+.account-workspace{
+    position:relative;
+    min-height:430px;
+    padding:2rem;
+    border-radius:0 0 10px 10px;
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.58), rgba(0,0,0,.2)),
+        url(../img/generated/account-pro.png);
+    background-size:cover;
+    background-position:center;
+    box-shadow:0 18px 38px rgba(0,0,0,.28);
+    overflow:hidden;
+}
+
+.account-form{
+    position:relative;
+    z-index:1;
+    width:min(720px,100%);
+    display:grid;
+    gap:.95rem;
+}
+
+.field-row{
+    display:grid;
+    grid-template-columns:190px minmax(0,1fr);
+    align-items:stretch;
+    width:100%;
+    min-height:64px;
+    border:1px solid rgba(255,255,255,.45);
+    border-radius:10px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 12px 22px rgba(0,0,0,.24);
+    overflow:hidden;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.field-row.is-active,
+.weight-grid.is-active{
+    transform:translateX(6px);
+    border-color:#f5a000;
+    box-shadow:0 16px 28px rgba(0,0,0,.32), 0 0 0 3px rgba(245,160,0,.32);
+}
+
+.field-row span,
+.weight-grid span{
+    display:flex;
+    align-items:center;
+    padding:.85rem 1rem;
+    background:#111;
+    color:#f5a000;
+    border-right:1px solid rgba(255,255,255,.16);
+    font-size:18px;
+    font-weight:900;
+    line-height:1.1;
+}
+
+.field-row input{
+    width:100%;
+    min-height:64px;
+    border:0;
+    background:rgba(255,255,255,.98);
+    padding:.75rem 1rem;
+    font-size:19px;
+    font-weight:800;
+    color:#111;
+    outline:0;
+}
+
+.email-row,
+.phone-row,
+.address-row{
+    width:100%;
+}
+
+.weight-grid{
+    width:min(520px,100%);
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    border:1px solid rgba(255,255,255,.45);
+    border-radius:10px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 12px 22px rgba(0,0,0,.24);
+    overflow:hidden;
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.weight-grid label{
+    display:grid;
+    grid-template-rows:48px 58px;
+}
+
+.weight-grid label:first-child{
+    border-right:1px solid rgba(0,0,0,.15);
+}
+
+.weight-grid span{
+    justify-content:center;
+    border-right:0;
+    border-bottom:1px solid rgba(255,255,255,.16);
+    font-size:17px;
+    text-align:center;
+}
+
+.weight-grid input{
+    width:100%;
+    border:0;
+    background:rgba(255,255,255,.98);
+    padding:.6rem .75rem;
+    font-size:20px;
+    font-weight:900;
+    text-align:center;
+    outline:0;
+}
+
+.account-summary{
+    position:absolute;
+    left:min(780px,68%);
+    top:220px;
+    width:250px;
+    z-index:1;
+    padding:1rem;
+    border-radius:10px;
+    background:rgba(17,17,17,.9);
+    color:#fff;
+    border-top:5px solid #f5a000;
+    box-shadow:0 14px 26px rgba(0,0,0,.28);
+}
+
+.account-summary strong,
+.account-summary span,
+.account-summary small{
+    display:block;
+}
+
+.account-summary strong{
+    font-size:26px;
+}
+
+.account-summary span,
+.account-summary small{
+    margin-top:.35rem;
+    color:rgba(255,255,255,.78);
+    font-weight:800;
+}
+
+.account-toast{
+    position:fixed;
+    right:24px;
+    bottom:24px;
+    z-index:100;
+    padding:.85rem 1rem;
+    border-radius:8px;
+    background:#166534;
+    color:#fff;
+    font-weight:900;
+    box-shadow:0 16px 30px rgba(0,0,0,.3);
+    transform:translateY(20px);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+}
+
+.account-toast.is-visible{
+    opacity:1;
+    transform:translateY(0);
+}
+
+.action-btn,
+.photo-box button{
+    transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+}
+
+.action-btn:hover,
+.photo-box button:hover{
+    transform:translateY(-2px);
+    filter:brightness(1.06);
+}
+
+@keyframes soft-pulse{
+    0%,100%{transform:scale(1);opacity:.7}
+    50%{transform:scale(1.08);opacity:.95}
+}
+
+@media (max-width:980px){
+    .account-stage{
+        grid-template-columns:150px 1fr;
+        padding-top:5rem;
+    }
+    .stage-actions{
+        left:1.5rem;
+        right:auto;
+    }
+    .photo-box{
+        align-self:start;
+    }
+    .stage-title{
+        align-self:start;
+    }
+    .account-summary{
+        position:relative;
+        left:auto;
+        top:auto;
+        width:min(720px,100%);
+        margin-top:1rem;
+    }
+}
+
+@media (max-width:680px){
+    .cuenta-page{
+        width:94%;
+    }
+    .account-stage{
+        grid-template-columns:1fr;
+        min-height:auto;
+        padding:5.2rem 1rem 1.4rem;
+    }
+    .stage-actions{
+        top:1rem;
+        left:1rem;
+        right:1rem;
+        justify-content:space-between;
+        gap:.55rem;
+    }
+    .action-btn{
+    min-width:158px;
+    min-height:44px;
+    border:1px solid rgba(255,255,255,.42);
+    border-radius:999px;
+    color:#fff;
+    font-size:15px;
+    font-weight:900;
+    letter-spacing:0;
+    box-shadow:0 14px 26px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.22);
+    cursor:pointer;
+    backdrop-filter:blur(8px);
+}
+    .photo-box{
+        width:132px;
+    }
+    .photo-preview{
+        width:132px;
+    }
+    .photo-box button{
+        width:132px;
+    }
+    .account-workspace{
+        padding:1rem;
+    }
+    .field-row{
+        grid-template-columns:1fr;
+    }
+    .field-row span{
+        border-right:0;
+        border-bottom:1px solid rgba(255,255,255,.16);
+    }
+    .weight-grid{
+        grid-template-columns:1fr;
+    }
+    .weight-grid label:first-child{
+        border-right:0;
+        border-bottom:1px solid rgba(0,0,0,.15);
+    }
+}
+.field-row,
+.weight-grid{
+    animation:field-wiggle 4.8s ease-in-out infinite;
+    transform-origin:center left;
+}
+
+.field-row:nth-of-type(1){animation-delay:0s;}
+.field-row:nth-of-type(2){animation-delay:.45s;}
+.field-row:nth-of-type(3){animation-delay:.9s;}
+.weight-grid{animation-delay:1.25s;}
+
+.field-row:hover,
+.weight-grid:hover{
+    animation-play-state:paused;
+    transform:translateY(-5px) rotate(.35deg) scale(1.01);
+    border-color:#f5a000;
+    box-shadow:0 18px 30px rgba(0,0,0,.34), 0 0 0 4px rgba(245,160,0,.28);
+}
+
+.field-row:hover span,
+.weight-grid:hover span{
+    background:#f5a000;
+    color:#111;
+}
+
+.field-row:hover input,
+.weight-grid:hover input{
+    background:#fffdf5;
+}
+
+@keyframes field-wiggle{
+    0%,100%{transform:translateY(0) rotate(0deg);}
+    25%{transform:translateY(-2px) rotate(.18deg);}
+    50%{transform:translateY(1px) rotate(-.16deg);}
+    75%{transform:translateY(-1px) rotate(.1deg);}
+}
+
+@media (prefers-reduced-motion: reduce){
+    .field-row,
+    .weight-grid{
+        animation:none;
+    }
+}
+.account-kicker{
+    display:inline-flex;
+    width:max-content;
+    align-items:center;
+    gap:.45rem;
+    margin-bottom:.7rem;
+    padding:.5rem .85rem;
+    border-radius:999px;
+    background:#111;
+    color:#f5a000;
+    border:1px solid rgba(245,160,0,.5);
+    box-shadow:0 10px 20px rgba(0,0,0,.16);
+    font-size:15px;
+    font-weight:900;
+}
+
+.account-kicker::before{
+    content:"";
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#22c55e;
+    box-shadow:0 0 12px rgba(34,197,94,.85);
+}
+.weight-grid label{
+    position:relative;
+}
+
+.weight-grid label::after{
+    content:"kg";
+    position:absolute;
+    right:.85rem;
+    bottom:14px;
+    color:#60636a;
+    font-size:18px;
+    font-weight:900;
+    pointer-events:none;
+}
+
+.weight-grid input{
+    padding-right:2.8rem;
+}
+
+.weight-grid:hover label::after,
+.weight-grid.is-active label::after{
+    color:#111;
+}
+.account-stage{
+    animation:account-stage-enter .75s cubic-bezier(.2,.8,.2,1), account-stage-float 6s ease-in-out .8s infinite;
+}
+
+.account-stage::before{
+    content:"";
+    position:absolute;
+    left:205px;
+    top:54px;
+    width:72px;
+    height:8px;
+    border-radius:999px;
+    background:linear-gradient(90deg, #f5a000, #fff06a);
+    box-shadow:0 0 18px rgba(245,160,0,.45);
+    animation:account-marker-pulse 2.8s ease-in-out infinite;
+}
+
+.stage-title h1{
+    animation:title-soft-pop .9s cubic-bezier(.2,.8,.2,1);
+}
+
+.stage-title p{
+    animation:title-soft-pop 1s cubic-bezier(.2,.8,.2,1) .08s both;
+}
+
+.photo-box{
+    animation:photo-bob 4.5s ease-in-out infinite;
+}
+
+.photo-preview{
+    transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+.photo-preview:hover{
+    transform:rotate(-2deg) scale(1.04);
+    border-color:#f5a000;
+    box-shadow:0 18px 32px rgba(0,0,0,.32), 0 0 0 4px rgba(245,160,0,.2);
+}
+
+.action-btn{
+    animation:account-button-breathe 3.8s ease-in-out infinite;
+}
+
+.update-btn{
+    animation-delay:.45s;
+}
+
+.action-btn:hover{
+    animation-play-state:paused;
+    transform:translateY(-3px) scale(1.03);
+}
+
+.account-summary{
+    overflow:hidden;
+    animation:summary-arrive .8s cubic-bezier(.2,.8,.2,1), summary-glow 4.6s ease-in-out 1s infinite;
+}
+
+.account-summary::after{
+    content:"";
+    position:absolute;
+    inset:-60% -40%;
+    background:linear-gradient(115deg, transparent 38%, rgba(255,240,106,.35) 50%, transparent 62%);
+    transform:translateX(-70%) rotate(8deg);
+    animation:summary-shine 3.4s ease-in-out infinite;
+    pointer-events:none;
+}
+
+@keyframes account-stage-enter{
+    from{opacity:0;transform:translateY(18px) scale(.985)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+@keyframes account-stage-float{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-3px)}
+}
+
+@keyframes account-marker-pulse{
+    0%,100%{transform:scaleX(1);opacity:.9}
+    50%{transform:scaleX(1.18);opacity:1}
+}
+
+@keyframes title-soft-pop{
+    from{opacity:0;transform:translateY(12px)}
+    to{opacity:1;transform:translateY(0)}
+}
+
+@keyframes photo-bob{
+    0%,100%{transform:translateY(0) rotate(0deg)}
+    35%{transform:translateY(-5px) rotate(.5deg)}
+    70%{transform:translateY(2px) rotate(-.35deg)}
+}
+
+@keyframes account-button-breathe{
+    0%,100%{box-shadow:0 14px 26px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.22)}
+    50%{box-shadow:0 18px 34px rgba(0,0,0,.3), 0 0 18px rgba(245,160,0,.2), inset 0 1px 0 rgba(255,255,255,.25)}
+}
+
+@keyframes summary-arrive{
+    from{opacity:0;transform:translateX(18px)}
+    to{opacity:1;transform:translateX(0)}
+}
+
+@keyframes summary-glow{
+    0%,100%{box-shadow:0 14px 26px rgba(0,0,0,.28)}
+    50%{box-shadow:0 18px 34px rgba(0,0,0,.35), 0 0 28px rgba(245,160,0,.28)}
+}
+
+@keyframes summary-shine{
+    0%,55%{transform:translateX(-70%) rotate(8deg);opacity:0}
+    70%{opacity:1}
+    100%{transform:translateX(70%) rotate(8deg);opacity:0}
+}
+
+@media (prefers-reduced-motion: reduce){
+    .account-stage,
+    .stage-title h1,
+    .stage-title p,
+    .photo-box,
+    .action-btn,
+    .account-summary,
+    .account-summary::after{
+        animation:none;
+    }
+}

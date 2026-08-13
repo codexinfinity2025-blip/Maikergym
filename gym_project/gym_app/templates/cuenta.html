@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load static %}
+{% load l10n %}
+
+{% block title %}MaikerGym - Mi Cuenta{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilos_cuenta.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="cuenta-page">
+    <section class="account-stage" data-motion="rise">
+        <div class="stage-actions">
+            <form method="POST" data-confirm-delete>
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="eliminar_cuenta">
+                <button class="action-btn delete-btn" type="submit">Eliminar cuenta</button>
+            </form>
+            <button class="action-btn update-btn" type="submit" form="account-form">Actualizar cuenta</button>
+        </div>
+
+        <form class="photo-box" method="POST" enctype="multipart/form-data" data-ajax-form>
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="actualizar_foto">
+            <label for="foto-perfil" class="photo-preview {% if perfil.foto %}has-preview{% endif %}">
+                {% if perfil.foto %}
+                    <img src="{{ perfil.foto.url }}" alt="Foto de perfil">
+                {% else %}
+                    <span>{{ user.first_name|first|default:"M" }}</span>
+                {% endif %}
+            </label>
+            <input id="foto-perfil" type="file" name="foto" accept="image/*">
+            <button type="submit">Cambiar foto</button>
+        </form>
+
+        <div class="stage-title">
+            <h1>Bienvenido, {{ user.first_name|default:"atleta" }}</h1>
+            <p>{% if perfil.personalizacion_completa %}&iquest;Listo para entrenar?{% else %}&iquest;Listo para empezar? Completa tu informaci&oacute;n y deja tu perfil preparado.{% endif %}</p>
+        </div>
+    </section>
+
+    <section class="account-workspace">
+        <form id="account-form" class="account-form" method="POST" enctype="multipart/form-data" data-ajax-form>
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="actualizar_cuenta">
+
+            <label class="field-row email-row featured-field">
+                <span>Correo electr&oacute;nico</span>
+                <input type="email" name="email" value="{{ user.email }}" placeholder="correo@ejemplo.com">
+            </label>
+
+            <label class="field-row phone-row featured-field">
+                <span>Tel&eacute;fono</span>
+                <input type="text" name="telefono" value="{{ perfil.telefono|default:'' }}" placeholder="Tu tel&eacute;fono">
+            </label>
+
+            <label class="field-row address-row">
+                <span>Direcci&oacute;n</span>
+                <input type="text" name="direccion" value="{{ perfil.direccion|default:'' }}" placeholder="Tu direcci&oacute;n">
+            </label>
+
+            <div class="weight-grid featured-weight">
+                <label>
+                    <span>Peso inicial</span>
+                    <input type="number" step="0.01" name="peso_inicial" value="{{ peso_inicial_value }}" placeholder="0.00">
+                </label>
+                <label>
+                    <span>Peso actual</span>
+                    <input type="number" step="0.01" name="peso" value="{{ peso_actual_value }}" placeholder="0.00">
+                </label>
+            </div>
+        </form>
+
+        <aside class="account-summary" data-motion="rise">
+            <strong>{{ perfil.get_objetivo_display|default:"Objetivo pendiente" }}</strong>
+            <span>{% if perfil.dieta_aceptada %}Dieta aceptada{% else %}Dieta pendiente{% endif %}</span>
+            <small>{% if perfil.activo %}Cuenta activa{% else %}Cuenta inactiva{% endif %}</small>
+        </aside>
+    </section>
+    <div class="account-toast" role="status" aria-live="polite">Cambios guardados</div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const fileInput = document.querySelector("#foto-perfil");
+    const preview = document.querySelector(".photo-preview");
+    const toast = document.querySelector(".account-toast");
+
+    const showToast = (message) => {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.add("is-visible");
+        window.setTimeout(() => toast.classList.remove("is-visible"), 2200);
+    };
+
+    const postForm = async (form, message) => {
+        const response = await fetch(window.location.href, {
+            method: "POST",
+            body: new FormData(form),
+            headers: {"X-Requested-With": "XMLHttpRequest"}
+        });
+        if (!response.ok) throw new Error("No se pudo guardar");
+        showToast(message);
+    };
+
+    if (fileInput && preview) {
+        preview.addEventListener("click", () => fileInput.click());
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) return;
+            const image = document.createElement("img");
+            image.src = URL.createObjectURL(file);
+            image.alt = "Vista previa de perfil";
+            preview.replaceChildren(image);
+            preview.classList.add("has-preview");
+        });
+    }
+
+    document.querySelectorAll("[data-ajax-form]").forEach((form) => {
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            try {
+                await postForm(form, form.classList.contains("photo-box") ? "Foto actualizada" : "Cuenta actualizada");
+            } catch (error) {
+                showToast("No se pudo guardar. Revisa los datos.");
+            }
+        });
+    });
+
+    document.querySelectorAll("[data-confirm-delete]").forEach((form) => {
+        form.addEventListener("submit", (event) => {
+            if (!confirm("Esta accion eliminara tu cuenta. Deseas continuar?")) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    document.querySelectorAll(".field-row input, .weight-grid input").forEach((input) => {
+        const wrap = input.closest(".field-row") || input.closest(".weight-grid");
+        input.addEventListener("focus", () => wrap.classList.add("is-active"));
+        input.addEventListener("blur", () => wrap.classList.remove("is-active"));
+    });
+});
+</script>
+{% endblock %}

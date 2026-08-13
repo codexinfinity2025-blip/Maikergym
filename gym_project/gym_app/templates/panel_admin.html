@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Panel Administrador{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_admin.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="admin-page">
+    <section class="panel-title">
+        <img src="{% static 'icons/admin.svg' %}" alt="">
+        <div>
+            <h1>Panel Administrador</h1>
+            <p>Gestión principal del gimnasio, usuarios, planes y contenido.</p>
+        </div>
+    </section>
+
+    <section class="admin-grid">
+        <article class="admin-card">
+            <img src="{% static 'icons/usuarios.svg' %}" alt="">
+            <h2>Usuarios</h2>
+            <p>Consultar usuarios registrados, editar datos y revisar objetivos seleccionados.</p>
+            <button>Gestionar</button>
+        </article>
+
+        <article class="admin-card">
+            <img src="{% static 'icons/planes.svg' %}" alt="">
+            <h2>Planes y precios</h2>
+            <p>Actualizar precios, beneficios y opciones de mensualidad del gimnasio.</p>
+            <button>Editar</button>
+        </article>
+
+        <article class="admin-card">
+            <img src="{% static 'icons/rutinas.svg' %}" alt="">
+            <h2>Rutinas</h2>
+            <p>Crear, modificar o retirar rutinas de hipertrofia, salud y estética.</p>
+            <button>Revisar</button>
+        </article>
+
+        <article class="admin-card">
+            <img src="{% static 'icons/nutricion.svg' %}" alt="">
+            <h2>Nutrición</h2>
+            <p>Administrar recomendaciones, alimentos y contenido de orientación nutricional.</p>
+            <button>Configurar</button>
+        </article>
+    </section>
+
+    <section class="admin-table">
+        <h2>Resumen rápido</h2>
+        <table>
+            <tr>
+                <th>Módulo</th>
+                <th>Estado</th>
+                <th>Acción sugerida</th>
+            </tr>
+            <tr>
+                <td>Usuarios nuevos</td>
+                <td>Pendiente</td>
+                <td>Revisar registros</td>
+            </tr>
+            <tr>
+                <td>Rutinas</td>
+                <td>Activas</td>
+                <td>Actualizar contenido</td>
+            </tr>
+            <tr>
+                <td>Precios</td>
+                <td>Publicado</td>
+                <td>Verificar valores</td>
+            </tr>
+        </table>
+    </section>
+</main>
+{% endblock %}

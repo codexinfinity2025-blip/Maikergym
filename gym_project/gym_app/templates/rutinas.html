@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Rutinas{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_rutinas.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="rutinas-page">
+    <h2 class="rutinas-title">Rutinas</h2>
+    <section class="rutinas-collage">
+        <article class="rutina-bloque bloque-uno">
+            <img src="{% static 'css/img/treinamento.jpg' %}" alt="Rutina de activacion">
+            <p>Rutina de activación para preparar articulaciones, elevar pulsaciones y empezar el entrenamiento con buena técnica.</p>
+        </article>
+        <article class="rutina-bloque bloque-dos">
+            <img src="{% static 'css/img/HD.jpg' %}" alt="Rutina de fuerza">
+            <p>Trabajo de fuerza con ejercicios básicos, descansos adecuados y progresión controlada para mejorar rendimiento.</p>
+        </article>
+        <article class="rutina-bloque bloque-tres">
+            <img src="{% static 'css/img/woman.png' %}" alt="Rutina funcional">
+            <p>Ejercicios funcionales para movilidad, estabilidad, resistencia y control corporal durante todo el proceso.</p>
+        </article>
+        <article class="rutina-bloque bloque-cuatro">
+            <img src="{% static 'css/img/musculos.png' %}" alt="Rutina muscular">
+            <p>Entrenamiento por grupos musculares, volumen moderado y recuperación pensada según el objetivo elegido.</p>
+        </article>
+    </section>
+</main>
+{% endblock %}

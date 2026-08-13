@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Nutrición{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_nutricion.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="nutricion-page">
+    <h2 class="nutricion-title">Alimentos</h2>
+    <section class="nutricion-layout">
+        <article class="info-panel">
+            <h3>Importancia de la alimentación</h3>
+            <p><strong>Alimentos energéticos:</strong> proporcionan energía para las actividades diarias. Incluyen carbohidratos como cereales, tubérculos, granos, frutas y vegetales.</p>
+            <p><strong>Alimentos plásticos o constructores:</strong> ricos en proteínas, ayudan a formar y reparar tejidos como músculos y huesos. Aquí entran carnes, huevos, lácteos y legumbres.</p>
+            <p><strong>Alimentos reguladores:</strong> aportan vitaminas y minerales que regulan procesos metabólicos y fortalecen el sistema inmunológico. Destacan frutas y verduras.</p>
+        </article>
+        <article class="food-gallery">
+            <img src="{% static 'css/img/cuadro.png' %}" alt="Alimentos saludables">
+            <img src="{% static 'css/img/todos.png' %}" alt="Fuentes de proteina">
+            <img src="{% static 'css/img/Salud.png' %}" alt="Frutas y verduras">
+        </article>
+        <aside class="question-panel">
+            <div class="question-box">¿Quieres saber qué comer y cómo hacerlo?</div>
+            <button class="registro-btn" onclick="window.location.href='{% url 'rutinas' %}'">Regístrate Ya</button>
+        </aside>
+    </section>
+</main>
+{% endblock %}

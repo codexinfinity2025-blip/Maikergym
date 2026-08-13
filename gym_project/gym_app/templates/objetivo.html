@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Objetivo{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilos_objetivo.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="objetivo-page">
+    <section class="objective-heading" data-motion="rise">
+        <span class="eyebrow">Paso 1 de 3</span>
+        <h1>Escoge tu objetivo</h1>
+        <p>Tu ruta cambia según lo que quieras lograr. Elige una opción y seguimos con la dieta recomendada.</p>
+    </section>
+
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+
+    <section class="objetivo-grid">
+        <article class="objetivo-card">
+            <img src="{% static 'img/generated/objective-aesthetic.png' %}" alt="Entrenamiento estético">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="objetivo" value="estetico">
+                <button class="objetivo-btn" type="submit">Estético</button>
+            </form>
+            <p>Definición, composición corporal y una rutina visualmente medible.</p>
+        </article>
+
+        <article class="objetivo-card">
+            <img src="{% static 'img/generated/objective-hypertrophy.png' %}" alt="Entrenamiento de hipertrofia">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="objetivo" value="hipertrofia">
+                <button class="objetivo-btn" type="submit">Hipertrofia</button>
+            </form>
+            <p>Fuerza, volumen muscular y progresión con ejercicios retadores.</p>
+        </article>
+
+        <article class="objetivo-card">
+            <img src="{% static 'img/generated/objective-health.png' %}" alt="Entrenamiento saludable">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="objetivo" value="salud">
+                <button class="objetivo-btn" type="submit">Salud</button>
+            </form>
+            <p>Condición física, energía diaria y bienestar sostenible.</p>
+        </article>
+    </section>
+</main>
+{% endblock %}

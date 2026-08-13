@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Salud{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_salud.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="salud-page">
+    <h2 class="salud-title">Salud</h2>
+    <section class="salud-grid">
+        <article class="salud-card">
+            <img src="{% static 'css/img/zalud.png' %}" alt="Entrenamiento saludable">
+            <p>Entrenar por salud mejora tu energía diaria, fortalece el cuerpo y ayuda a crear hábitos sostenibles sin depender de rutinas extremas.</p>
+        </article>
+        <article class="salud-card">
+            <img src="{% static 'css/img/Mujer.png' %}" alt="Bienestar fisico">
+            <p>Este objetivo busca que te muevas mejor, descanses mejor y sientas progreso en actividades cotidianas como caminar, subir escaleras o trabajar.</p>
+        </article>
+        <article class="salud-card">
+            <img src="{% static 'css/img/Loomaduro.png' %}" alt="Objetivo de salud">
+        </article>
+        <article class="salud-card accept-card">
+            <img src="{% static 'css/img/Losdo.png' %}" alt="Plan de salud">
+            <button style="margin: 3rem 30rem 0rem -5rem;" class="aceptar-btn" onclick="window.location.href='{% url 'nutricion' %}'">Aceptar</button>
+        </article>
+    </section>
+</main>
+{% endblock %}

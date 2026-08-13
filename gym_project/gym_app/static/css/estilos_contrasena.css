@@ -1,0 +1,77 @@
+.btn{
+    display:block;
+    width:100%;
+    margin-top:10px;
+    padding:12px;
+    background:black;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+}
+h1{
+    border:2px solid red;
+    padding:15px;
+    background-color:rgb(255,166,0);
+    width:100%;
+    border-radius:0;
+    font-family:JHCAudemars-Medium;
+    font-size:40px;
+    text-align:center;
+    margin:0;
+    box-sizing:border-box;
+    box-shadow:0px 5px #CD1C1C;
+}
+body{
+    margin:0;
+    padding:0;
+    background:url(img/woman.png);
+    background-size:100%;
+    background-repeat:no-repeat;
+}
+.box{
+    width:90%;
+    max-width:420px;
+    margin:8rem auto 0 auto;
+    padding:25px;
+    background-color:rgba(233,174,11,0.85);
+    color:#140000;
+    border-radius:8px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.18);
+    box-sizing:border-box;
+}
+.box input{
+    width:100%;
+    padding:12px;
+    margin:10px 0 20px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    box-sizing:border-box;
+}
+
+.form-label{
+    font-size:25px;
+}
+.house-btn{
+     position:absolute;
+    right:30px;
+    top:5%;
+    transform:translateY(-50%);
+    background:black;
+    color:white;
+    border:none;
+    padding:12px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+}
+.footer1{
+    text-align:center;
+    padding:1.5rem 0;
+    background-color:rgba(255,166,0,0.95);
+    border-top:3px solid #CD1C1C;
+    box-shadow:0 -8px 0 rgba(205,28,28,0.75);
+    color:#102030;
+    font-size:14px;
+}

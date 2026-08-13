@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Estético{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_estetico .css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="estetico-page">
+    <div class="container text-center mt-3">
+        <h1 class="display-5 box">Estético</h1>
+    </div>
+    <div class="contenedor-principal">
+        <section class="inicio-features">
+            <article class="inicio-feature box" style="padding:1.4rem;">
+                <h3>¿Qué es la estética?</h3>
+                <p>La estética en el entrenamiento físico busca mejorar la apariencia visual del cuerpo para lograr una figura más proporcionada, definida y armónica.</p>
+            </article>
+            <article class="inicio-feature">
+                <img style="height: 310px; width: 730px;" src="{% static 'css/img/cuadro.png' %}" alt="">
+            </article>
+        </section>
+        <aside class="inicio-features right">
+            <article class="inicio-feature box">
+                <h3>¿Por qué es buena opción?</h3>
+                <p>La estética ayuda a desarrollar una figura equilibrada mediante ejercicio, alimentación y descanso.</p>
+            </article>
+            <article class="inicio-feature">
+                <img style="height: 310px; width: 730px; margin: -30px 0px;" src="{% static 'css/img/todos.png' %}" alt="">
+                <div>
+                    <button style="margin: 3rem -10rem 0rem -5rem; width:7rem; height: 4rem; font-size: 1.25rem;" class="display-5 box" onclick="window.location.href='{% url 'nutricion' %}'">Aceptar</button>
+                </div>
+            </article>
+        </aside>
+    </div>
+</main>
+{% endblock %}

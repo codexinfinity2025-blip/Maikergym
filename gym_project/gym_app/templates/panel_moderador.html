@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Panel Moderador{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/Estilo_moderador.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="moderador-page">
+    <section class="panel-title">
+        <img src="{% static 'icons/moderador.svg' %}" alt="">
+        <div>
+            <h1>Panel Moderador</h1>
+            <p>Revisión de usuarios, objetivos y contenido pendiente.</p>
+        </div>
+    </section>
+
+    <section class="moderador-layout">
+        <article class="review-card grande">
+            <h2>Solicitudes recientes</h2>
+            <p>Usuarios que eligieron objetivo y esperan seguimiento inicial.</p>
+
+            <ul>
+                <li>Usuario estético - revisar rutina sugerida</li>
+                <li>Usuario hipertrofia - validar plan semanal</li>
+                <li>Usuario salud - confirmar nivel inicial</li>
+            </ul>
+        </article>
+
+        <article class="review-card">
+            <img src="{% static 'icons/objetivos.svg' %}" alt="">
+            <h2>Objetivos</h2>
+            <p>Revisar que cada usuario tenga objetivo asignado.</p>
+            <button>Ver objetivos</button>
+        </article>
+
+        <article class="review-card">
+            <img src="{% static 'icons/mensajes.svg' %}" alt="">
+            <h2>Mensajes</h2>
+            <p>Responder dudas sobre planes, rutinas y nutrición.</p>
+            <button>Responder</button>
+        </article>
+
+        <article class="review-card">
+            <img src="{% static 'icons/contenido.svg' %}" alt="">
+            <h2>Contenido</h2>
+            <p>Revisar textos antes de publicarlos al usuario.</p>
+            <button>Revisar</button>
+        </article>
+    </section>
+</main>
+{% endblock %}

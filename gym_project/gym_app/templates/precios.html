@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Precios{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/estilos_precios.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/public_nav.html" %}
+
+<main class="pricing-page public-page" style="--page-bg: url('../img/generated/pricing-pro.png')">
+    <section class="public-hero pricing-hero" data-motion="rise">
+        <div class="hero-copy">
+            <span class="eyebrow">Planes claros, sin ruido</span>
+            <h1>Precios</h1>
+            <p>Elige el plan que encaja con tu ritmo. Todos conservan la misma base: entrenamiento con propósito, personalización y seguimiento.</p>
+            <div class="public-actions">
+                {% if user.is_authenticated %}
+                    <button class="unete" onclick="window.location.href='{% url 'cuenta' %}'">Ver mi cuenta</button>
+                {% else %}
+                    <button class="unete" onclick="window.location.href='{% url 'registrarse' %}'">Elegir plan</button>
+                {% endif %}
+                <button class="ghost-btn" onclick="window.location.href='{% url 'escogenos' %}'">Por qué nosotros</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="pricing-grid" aria-label="Planes MaikerGym">
+        <article class="price-card">
+            <span class="plan-tag">Inicio</span>
+            <h2>Mensual</h2>
+            <strong>$70.000</strong>
+            <ul>
+                <li>4 días a la semana</li>
+                <li>Asesoría física</li>
+                <li>Guía inicial de objetivo</li>
+            </ul>
+            <button onclick="window.location.href='{% if user.is_authenticated %}{% url 'cuenta' %}{% else %}{% url 'registrarse' %}{% endif %}'">Elegir plan</button>
+        </article>
+        <article class="price-card featured">
+            <span class="plan-tag">Más elegido</span>
+            <h2>6 meses</h2>
+            <strong>$300.000</strong>
+            <ul>
+                <li>6 días a la semana</li>
+                <li>Entrenador</li>
+                <li>Asesoría física y mental</li>
+            </ul>
+            <button onclick="window.location.href='{% if user.is_authenticated %}{% url 'cuenta' %}{% else %}{% url 'registrarse' %}{% endif %}'">Elegir plan</button>
+        </article>
+        <article class="price-card">
+            <span class="plan-tag">Completo</span>
+            <h2>Premium</h2>
+            <strong>$820.000</strong>
+            <ul>
+                <li>Acceso 24/7</li>
+                <li>Entrenador y nutricionista</li>
+                <li>Asesoría física, mental y alimenticia</li>
+            </ul>
+            <button onclick="window.location.href='{% if user.is_authenticated %}{% url 'cuenta' %}{% else %}{% url 'registrarse' %}{% endif %}'">Elegir plan</button>
+        </article>
+    </section>
+</main>
+{% endblock %}

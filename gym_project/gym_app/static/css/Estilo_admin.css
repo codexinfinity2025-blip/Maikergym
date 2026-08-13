@@ -1,0 +1,157 @@
+@font-face{
+    font-family:"JHCAudemars-Medium";
+    src:url(JHCAudemars-Medium.otf) format("opentype");
+}
+
+body{
+    min-height:100vh;
+    margin:0;
+    background:
+        linear-gradient(rgba(15,15,15,0.78),rgba(15,15,15,0.86)),
+        url(img/Losdo.png);
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
+    color:#151515;
+}
+
+header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background-color:rgba(255,166,0,0.95);
+    border-bottom:3px solid #CD1C1C;
+    padding:15px 30px;
+    box-shadow:0 8px 0 rgba(205,28,28,0.75);
+}
+
+.brand-btn{
+    background:none;
+    border:none;
+    font-family:JHCAudemars-Medium;
+    font-size:34px;
+    text-shadow:4px 4px 4px black;
+    cursor:pointer;
+}
+
+.derecha{
+    display:flex;
+    gap:15px;
+}
+
+.icon-btn{
+    background:black;
+    border:none;
+    padding:12px 18px;
+    border-radius:8px;
+    cursor:pointer;
+}
+
+.btn-icon,
+.panel-title img,
+.admin-card img{
+    width:28px;
+    height:28px;
+    filter:invert(1);
+}
+
+.admin-page{
+    width:min(1180px,94%);
+    margin:0 auto;
+    padding:3rem 0;
+}
+
+.panel-title{
+    display:flex;
+    align-items:center;
+    gap:1rem;
+    width:max-content;
+    max-width:100%;
+    padding:1rem 1.5rem;
+    margin-bottom:2rem;
+    background:rgba(255,255,255,0.9);
+    border-left:8px solid #ffae28;
+    border-radius:8px;
+}
+
+.panel-title img{
+    filter:none;
+    width:46px;
+    height:46px;
+}
+
+.panel-title h1{
+    margin:0;
+    font-size:38px;
+}
+
+.panel-title p{
+    margin:0;
+}
+
+.admin-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:1rem;
+}
+
+.admin-card,
+.admin-table{
+    background:rgba(255,255,255,0.9);
+    border-radius:8px;
+    padding:1.2rem;
+    box-shadow:0 10px 24px rgba(0,0,0,0.25);
+}
+
+.admin-card img{
+    filter:none;
+    width:40px;
+    height:40px;
+}
+
+.admin-card h2{
+    margin:0.8rem 0;
+    font-size:24px;
+}
+
+.admin-card button{
+    width:100%;
+    border:none;
+    border-radius:6px;
+    background:#111;
+    color:white;
+    padding:0.7rem;
+    cursor:pointer;
+}
+
+.admin-table{
+    margin-top:1.5rem;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,
+td{
+    border:1px solid #cfcfcf;
+    padding:0.8rem;
+}
+
+th{
+    background:#ffae28;
+}
+
+.footer1{
+    text-align:center;
+    padding:1.5rem 0;
+    background-color:rgba(255,166,0,0.95);
+    border-top:3px solid #CD1C1C;
+}
+
+@media (max-width:900px){
+    .admin-grid{
+        grid-template-columns:1fr;
+    }
+}

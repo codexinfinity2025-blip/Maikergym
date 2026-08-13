@@ -1,0 +1,82 @@
+body{
+    background:
+        linear-gradient(90deg, rgba(0,0,0,.68), rgba(0,0,0,.18)),
+        url(../img/generated/why-choose-pro.png);
+    background-size:cover;
+    background-position:center;
+    background-attachment:fixed;
+}
+.choose-page{
+    width:min(1160px,92%);
+    margin:0 auto;
+    padding:4.5rem 0 3rem;
+}
+.public-hero{
+    display:flex;
+    align-items:center;
+    min-height:46vh;
+}
+.hero-copy{
+    width:min(720px,100%);
+    padding:clamp(1.6rem,4vw,3rem);
+    border-radius:10px;
+    background:rgba(255,255,255,.93);
+    color:#111;
+    box-shadow:0 18px 36px rgba(0,0,0,.28);
+    border:1px solid rgba(255,255,255,.5);
+}
+.choose-hero h1{
+    margin:.8rem 0 1rem;
+    font-size:clamp(36px,5vw,64px);
+    line-height:1.02;
+    color:#000;
+    text-shadow:0 1px 1px rgba(0,0,0,.1);
+}
+.choose-hero p{
+    margin:0;
+    font-size:20px;
+    line-height:1.55;
+}
+.public-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:.8rem;
+    margin-top:1.4rem;
+}
+.choose-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:1rem;
+    margin-top:1.5rem;
+}
+.choose-card{
+    min-height:250px;
+    padding:1.5rem;
+    border-radius:10px;
+    background:rgba(255,255,255,.94);
+    color:#111;
+    border-top:5px solid #f5a000;
+    box-shadow:0 16px 30px rgba(0,0,0,.24);
+}
+.choose-card:nth-child(2){
+    background:#111;
+    color:#fff;
+}
+.card-number{
+    display:block;
+    margin-bottom:1.4rem;
+    color:#f5a000;
+    font-weight:900;
+}
+.choose-card h2{
+    margin:0 0 .7rem;
+    font-size:28px;
+    line-height:1.12;
+}
+.choose-card p{
+    line-height:1.55;
+    margin:0;
+}
+@media (max-width:860px){
+    .choose-grid{grid-template-columns:1fr}
+}
