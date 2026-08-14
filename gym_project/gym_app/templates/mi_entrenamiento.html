@@ -11,6 +11,15 @@
 {% include "partials/app_nav.html" %}
 
 <main class="training-page">
+        {% if messages %}
+        <div class="training-messages">
+            {% for message in messages %}
+                <div class="training-message {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
     <section class="training-hero">
         <div>
             <span class="training-eyebrow">
@@ -137,6 +146,33 @@
                     </div>
 
                     <p>{{ dia_hoy.enfoque }}</p>
+                                    <div class="session-action-bar">
+                    {% if sesion_hoy %}
+                        <div class="session-status">
+                            <span>Estado de la sesión</span>
+                            <strong>
+                                {{ sesion_hoy.get_estado_display }}
+                            </strong>
+                        </div>
+                    {% else %}
+                        <form method="POST">
+                            {% csrf_token %}
+
+                            <input
+                                type="hidden"
+                                name="accion"
+                                value="iniciar_sesion"
+                            >
+
+                            <button
+                                class="start-session-button"
+                                type="submit"
+                            >
+                                Iniciar entrenamiento
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
                 </div>
 
                 {% if dia_hoy.descripcion %}

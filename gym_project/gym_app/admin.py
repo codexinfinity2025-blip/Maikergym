@@ -4,10 +4,12 @@ from gym_project.gym_app.models import (
     DiaPlan,
     Ejercicio,
     EjercicioProgramado,
+    EjercicioSesion,
     FasePlan,
     HorarioPlanUsuario,
     PerfilUsuario,
     PlanEntrenamiento,
+    SesionEntrenamiento,
 )
 
 @admin.register(PerfilUsuario)
@@ -421,4 +423,121 @@ class HorarioPlanUsuarioAdmin(admin.ModelAdmin):
         "asignacion__usuario__username",
         "asignacion__usuario__email",
         "asignacion__plan__nombre",
+    )
+
+class EjercicioSesionInline(admin.TabularInline):
+    model = EjercicioSesion
+    extra = 0
+    fields = (
+        "ejercicio_programado",
+        "completado",
+        "series_completadas",
+        "repeticiones_realizadas",
+        "duracion_realizada_segundos",
+        "distancia_realizada_metros",
+        "peso_utilizado_kg",
+        "puntos_obtenidos",
+        "fecha_completado",
+    )
+    readonly_fields = (
+        "puntos_obtenidos",
+        "fecha_completado",
+    )
+    autocomplete_fields = (
+        "ejercicio_programado",
+    )
+
+
+@admin.register(SesionEntrenamiento)
+class SesionEntrenamientoAdmin(admin.ModelAdmin):
+    list_display = (
+        "asignacion",
+        "dia_plan",
+        "fecha",
+        "semana_plan",
+        "estado",
+        "puntos_obtenidos",
+    )
+    list_filter = (
+        "estado",
+        "fecha",
+        "semana_plan",
+        "asignacion__plan",
+    )
+    search_fields = (
+        "asignacion__usuario__username",
+        "asignacion__usuario__email",
+        "asignacion__plan__nombre",
+        "dia_plan__nombre",
+    )
+    autocomplete_fields = (
+        "asignacion",
+        "dia_plan",
+    )
+    readonly_fields = (
+        "puntos_obtenidos",
+        "fecha_creacion",
+        "fecha_actualizacion",
+    )
+    inlines = [
+        EjercicioSesionInline,
+    ]
+
+    fieldsets = (
+        ("Entrenamiento", {
+            "fields": (
+                "asignacion",
+                "dia_plan",
+                "semana_plan",
+                "fecha",
+                "estado",
+            )
+        }),
+        ("Resultado", {
+            "fields": (
+                "puntos_obtenidos",
+                "fecha_inicio",
+                "fecha_finalizacion",
+            )
+        }),
+        ("Control", {
+            "fields": (
+                "fecha_creacion",
+                "fecha_actualizacion",
+            ),
+            "classes": (
+                "collapse",
+            ),
+        }),
+    )
+
+
+@admin.register(EjercicioSesion)
+class EjercicioSesionAdmin(admin.ModelAdmin):
+    list_display = (
+        "sesion",
+        "ejercicio_programado",
+        "completado",
+        "series_completadas",
+        "puntos_obtenidos",
+        "fecha_completado",
+    )
+    list_filter = (
+        "completado",
+        "sesion__fecha",
+        "sesion__asignacion__plan",
+    )
+    search_fields = (
+        "sesion__asignacion__usuario__username",
+        "sesion__asignacion__usuario__email",
+        "ejercicio_programado__ejercicio__nombre",
+    )
+    autocomplete_fields = (
+        "sesion",
+        "ejercicio_programado",
+    )
+    readonly_fields = (
+        "puntos_obtenidos",
+        "fecha_completado",
+        "fecha_actualizacion",
     )

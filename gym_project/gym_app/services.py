@@ -1,12 +1,16 @@
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 from .models import (
     AsignacionPlanUsuario,
+    EjercicioSesion,
     EstadoAsignacionChoice,
+    EstadoSesionChoice,
     HorarioPlanUsuario,
     NivelEjercicioChoice,
     PlanEntrenamiento,
+    SesionEntrenamiento,
 )
 
 
@@ -98,3 +102,122 @@ def asignar_plan_por_objetivo(usuario, objetivo):
     HorarioPlanUsuario.objects.bulk_create(horarios)
 
     return asignacion, True
+
+@transaction.atomic
+def iniciar_sesion_entrenamiento(
+    asignacion,
+    dia_plan,
+):
+    asignacion = (
+        AsignacionPlanUsuario.objects
+        .select_for_update()
+        .select_related("plan")
+        .get(pk=asignacion.pk)
+    )
+
+    if asignacion.estado != EstadoAsignacionChoice.ACTIVO:
+        raise ValidationError(
+            "El usuario no tiene un plan activo."
+        )
+
+    hoy = timezone.localdate()
+    semana_actual = asignacion.semana_actual
+    fase_actual = asignacion.fase_actual
+
+    if semana_actual <= 0:
+        raise ValidationError(
+            "El plan todavía no ha comenzado."
+        )
+
+    if (
+        fase_actual is None
+        or dia_plan.fase_id != fase_actual.id
+    ):
+        raise ValidationError(
+            "Este entrenamiento no pertenece "
+            "a la fase actual."
+        )
+
+    horario = asignacion.horarios.filter(
+        numero_dia_plan=dia_plan.numero,
+        dia_semana=hoy.weekday(),
+        activo=True,
+    ).first()
+
+    if horario is None:
+        raise ValidationError(
+            "Este entrenamiento no corresponde "
+            "al día de hoy."
+        )
+
+    sesion = (
+        SesionEntrenamiento.objects
+        .select_for_update()
+        .filter(
+            asignacion=asignacion,
+            fecha=hoy,
+        )
+        .first()
+    )
+
+    sesion_creada = False
+
+    if sesion is None:
+        sesion = SesionEntrenamiento.objects.create(
+            asignacion=asignacion,
+            dia_plan=dia_plan,
+            fecha=hoy,
+            semana_plan=semana_actual,
+            estado=EstadoSesionChoice.EN_PROGRESO,
+            fecha_inicio=timezone.now(),
+        )
+        sesion_creada = True
+
+    elif sesion.dia_plan_id != dia_plan.id:
+        raise ValidationError(
+            "Ya existe otra sesión para esta fecha."
+        )
+
+    elif sesion.estado == EstadoSesionChoice.PENDIENTE:
+        sesion.estado = EstadoSesionChoice.EN_PROGRESO
+        sesion.fecha_inicio = timezone.now()
+        sesion.save(
+            update_fields=[
+                "estado",
+                "fecha_inicio",
+                "fecha_actualizacion",
+            ]
+        )
+
+    ejercicios_programados = (
+        dia_plan.ejercicios_programados
+        .filter(
+            activo=True,
+            ejercicio__activo=True,
+        )
+        .select_related("ejercicio")
+    )
+
+    ejercicios_existentes = set(
+        sesion.ejercicios.values_list(
+            "ejercicio_programado_id",
+            flat=True,
+        )
+    )
+
+    ejercicios_nuevos = [
+        EjercicioSesion(
+            sesion=sesion,
+            ejercicio_programado=programado,
+        )
+        for programado in ejercicios_programados
+        if programado.id not in ejercicios_existentes
+    ]
+
+    if ejercicios_nuevos:
+        EjercicioSesion.objects.bulk_create(
+            ejercicios_nuevos,
+            ignore_conflicts=True,
+        )
+
+    return sesion, sesion_creada

@@ -1,9 +1,10 @@
 from datetime import date
-
+from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
@@ -12,7 +13,10 @@ from gym_project.gym_app.models import (
     PerfilUsuario,
     RolChoice,
 )
-from gym_project.gym_app.services import asignar_plan_por_objetivo
+from gym_project.gym_app.services import (
+    asignar_plan_por_objetivo,
+    iniciar_sesion_entrenamiento,
+)
 
 DIETAS_POR_OBJETIVO = {
     'estetico': {
@@ -289,7 +293,7 @@ def cuenta_view(request):
     }
     return render(request, 'cuenta.html', context)
 @login_required(login_url='login')
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 def mi_entrenamiento_view(request):
     perfil = get_perfil(request.user)
 
@@ -320,6 +324,7 @@ def mi_entrenamiento_view(request):
         "horario_hoy": None,
         "dia_hoy": None,
         "ejercicios_hoy": [],
+        "sesion_hoy": None,
         "fecha_hoy": timezone.localdate(),
     }
 
@@ -394,6 +399,57 @@ def mi_entrenamiento_view(request):
             )
         ]
 
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+
+        if accion != "iniciar_sesion":
+            messages.error(
+                request,
+                "La acción solicitada no es válida.",
+            )
+
+        elif dia_hoy is None:
+            messages.error(
+                request,
+                "Hoy no tienes un entrenamiento programado.",
+            )
+
+        else:
+            try:
+                sesion, sesion_creada = (
+                    iniciar_sesion_entrenamiento(
+                        asignacion,
+                        dia_hoy,
+                    )
+                )
+            except ValidationError as error:
+                messages.error(
+                    request,
+                    " ".join(error.messages),
+                )
+            else:
+                if sesion_creada:
+                    messages.success(
+                        request,
+                        "Entrenamiento iniciado correctamente.",
+                    )
+                else:
+                    messages.success(
+                        request,
+                        "Tu entrenamiento ya estaba iniciado.",
+                    )
+
+        return redirect("mi_entrenamiento")
+
+    sesion_hoy = (
+        asignacion.sesiones
+        .filter(fecha=hoy)
+        .prefetch_related(
+            "ejercicios__ejercicio_programado__ejercicio"
+        )
+        .first()
+    )
+
     context.update({
         "fase_actual": fase_actual,
         "semana_actual": asignacion.semana_actual,
@@ -401,6 +457,7 @@ def mi_entrenamiento_view(request):
         "horario_hoy": horario_hoy,
         "dia_hoy": dia_hoy,
         "ejercicios_hoy": ejercicios_hoy,
+        "sesion_hoy": sesion_hoy,
     })
 
     return render(
@@ -408,6 +465,7 @@ def mi_entrenamiento_view(request):
         "mi_entrenamiento.html",
         context,
     )
+
 
 @login_required(login_url='login')
 def panel_moderador_view(request):

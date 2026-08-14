@@ -81,6 +81,11 @@ class DiaSemanaChoice(models.IntegerChoices):
     SABADO = 5, "Sábado"
     DOMINGO = 6, "Domingo"
 
+class EstadoSesionChoice(models.TextChoices):
+    PENDIENTE = "pendiente", "Pendiente"
+    EN_PROGRESO = "en_progreso", "En progreso"
+    COMPLETADA = "completada", "Completada"
+
 class PerfilUsuario(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol = models.CharField(
@@ -737,3 +742,196 @@ class HorarioPlanUsuario(models.Model):
         ]
         verbose_name = "Horario del plan"
         verbose_name_plural = "Horarios del plan"
+
+class SesionEntrenamiento(models.Model):
+    asignacion = models.ForeignKey(
+        AsignacionPlanUsuario,
+        on_delete=models.CASCADE,
+        related_name="sesiones",
+    )
+    dia_plan = models.ForeignKey(
+        DiaPlan,
+        on_delete=models.PROTECT,
+        related_name="sesiones_realizadas",
+    )
+    fecha = models.DateField(
+        default=timezone.localdate,
+    )
+    semana_plan = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(52),
+        ],
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoSesionChoice.choices,
+        default=EstadoSesionChoice.PENDIENTE,
+    )
+    puntos_obtenidos = models.PositiveIntegerField(
+        default=0,
+    )
+    fecha_inicio = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    fecha_finalizacion = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    fecha_creacion = models.DateTimeField(
+        auto_now_add=True,
+    )
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def clean(self):
+        errores = {}
+
+        if self.asignacion_id and self.dia_plan_id:
+            if (
+                self.dia_plan.fase.plan_id
+                != self.asignacion.plan_id
+            ):
+                errores["dia_plan"] = (
+                    "Este día no pertenece al plan asignado."
+                )
+
+        if self.asignacion_id:
+            if (
+                self.semana_plan
+                > self.asignacion.plan.duracion_semanas
+            ):
+                errores["semana_plan"] = (
+                    "La semana supera la duración del plan."
+                )
+
+        if errores:
+            raise ValidationError(errores)
+
+    def __str__(self):
+        return (
+            f"{self.asignacion.usuario.username} - "
+            f"{self.fecha} - "
+            f"{self.dia_plan.nombre}"
+        )
+
+    class Meta:
+        ordering = [
+            "-fecha",
+            "-fecha_creacion",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "asignacion",
+                    "fecha",
+                ],
+                name="sesion_unica_por_asignacion_y_fecha",
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "asignacion",
+                    "semana_plan",
+                    "dia_plan",
+                ],
+                name="dia_plan_unico_por_semana_asignada",
+            ),
+        ]
+        verbose_name = "Sesión de entrenamiento"
+        verbose_name_plural = "Sesiones de entrenamiento"
+
+
+class EjercicioSesion(models.Model):
+    sesion = models.ForeignKey(
+        SesionEntrenamiento,
+        on_delete=models.CASCADE,
+        related_name="ejercicios",
+    )
+    ejercicio_programado = models.ForeignKey(
+        EjercicioProgramado,
+        on_delete=models.PROTECT,
+        related_name="registros_realizados",
+    )
+    completado = models.BooleanField(
+        default=False,
+    )
+    series_completadas = models.PositiveSmallIntegerField(
+        default=0,
+        validators=[
+            MaxValueValidator(20),
+        ],
+    )
+    repeticiones_realizadas = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    duracion_realizada_segundos = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    distancia_realizada_metros = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    peso_utilizado_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(0),
+        ],
+    )
+    puntos_obtenidos = models.PositiveSmallIntegerField(
+        default=0,
+    )
+    fecha_completado = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    observaciones = models.CharField(
+        max_length=250,
+        blank=True,
+    )
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def clean(self):
+        if (
+            self.sesion_id
+            and self.ejercicio_programado_id
+            and self.ejercicio_programado.dia_id
+            != self.sesion.dia_plan_id
+        ):
+            raise ValidationError({
+                "ejercicio_programado": (
+                    "Este ejercicio no pertenece al día "
+                    "de la sesión."
+                )
+            })
+
+    def __str__(self):
+        return (
+            f"{self.sesion} - "
+            f"{self.ejercicio_programado.ejercicio.nombre}"
+        )
+
+    class Meta:
+        ordering = [
+            "sesion",
+            "ejercicio_programado__orden",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "sesion",
+                    "ejercicio_programado",
+                ],
+                name="ejercicio_unico_por_sesion",
+            ),
+        ]
+        verbose_name = "Ejercicio de una sesión"
+        verbose_name_plural = "Ejercicios de las sesiones"
