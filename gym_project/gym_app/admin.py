@@ -1,9 +1,11 @@
 ﻿from django.contrib import admin
 from gym_project.gym_app.models import (
+    AsignacionPlanUsuario,
     DiaPlan,
     Ejercicio,
     EjercicioProgramado,
     FasePlan,
+    HorarioPlanUsuario,
     PerfilUsuario,
     PlanEntrenamiento,
 )
@@ -296,4 +298,127 @@ class EjercicioProgramadoAdmin(admin.ModelAdmin):
     )
     autocomplete_fields = (
         "ejercicio",
+    )
+class HorarioPlanUsuarioInline(admin.TabularInline):
+    model = HorarioPlanUsuario
+    extra = 0
+    fields = (
+        "numero_dia_plan",
+        "dia_semana",
+        "hora_preferida",
+        "recordatorio_activo",
+        "activo",
+    )
+
+
+@admin.register(AsignacionPlanUsuario)
+class AsignacionPlanUsuarioAdmin(admin.ModelAdmin):
+    list_display = (
+        "usuario",
+        "plan",
+        "fecha_inicio",
+        "mostrar_semana_actual",
+        "mostrar_fase_actual",
+        "estado",
+    )
+    list_filter = (
+        "plan",
+        "estado",
+        "fecha_inicio",
+    )
+    search_fields = (
+        "usuario__username",
+        "usuario__email",
+        "usuario__first_name",
+        "usuario__last_name",
+        "plan__nombre",
+    )
+    autocomplete_fields = (
+        "usuario",
+        "plan",
+    )
+    readonly_fields = (
+        "mostrar_fecha_fin_estimada",
+        "mostrar_semana_actual",
+        "mostrar_fase_actual",
+        "fecha_creacion",
+        "fecha_actualizacion",
+    )
+    inlines = [
+        HorarioPlanUsuarioInline,
+    ]
+
+    fieldsets = (
+        ("Asignación", {
+            "fields": (
+                "usuario",
+                "plan",
+                "estado",
+            )
+        }),
+        ("Fechas", {
+            "fields": (
+                "fecha_inicio",
+                "fecha_fin",
+                "mostrar_fecha_fin_estimada",
+            )
+        }),
+        ("Progreso calculado", {
+            "fields": (
+                "mostrar_semana_actual",
+                "mostrar_fase_actual",
+            )
+        }),
+        ("Control", {
+            "fields": (
+                "fecha_creacion",
+                "fecha_actualizacion",
+            ),
+            "classes": (
+                "collapse",
+            ),
+        }),
+    )
+
+    @admin.display(description="Fecha final estimada")
+    def mostrar_fecha_fin_estimada(self, obj):
+        if not obj:
+            return "-"
+
+        return obj.fecha_fin_estimada
+
+    @admin.display(description="Semana actual")
+    def mostrar_semana_actual(self, obj):
+        if not obj:
+            return "-"
+
+        return obj.semana_actual
+
+    @admin.display(description="Fase actual")
+    def mostrar_fase_actual(self, obj):
+        if not obj:
+            return "-"
+
+        return obj.fase_actual or "Sin fase"
+
+
+@admin.register(HorarioPlanUsuario)
+class HorarioPlanUsuarioAdmin(admin.ModelAdmin):
+    list_display = (
+        "asignacion",
+        "numero_dia_plan",
+        "dia_semana",
+        "hora_preferida",
+        "recordatorio_activo",
+        "activo",
+    )
+    list_filter = (
+        "dia_semana",
+        "recordatorio_activo",
+        "activo",
+    )
+    search_fields = (
+        "asignacion__usuario__username",
+        "asignacion__usuario__email",
+        "asignacion__plan__nombre",
     )

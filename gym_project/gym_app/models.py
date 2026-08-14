@@ -1,12 +1,15 @@
-from django.db import models
+from datetime import timedelta
+
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
     MaxValueValidator,
     MinValueValidator,
 )
+from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
-from django.core.exceptions import ValidationError
 
 class RolChoice(models.TextChoices):
     ADMIN = 'admin', 'Administrador'
@@ -62,6 +65,21 @@ class TipoMedicionChoice(models.TextChoices):
     REPETICIONES = "repeticiones", "Repeticiones"
     TIEMPO = "tiempo", "Tiempo"
     DISTANCIA = "distancia", "Distancia"
+
+class EstadoAsignacionChoice(models.TextChoices):
+    ACTIVO = "activo", "Activo"
+    PAUSADO = "pausado", "Pausado"
+    COMPLETADO = "completado", "Completado"
+    ABANDONADO = "abandonado", "Abandonado"
+
+class DiaSemanaChoice(models.IntegerChoices):
+    LUNES = 0, "Lunes"
+    MARTES = 1, "Martes"
+    MIERCOLES = 2, "Miércoles"
+    JUEVES = 3, "Jueves"
+    VIERNES = 4, "Viernes"
+    SABADO = 5, "Sábado"
+    DOMINGO = 6, "Domingo"
 
 class PerfilUsuario(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
@@ -550,3 +568,172 @@ class EjercicioProgramado(models.Model):
         ]
         verbose_name = "Ejercicio programado"
         verbose_name_plural = "Ejercicios programados"
+
+class AsignacionPlanUsuario(models.Model):
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="planes_asignados",
+    )
+    plan = models.ForeignKey(
+        PlanEntrenamiento,
+        on_delete=models.PROTECT,
+        related_name="asignaciones",
+    )
+    fecha_inicio = models.DateField(
+        default=timezone.localdate,
+    )
+    fecha_fin = models.DateField(
+        null=True,
+        blank=True,
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoAsignacionChoice.choices,
+        default=EstadoAsignacionChoice.ACTIVO,
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    @property
+    def fecha_fin_estimada(self):
+        return (
+            self.fecha_inicio
+            + timedelta(weeks=self.plan.duracion_semanas)
+            - timedelta(days=1)
+        )
+
+    @property
+    def semana_actual(self):
+        hoy = timezone.localdate()
+
+        if hoy < self.fecha_inicio:
+            return 0
+
+        dias_transcurridos = (hoy - self.fecha_inicio).days
+        semana = (dias_transcurridos // 7) + 1
+
+        return min(
+            semana,
+            self.plan.duracion_semanas,
+        )
+
+    @property
+    def fase_actual(self):
+        semana = self.semana_actual
+
+        if semana == 0:
+            return None
+
+        return self.plan.fases.filter(
+            semana_inicio__lte=semana,
+            semana_fin__gte=semana,
+            activo=True,
+        ).first()
+
+    def clean(self):
+        errores = {}
+
+        if (
+            self.fecha_fin is not None
+            and self.fecha_fin < self.fecha_inicio
+        ):
+            errores["fecha_fin"] = (
+                "La fecha final no puede ser anterior al inicio."
+            )
+
+        if (
+            self.usuario_id
+            and self.estado == EstadoAsignacionChoice.ACTIVO
+        ):
+            otra_asignacion = AsignacionPlanUsuario.objects.filter(
+                usuario=self.usuario,
+                estado=EstadoAsignacionChoice.ACTIVO,
+            ).exclude(pk=self.pk)
+
+            if otra_asignacion.exists():
+                errores["estado"] = (
+                    "El usuario ya tiene otro plan activo."
+                )
+
+        if errores:
+            raise ValidationError(errores)
+
+    def __str__(self):
+        return (
+            f"{self.usuario.get_full_name() or self.usuario.username} - "
+            f"{self.plan.nombre}"
+        )
+
+    class Meta:
+        ordering = [
+            "-fecha_inicio",
+            "usuario",
+        ]
+        verbose_name = "Plan asignado a usuario"
+        verbose_name_plural = "Planes asignados a usuarios"
+
+class HorarioPlanUsuario(models.Model):
+    asignacion = models.ForeignKey(
+        AsignacionPlanUsuario,
+        on_delete=models.CASCADE,
+        related_name="horarios",
+    )
+    numero_dia_plan = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(7),
+        ],
+    )
+    dia_semana = models.PositiveSmallIntegerField(
+        choices=DiaSemanaChoice.choices,
+    )
+    hora_preferida = models.TimeField(
+        null=True,
+        blank=True,
+    )
+    recordatorio_activo = models.BooleanField(default=True)
+    activo = models.BooleanField(default=True)
+
+    def clean(self):
+        if (
+            self.asignacion_id
+            and self.numero_dia_plan
+            > self.asignacion.plan.dias_por_semana
+        ):
+            raise ValidationError({
+                "numero_dia_plan": (
+                    "Este número supera los días semanales del plan."
+                )
+            })
+
+    def __str__(self):
+        return (
+            f"{self.asignacion.usuario.username} - "
+            f"Día {self.numero_dia_plan} del plan: "
+            f"{self.get_dia_semana_display()}"
+        )
+
+    class Meta:
+        ordering = [
+            "asignacion",
+            "dia_semana",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "asignacion",
+                    "numero_dia_plan",
+                ],
+                name="numero_dia_unico_por_asignacion",
+            ),
+            models.UniqueConstraint(
+                fields=[
+                    "asignacion",
+                    "dia_semana",
+                ],
+                name="dia_semana_unico_por_asignacion",
+            ),
+        ]
+        verbose_name = "Horario del plan"
+        verbose_name_plural = "Horarios del plan"
