@@ -1,5 +1,12 @@
 ﻿from django.contrib import admin
-from gym_project.gym_app.models import Ejercicio, PerfilUsuario
+from gym_project.gym_app.models import (
+    DiaPlan,
+    Ejercicio,
+    EjercicioProgramado,
+    FasePlan,
+    PerfilUsuario,
+    PlanEntrenamiento,
+)
 
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
@@ -107,4 +114,186 @@ class EjercicioAdmin(admin.ModelAdmin):
                 "collapse",
             ),
         }),
+    )
+
+class FasePlanInline(admin.TabularInline):
+    model = FasePlan
+    extra = 0
+    fields = (
+        "orden",
+        "nombre",
+        "semana_inicio",
+        "semana_fin",
+        "activo",
+    )
+    show_change_link = True
+
+
+@admin.register(PlanEntrenamiento)
+class PlanEntrenamientoAdmin(admin.ModelAdmin):
+    list_display = (
+        "nombre",
+        "objetivo",
+        "nivel",
+        "duracion_semanas",
+        "dias_por_semana",
+        "activo",
+    )
+    list_filter = (
+        "objetivo",
+        "nivel",
+        "activo",
+    )
+    search_fields = (
+        "nombre",
+        "descripcion",
+    )
+    readonly_fields = (
+        "slug",
+        "fecha_creacion",
+        "fecha_actualizacion",
+    )
+    inlines = [
+        FasePlanInline,
+    ]
+
+    fieldsets = (
+        ("Información principal", {
+            "fields": (
+                "nombre",
+                "slug",
+                "objetivo",
+                "nivel",
+                "descripcion",
+            )
+        }),
+        ("Programación", {
+            "fields": (
+                "duracion_semanas",
+                "dias_por_semana",
+                "activo",
+            )
+        }),
+        ("Fechas", {
+            "fields": (
+                "fecha_creacion",
+                "fecha_actualizacion",
+            ),
+            "classes": (
+                "collapse",
+            ),
+        }),
+    )
+
+
+class DiaPlanInline(admin.TabularInline):
+    model = DiaPlan
+    extra = 0
+    fields = (
+        "numero",
+        "nombre",
+        "enfoque",
+        "activo",
+    )
+    show_change_link = True
+
+
+@admin.register(FasePlan)
+class FasePlanAdmin(admin.ModelAdmin):
+    list_display = (
+        "plan",
+        "orden",
+        "nombre",
+        "semana_inicio",
+        "semana_fin",
+        "activo",
+    )
+    list_filter = (
+        "plan",
+        "activo",
+    )
+    search_fields = (
+        "nombre",
+        "plan__nombre",
+    )
+    inlines = [
+        DiaPlanInline,
+    ]
+
+
+class EjercicioProgramadoInline(admin.TabularInline):
+    model = EjercicioProgramado
+    extra = 0
+    autocomplete_fields = (
+        "ejercicio",
+    )
+    fields = (
+        "orden",
+        "ejercicio",
+        "series",
+        "repeticiones_min",
+        "repeticiones_max",
+        "duracion_segundos",
+        "distancia_metros",
+        "descanso_segundos",
+        "esfuerzo_objetivo",
+        "obligatorio",
+        "activo",
+    )
+    show_change_link = True
+
+
+@admin.register(DiaPlan)
+class DiaPlanAdmin(admin.ModelAdmin):
+    list_display = (
+        "fase",
+        "numero",
+        "nombre",
+        "enfoque",
+        "activo",
+    )
+    list_filter = (
+        "fase__plan",
+        "fase",
+        "activo",
+    )
+    search_fields = (
+        "nombre",
+        "enfoque",
+        "fase__nombre",
+        "fase__plan__nombre",
+    )
+    inlines = [
+        EjercicioProgramadoInline,
+    ]
+
+
+@admin.register(EjercicioProgramado)
+class EjercicioProgramadoAdmin(admin.ModelAdmin):
+    list_display = (
+        "dia",
+        "orden",
+        "ejercicio",
+        "series",
+        "repeticiones_min",
+        "repeticiones_max",
+        "duracion_segundos",
+        "distancia_metros",
+        "obligatorio",
+        "activo",
+    )
+    list_filter = (
+        "dia__fase__plan",
+        "ejercicio__grupo_muscular",
+        "obligatorio",
+        "activo",
+    )
+    search_fields = (
+        "ejercicio__nombre",
+        "dia__nombre",
+        "dia__fase__nombre",
+        "dia__fase__plan__nombre",
+    )
+    autocomplete_fields = (
+        "ejercicio",
     )
