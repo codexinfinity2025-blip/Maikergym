@@ -276,6 +276,168 @@
                                         {{ programado.notas }}
                                     </p>
                                 {% endif %}
+                                                                {% if sesion_hoy and programado.registro_sesion %}
+                                    {% if programado.registro_sesion.completado %}
+                                        <div class="exercise-completed">
+                                            <div class="completed-heading">
+                                                <strong>Ejercicio completado</strong>
+
+                                                <span>
+                                                    +{{ programado.registro_sesion.puntos_obtenidos }}
+                                                    puntos
+                                                </span>
+                                            </div>
+
+                                            <div class="completed-results">
+                                                <span>
+                                                    {{ programado.registro_sesion.series_completadas }}
+                                                    series
+                                                </span>
+
+                                                {% if programado.registro_sesion.repeticiones_realizadas %}
+                                                    <span>
+                                                        {{ programado.registro_sesion.repeticiones_realizadas }}
+                                                        repeticiones
+                                                    </span>
+                                                {% endif %}
+
+                                                {% if programado.registro_sesion.duracion_realizada_segundos %}
+                                                    <span>
+                                                        {{ programado.registro_sesion.duracion_realizada_segundos }}
+                                                        segundos
+                                                    </span>
+                                                {% endif %}
+
+                                                {% if programado.registro_sesion.distancia_realizada_metros %}
+                                                    <span>
+                                                        {{ programado.registro_sesion.distancia_realizada_metros }}
+                                                        metros
+                                                    </span>
+                                                {% endif %}
+
+                                                {% if programado.registro_sesion.peso_utilizado_kg %}
+                                                    <span>
+                                                        {{ programado.registro_sesion.peso_utilizado_kg }}
+                                                        kg
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <form
+                                            class="exercise-completion-form"
+                                            method="POST"
+                                        >
+                                            {% csrf_token %}
+
+                                            <input
+                                                type="hidden"
+                                                name="accion"
+                                                value="completar_ejercicio"
+                                            >
+
+                                            <input
+                                                type="hidden"
+                                                name="ejercicio_sesion_id"
+                                                value="{{ programado.registro_sesion.id }}"
+                                            >
+
+                                            <div class="completion-fields">
+                                                <label>
+                                                    <span>Series realizadas</span>
+
+                                                    <input
+                                                        type="number"
+                                                        name="series_completadas"
+                                                        min="{{ programado.series }}"
+                                                        max="20"
+                                                        value="{{ programado.series }}"
+                                                        required
+                                                    >
+                                                </label>
+
+                                                {% if programado.repeticiones_min %}
+                                                    <label>
+                                                        <span>
+                                                            Repeticiones por serie
+                                                        </span>
+
+                                                        <input
+                                                            type="number"
+                                                            name="repeticiones_realizadas"
+                                                            min="{{ programado.repeticiones_min }}"
+                                                            value="{{ programado.repeticiones_min }}"
+                                                            required
+                                                        >
+                                                    </label>
+                                                {% elif programado.duracion_segundos %}
+                                                    <label>
+                                                        <span>
+                                                            Segundos realizados
+                                                        </span>
+
+                                                        <input
+                                                            type="number"
+                                                            name="duracion_realizada_segundos"
+                                                            min="{{ programado.duracion_segundos }}"
+                                                            value="{{ programado.duracion_segundos }}"
+                                                            required
+                                                        >
+                                                    </label>
+                                                {% elif programado.distancia_metros %}
+                                                    <label>
+                                                        <span>
+                                                            Metros realizados
+                                                        </span>
+
+                                                        <input
+                                                            type="number"
+                                                            name="distancia_realizada_metros"
+                                                            min="{{ programado.distancia_metros }}"
+                                                            value="{{ programado.distancia_metros }}"
+                                                            required
+                                                        >
+                                                    </label>
+                                                {% endif %}
+
+                                                <label>
+                                                    <span>Peso utilizado en kg</span>
+
+                                                    <input
+                                                        type="number"
+                                                        name="peso_utilizado_kg"
+                                                        min="0"
+                                                        max="9999.99"
+                                                        step="0.01"
+                                                        placeholder="Opcional"
+                                                    >
+                                                </label>
+
+                                                <label class="notes-field">
+                                                    <span>Observaciones</span>
+
+                                                    <input
+                                                        type="text"
+                                                        name="observaciones"
+                                                        maxlength="250"
+                                                        placeholder="¿Cómo te sentiste?"
+                                                    >
+                                                </label>
+                                            </div>
+
+                                            <button
+                                                class="complete-exercise-button"
+                                                type="submit"
+                                            >
+                                                Completar ejercicio
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                {% elif not sesion_hoy %}
+                                    <div class="exercise-locked">
+                                        Inicia el entrenamiento para registrar este ejercicio.
+                                    </div>
+                                {% endif %}
                             </div>
                         </article>
                     {% empty %}

@@ -86,6 +86,11 @@ class EstadoSesionChoice(models.TextChoices):
     EN_PROGRESO = "en_progreso", "En progreso"
     COMPLETADA = "completada", "Completada"
 
+class EstadoSerieChoice(models.TextChoices):
+    PENDIENTE = "pendiente", "Pendiente"
+    EN_PROGRESO = "en_progreso", "En progreso"
+    COMPLETADA = "completada", "Completada"
+
 class PerfilUsuario(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol = models.CharField(
@@ -935,3 +940,130 @@ class EjercicioSesion(models.Model):
         ]
         verbose_name = "Ejercicio de una sesión"
         verbose_name_plural = "Ejercicios de las sesiones"
+
+class SerieEjercicioSesion(models.Model):
+    ejercicio_sesion = models.ForeignKey(
+        EjercicioSesion,
+        on_delete=models.CASCADE,
+        related_name="series",
+    )
+    numero = models.PositiveSmallIntegerField(
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(20),
+        ],
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=EstadoSerieChoice.choices,
+        default=EstadoSerieChoice.PENDIENTE,
+    )
+    repeticiones_realizadas = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    duracion_realizada_segundos = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    distancia_realizada_metros = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    peso_utilizado_kg = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(0),
+        ],
+    )
+    fecha_inicio = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    fecha_finalizacion = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    descanso_hasta = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    descanso_omitido = models.BooleanField(
+        default=False,
+    )
+    fecha_actualizacion = models.DateTimeField(
+        auto_now=True,
+    )
+
+    def clean(self):
+        errores = {}
+
+        if self.ejercicio_sesion_id:
+            series_programadas = (
+                self.ejercicio_sesion
+                .ejercicio_programado
+                .series
+            )
+
+            if self.numero > series_programadas:
+                errores["numero"] = (
+                    "El número supera las series programadas."
+                )
+
+        if (
+            self.fecha_inicio is not None
+            and self.fecha_finalizacion is not None
+            and self.fecha_finalizacion < self.fecha_inicio
+        ):
+            errores["fecha_finalizacion"] = (
+                "La finalización no puede ser anterior "
+                "al inicio."
+            )
+
+        if (
+            self.fecha_finalizacion is not None
+            and self.descanso_hasta is not None
+            and self.descanso_hasta < self.fecha_finalizacion
+        ):
+            errores["descanso_hasta"] = (
+                "El descanso no puede terminar antes "
+                "de finalizar la serie."
+            )
+
+        if (
+            self.estado == EstadoSerieChoice.COMPLETADA
+            and self.fecha_finalizacion is None
+        ):
+            errores["estado"] = (
+                "Una serie completada necesita "
+                "fecha de finalización."
+            )
+
+        if errores:
+            raise ValidationError(errores)
+
+    def __str__(self):
+        return (
+            f"{self.ejercicio_sesion} - "
+            f"Serie {self.numero}"
+        )
+
+    class Meta:
+        ordering = [
+            "ejercicio_sesion",
+            "numero",
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "ejercicio_sesion",
+                    "numero",
+                ],
+                name="numero_serie_unico_por_ejercicio",
+            ),
+        ]
+        verbose_name = "Serie realizada"
+        verbose_name_plural = "Series realizadas"

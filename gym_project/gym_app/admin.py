@@ -10,6 +10,7 @@ from gym_project.gym_app.models import (
     PerfilUsuario,
     PlanEntrenamiento,
     SesionEntrenamiento,
+    SerieEjercicioSesion,
 )
 
 @admin.register(PerfilUsuario)
@@ -539,5 +540,32 @@ class EjercicioSesionAdmin(admin.ModelAdmin):
     readonly_fields = (
         "puntos_obtenidos",
         "fecha_completado",
+        "fecha_actualizacion",
+    )
+
+@admin.register(SerieEjercicioSesion)
+class SerieEjercicioSesionAdmin(admin.ModelAdmin):
+    list_display = (
+        "ejercicio_sesion",
+        "numero",
+        "estado",
+        "repeticiones_realizadas",
+        "peso_utilizado_kg",
+        "fecha_inicio",
+        "fecha_finalizacion",
+        "descanso_hasta",
+    )
+    list_filter = (
+        "estado",
+        "descanso_omitido",
+    )
+    search_fields = (
+        "ejercicio_sesion__sesion__asignacion__usuario__username",
+        "ejercicio_sesion__ejercicio_programado__ejercicio__nombre",
+    )
+    autocomplete_fields = (
+        "ejercicio_sesion",
+    )
+    readonly_fields = (
         "fecha_actualizacion",
     )

@@ -15,6 +15,7 @@ from gym_project.gym_app.models import (
 )
 from gym_project.gym_app.services import (
     asignar_plan_por_objetivo,
+    completar_ejercicio_sesion,
     iniciar_sesion_entrenamiento,
 )
 
@@ -402,24 +403,64 @@ def mi_entrenamiento_view(request):
     if request.method == "POST":
         accion = request.POST.get("accion")
 
-        if accion != "iniciar_sesion":
-            messages.error(
-                request,
-                "La acción solicitada no es válida.",
-            )
+        if accion == "iniciar_sesion":
+            if dia_hoy is None:
+                messages.error(
+                    request,
+                    "Hoy no tienes un entrenamiento programado.",
+                )
+            else:
+                try:
+                    sesion, sesion_creada = (
+                        iniciar_sesion_entrenamiento(
+                            asignacion,
+                            dia_hoy,
+                        )
+                    )
+                except ValidationError as error:
+                    messages.error(
+                        request,
+                        " ".join(error.messages),
+                    )
+                else:
+                    if sesion_creada:
+                        messages.success(
+                            request,
+                            "Entrenamiento iniciado correctamente.",
+                        )
+                    else:
+                        messages.success(
+                            request,
+                            "Tu entrenamiento ya estaba iniciado.",
+                        )
 
-        elif dia_hoy is None:
-            messages.error(
-                request,
-                "Hoy no tienes un entrenamiento programado.",
-            )
-
-        else:
+        elif accion == "completar_ejercicio":
             try:
-                sesion, sesion_creada = (
-                    iniciar_sesion_entrenamiento(
-                        asignacion,
-                        dia_hoy,
+                registro, puntos_entregados, sesion = (
+                    completar_ejercicio_sesion(
+                        usuario=request.user,
+                        ejercicio_sesion_id=request.POST.get(
+                            "ejercicio_sesion_id"
+                        ),
+                        series_completadas=request.POST.get(
+                            "series_completadas"
+                        ),
+                        repeticiones_realizadas=request.POST.get(
+                            "repeticiones_realizadas"
+                        ),
+                        duracion_realizada_segundos=request.POST.get(
+                            "duracion_realizada_segundos"
+                        ),
+                        distancia_realizada_metros=request.POST.get(
+                            "distancia_realizada_metros"
+                        ),
+                        peso_utilizado_kg=request.POST.get(
+                            "peso_utilizado_kg"
+                        ),
+                        observaciones=request.POST.get(
+                            "observaciones",
+                            "",
+                        ),
                     )
                 )
             except ValidationError as error:
@@ -428,27 +469,57 @@ def mi_entrenamiento_view(request):
                     " ".join(error.messages),
                 )
             else:
-                if sesion_creada:
+                if puntos_entregados:
                     messages.success(
                         request,
-                        "Entrenamiento iniciado correctamente.",
+                        (
+                            "Ejercicio completado. Ganaste "
+                            f"{registro.puntos_obtenidos} puntos."
+                        ),
                     )
                 else:
-                    messages.success(
+                    messages.info(
                         request,
-                        "Tu entrenamiento ya estaba iniciado.",
+                        "Este ejercicio ya estaba completado.",
                     )
+
+        else:
+            messages.error(
+                request,
+                "La acción solicitada no es válida.",
+            )
 
         return redirect("mi_entrenamiento")
 
-    sesion_hoy = (
-        asignacion.sesiones
-        .filter(fecha=hoy)
-        .prefetch_related(
-            "ejercicios__ejercicio_programado__ejercicio"
+    sesion_hoy = None
+
+    if dia_hoy is not None:
+        sesion_hoy = (
+            asignacion.sesiones
+            .filter(
+                semana_plan=asignacion.semana_actual,
+                dia_plan=dia_hoy,
+            )
+            .prefetch_related(
+                "ejercicios__ejercicio_programado__ejercicio"
+            )
+            .first()
         )
-        .first()
-    )
+
+        registros_por_programado = {}
+
+    if sesion_hoy is not None:
+        registros_por_programado = {
+            registro.ejercicio_programado_id: registro
+            for registro in sesion_hoy.ejercicios.all()
+        }
+
+    for programado in ejercicios_hoy:
+        programado.registro_sesion = (
+            registros_por_programado.get(
+                programado.id
+            )
+        )
 
     context.update({
         "fase_actual": fase_actual,
