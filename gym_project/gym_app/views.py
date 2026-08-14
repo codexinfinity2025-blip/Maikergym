@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_http_methods
 from gym_project.gym_app.models import PerfilUsuario, RolChoice
+from gym_project.gym_app.services import asignar_plan_por_objetivo
 
 DIETAS_POR_OBJETIVO = {
     'estetico': {
@@ -126,6 +127,10 @@ def objetivo(request):
             perfil.dieta_aceptada = False
             perfil.datos_completos = False
             perfil.save()
+            asignar_plan_por_objetivo(
+             request.user,
+            objetivo_elegido,
+)
             return redirect('dieta')
         return render(request, 'objetivo.html', {'error': 'Escoge un objetivo válido.'})
     return render(request, 'objetivo.html', {'perfil': perfil})
