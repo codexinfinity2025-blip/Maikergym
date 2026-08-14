@@ -1,0 +1,419 @@
+.training-page {
+    min-height: calc(100vh - 76px);
+    padding: clamp(28px, 5vw, 72px);
+    color: #ffffff;
+    background:
+        radial-gradient(
+            circle at 85% 8%,
+            rgba(245, 160, 0, 0.22),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 10% 45%,
+            rgba(201, 32, 32, 0.14),
+            transparent 30%
+        ),
+        linear-gradient(145deg, #090a0c, #17191d 55%, #0d0e10);
+}
+
+.training-hero {
+    width: min(1200px, 100%);
+    margin: 0 auto 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.training-eyebrow {
+    display: inline-flex;
+    margin-bottom: 12px;
+    padding: 7px 13px;
+    border: 1px solid rgba(245, 160, 0, 0.55);
+    border-radius: 999px;
+    background: rgba(245, 160, 0, 0.13);
+    color: #ffc247;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.training-hero h1 {
+    margin: 0;
+    font-size: clamp(38px, 6vw, 76px);
+    font-weight: 900;
+    line-height: 0.95;
+}
+
+.training-hero p {
+    margin: 14px 0 0;
+    color: #b7bac2;
+    font-weight: 700;
+}
+
+.active-plan {
+    width: min(330px, 100%);
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-left: 5px solid #f5a000;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+}
+
+.active-plan span,
+.active-plan small {
+    display: block;
+    color: #b7bac2;
+}
+
+.active-plan strong {
+    display: block;
+    margin: 6px 0;
+    font-size: 21px;
+}
+
+.empty-training,
+.rest-card,
+.empty-exercises {
+    width: min(900px, 100%);
+    margin: 40px auto;
+    padding: clamp(28px, 6vw, 64px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.07);
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+.empty-icon {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 18px;
+    place-items: center;
+    border-radius: 50%;
+    background: #f5a000;
+    color: #111111;
+    font-size: 30px;
+    font-weight: 900;
+}
+
+.empty-training h2,
+.rest-card h2 {
+    margin: 0 0 12px;
+    font-size: clamp(28px, 4vw, 45px);
+}
+
+.empty-training p,
+.rest-card p {
+    color: #c3c6cc;
+    line-height: 1.7;
+}
+
+.empty-training a {
+    display: inline-flex;
+    margin-top: 14px;
+    padding: 13px 20px;
+    border-radius: 9px;
+    background: #f5a000;
+    color: #111111;
+    font-weight: 900;
+    text-decoration: none;
+}
+
+.training-summary {
+    width: min(1200px, 100%);
+    margin: 0 auto 42px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.training-summary article {
+    min-height: 118px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid #f5a000;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+.training-summary span {
+    display: block;
+    margin-bottom: 10px;
+    color: #aeb2ba;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.training-summary strong {
+    font-size: 20px;
+}
+
+.weekly-section,
+.today-section {
+    width: min(1200px, 100%);
+    margin: 0 auto 46px;
+}
+
+.section-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 25px;
+    margin-bottom: 20px;
+}
+
+.section-heading span {
+    color: #f5a000;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.section-heading h2 {
+    margin: 5px 0 0;
+    font-size: clamp(27px, 4vw, 43px);
+}
+
+.section-heading p {
+    max-width: 430px;
+    margin: 0;
+    color: #b7bac2;
+    line-height: 1.6;
+}
+
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+}
+
+.week-card {
+    min-height: 145px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.week-card.is-today {
+    border-color: #f5a000;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(245, 160, 0, 0.25),
+            rgba(255, 255, 255, 0.07)
+        );
+    box-shadow: 0 15px 40px rgba(245, 160, 0, 0.16);
+    transform: translateY(-4px);
+}
+
+.week-day {
+    display: block;
+    margin-bottom: 18px;
+    color: #f5a000;
+    font-size: 13px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.week-card strong,
+.week-card small {
+    display: block;
+}
+
+.week-card strong {
+    margin-bottom: 8px;
+    font-size: 18px;
+}
+
+.week-card small {
+    color: #adb1ba;
+}
+
+.day-description {
+    margin: -4px 0 24px;
+    padding: 17px 20px;
+    border-left: 4px solid #f5a000;
+    background: rgba(245, 160, 0, 0.08);
+    color: #d7d9de;
+    line-height: 1.65;
+}
+
+.exercise-list {
+    display: grid;
+    gap: 17px;
+}
+
+.exercise-card {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 20px;
+    padding: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+}
+
+.exercise-card:hover {
+    border-color: rgba(245, 160, 0, 0.55);
+}
+
+.exercise-order {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    border-radius: 13px;
+    background: #f5a000;
+    color: #111111;
+    font-size: 23px;
+    font-weight: 900;
+}
+
+.exercise-information {
+    min-width: 0;
+}
+
+.exercise-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.exercise-title span {
+    color: #f5a000;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.exercise-title h3 {
+    margin: 5px 0 0;
+    font-size: clamp(22px, 3vw, 31px);
+}
+
+.points-badge {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border: 1px solid rgba(245, 160, 0, 0.45);
+    border-radius: 999px;
+    background: rgba(245, 160, 0, 0.13);
+    color: #ffc247;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.exercise-information > p {
+    max-width: 850px;
+    color: #c1c4ca;
+    line-height: 1.65;
+}
+
+.exercise-prescription {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 17px 0;
+}
+
+.exercise-prescription span {
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #d6d8dc;
+    font-size: 14px;
+}
+
+.exercise-prescription strong {
+    color: #ffffff;
+}
+
+.exercise-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #aeb2b9;
+    font-size: 14px;
+}
+
+.optional-badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.exercise-note {
+    margin-bottom: 0;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(201, 32, 32, 0.12);
+    color: #ffb0b0 !important;
+}
+
+.rest-card {
+    border-top: 5px solid #f5a000;
+}
+
+.rest-card > span {
+    color: #f5a000;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+    .training-hero,
+    .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .training-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .active-plan {
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .training-page {
+        padding: 28px 16px 50px;
+    }
+
+    .training-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .exercise-card {
+        grid-template-columns: 1fr;
+    }
+
+    .exercise-title,
+    .exercise-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .points-badge {
+        align-self: flex-start;
+    }
+
+    .week-card.is-today {
+        transform: none;
+    }
+}

@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Mi entrenamiento{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/mi_entrenamiento.css' %}">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="training-page">
+    <section class="training-hero">
+        <div>
+            <span class="training-eyebrow">
+                Programa personal
+            </span>
+
+            <h1>Mi entrenamiento</h1>
+
+            <p>
+                {{ fecha_hoy|date:"d/m/Y" }}
+            </p>
+        </div>
+
+        {% if asignacion %}
+            <div class="active-plan">
+                <span>Plan activo</span>
+                <strong>{{ asignacion.plan.nombre }}</strong>
+                <small>
+                    {{ asignacion.plan.dias_por_semana }}
+                    días por semana
+                </small>
+            </div>
+        {% endif %}
+    </section>
+
+    {% if not asignacion %}
+        <section class="empty-training">
+            <span class="empty-icon">!</span>
+            <h2>Aún no tienes un plan activo</h2>
+
+            <p>
+                Escoge tu objetivo para recibir un programa
+                de entrenamiento personalizado.
+            </p>
+
+            <a href="{% url 'objetivo' %}">
+                Escoger objetivo
+            </a>
+        </section>
+    {% else %}
+        <section class="training-summary">
+            <article>
+                <span>Semana actual</span>
+
+                <strong>
+                    {{ semana_actual }}
+                    de
+                    {{ asignacion.plan.duracion_semanas }}
+                </strong>
+            </article>
+
+            <article>
+                <span>Fase actual</span>
+
+                <strong>
+                    {% if fase_actual %}
+                        {{ fase_actual.nombre }}
+                    {% else %}
+                        Sin fase disponible
+                    {% endif %}
+                </strong>
+            </article>
+
+            <article>
+                <span>Objetivo</span>
+                <strong>{{ asignacion.plan.get_objetivo_display }}</strong>
+            </article>
+
+            <article>
+                <span>Nivel</span>
+                <strong>{{ asignacion.plan.get_nivel_display }}</strong>
+            </article>
+        </section>
+
+        <section class="weekly-section">
+            <div class="section-heading">
+                <div>
+                    <span>Organización semanal</span>
+                    <h2>Tu semana de entrenamiento</h2>
+                </div>
+
+                <p>
+                    Los días se adaptan al plan que tienes activo.
+                </p>
+            </div>
+
+            <div class="week-grid">
+                {% for elemento in calendario_semana %}
+                    <article
+                        class="week-card
+                        {% if elemento.horario == horario_hoy %}
+                            is-today
+                        {% endif %}"
+                    >
+                        <span class="week-day">
+                            {{ elemento.horario.get_dia_semana_display }}
+                        </span>
+
+                        {% if elemento.dia_plan %}
+                            <strong>{{ elemento.dia_plan.nombre }}</strong>
+
+                            <small>
+                                Día
+                                {{ elemento.horario.numero_dia_plan }}
+                                del plan
+                            </small>
+                        {% else %}
+                            <strong>Entrenamiento pendiente</strong>
+                            <small>Falta configurar este día</small>
+                        {% endif %}
+                    </article>
+                {% empty %}
+                    <p>No hay horarios configurados.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="today-section">
+            {% if horario_hoy and dia_hoy %}
+                <div class="section-heading">
+                    <div>
+                        <span>Entrenamiento de hoy</span>
+                        <h2>{{ dia_hoy.nombre }}</h2>
+                    </div>
+
+                    <p>{{ dia_hoy.enfoque }}</p>
+                </div>
+
+                {% if dia_hoy.descripcion %}
+                    <p class="day-description">
+                        {{ dia_hoy.descripcion }}
+                    </p>
+                {% endif %}
+
+                <div class="exercise-list">
+                    {% for programado in ejercicios_hoy %}
+                        <article class="exercise-card">
+                            <div class="exercise-order">
+                                {{ programado.orden }}
+                            </div>
+
+                            <div class="exercise-information">
+                                <div class="exercise-title">
+                                    <div>
+                                        <span>
+                                            {{ programado.ejercicio.get_grupo_muscular_display }}
+                                        </span>
+
+                                        <h3>
+                                            {{ programado.ejercicio.nombre }}
+                                        </h3>
+                                    </div>
+
+                                    <div class="points-badge">
+                                        +{{ programado.ejercicio.puntos_base }}
+                                        puntos
+                                    </div>
+                                </div>
+
+                                <p>
+                                    {{ programado.ejercicio.descripcion }}
+                                </p>
+
+                                <div class="exercise-prescription">
+                                    <span>
+                                        <strong>{{ programado.series }}</strong>
+                                        series
+                                    </span>
+
+                                    {% if programado.repeticiones_min %}
+                                        <span>
+                                            <strong>
+                                                {% if programado.repeticiones_min == programado.repeticiones_max %}
+                                                    {{ programado.repeticiones_min }}
+                                                {% else %}
+                                                    {{ programado.repeticiones_min }}-{{ programado.repeticiones_max }}
+                                                {% endif %}
+                                            </strong>
+                                            repeticiones
+                                        </span>
+                                    {% elif programado.duracion_segundos %}
+                                        <span>
+                                            <strong>
+                                                {{ programado.duracion_segundos }}
+                                            </strong>
+                                            segundos
+                                        </span>
+                                    {% elif programado.distancia_metros %}
+                                        <span>
+                                            <strong>
+                                                {{ programado.distancia_metros }}
+                                            </strong>
+                                            metros
+                                        </span>
+                                    {% endif %}
+
+                                    <span>
+                                        <strong>
+                                            {{ programado.descanso_segundos }}
+                                        </strong>
+                                        segundos de descanso
+                                    </span>
+
+                                    <span>
+                                        Esfuerzo
+                                        <strong>
+                                            {{ programado.esfuerzo_objetivo }}/10
+                                        </strong>
+                                    </span>
+                                </div>
+
+                                <div class="exercise-footer">
+                                    <span>
+                                        Equipo:
+                                        {{ programado.ejercicio.equipo_necesario|default:programado.ejercicio.get_tipo_equipo_display }}
+                                    </span>
+
+                                    {% if not programado.obligatorio %}
+                                        <span class="optional-badge">
+                                            Opcional
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                {% if programado.notas %}
+                                    <p class="exercise-note">
+                                        {{ programado.notas }}
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% empty %}
+                        <div class="empty-exercises">
+                            Este día todavía no tiene ejercicios.
+                        </div>
+                    {% endfor %}
+                </div>
+            {% elif horario_hoy %}
+                <section class="rest-card">
+                    <span>Configuración pendiente</span>
+                    <h2>El entrenamiento de hoy no está disponible</h2>
+                    <p>
+                        Revisa la configuración del plan desde
+                        el administrador.
+                    </p>
+                </section>
+                     {% else %}
+                <section class="rest-card">
+                    <span>Día de recuperación</span>
+
+                    <h2>Hoy corresponde descanso</h2>
+
+                    <p>
+                        La recuperación también hace parte del progreso.
+                        Descansa, hidrátate y prepárate para la siguiente sesión.
+                    </p>
+                </section>
+            {% endif %}
+        </section>
+    {% endif %}
+</main>
+{% endblock %}

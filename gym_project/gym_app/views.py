@@ -6,7 +6,12 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_http_methods
-from gym_project.gym_app.models import PerfilUsuario, RolChoice
+from django.utils import timezone
+from gym_project.gym_app.models import (
+    EstadoAsignacionChoice,
+    PerfilUsuario,
+    RolChoice,
+)
 from gym_project.gym_app.services import asignar_plan_por_objetivo
 
 DIETAS_POR_OBJETIVO = {
@@ -128,8 +133,8 @@ def objetivo(request):
             perfil.datos_completos = False
             perfil.save()
             asignar_plan_por_objetivo(
-             request.user,
-            objetivo_elegido,
+                request.user,
+                objetivo_elegido,
 )
             return redirect('dieta')
         return render(request, 'objetivo.html', {'error': 'Escoge un objetivo válido.'})
@@ -283,6 +288,126 @@ def cuenta_view(request):
         'peso_actual_value': f'{perfil.peso:.2f}' if perfil.peso is not None else '',
     }
     return render(request, 'cuenta.html', context)
+@login_required(login_url='login')
+@require_http_methods(["GET"])
+def mi_entrenamiento_view(request):
+    perfil = get_perfil(request.user)
+
+    if (
+        perfil.rol == RolChoice.USUARIO
+        and not perfil.personalizacion_completa()
+    ):
+        return redirect(
+            siguiente_paso_personalizacion(perfil)
+        )
+
+    asignacion = (
+        request.user.planes_asignados
+        .filter(
+            estado=EstadoAsignacionChoice.ACTIVO,
+        )
+        .select_related("plan")
+        .prefetch_related("horarios")
+        .first()
+    )
+
+    context = {
+        "perfil": perfil,
+        "asignacion": asignacion,
+        "fase_actual": None,
+        "semana_actual": None,
+        "calendario_semana": [],
+        "horario_hoy": None,
+        "dia_hoy": None,
+        "ejercicios_hoy": [],
+        "fecha_hoy": timezone.localdate(),
+    }
+
+    if asignacion is None:
+        return render(
+            request,
+            "mi_entrenamiento.html",
+            context,
+        )
+
+    fase_actual = asignacion.fase_actual
+    hoy = timezone.localdate()
+
+    dias_fase = {}
+
+    if fase_actual is not None:
+        dias_fase = {
+            dia.numero: dia
+            for dia in (
+                fase_actual.dias
+                .filter(activo=True)
+                .prefetch_related(
+                    "ejercicios_programados__ejercicio"
+                )
+            )
+        }
+
+    horarios = sorted(
+        [
+            horario
+            for horario in asignacion.horarios.all()
+            if horario.activo
+        ],
+        key=lambda horario: horario.dia_semana,
+    )
+
+    calendario_semana = [
+        {
+            "horario": horario,
+            "dia_plan": dias_fase.get(
+                horario.numero_dia_plan
+            ),
+        }
+        for horario in horarios
+    ]
+
+    horario_hoy = next(
+        (
+            horario
+            for horario in horarios
+            if horario.dia_semana == hoy.weekday()
+        ),
+        None,
+    )
+
+    dia_hoy = None
+    ejercicios_hoy = []
+
+    if horario_hoy is not None:
+        dia_hoy = dias_fase.get(
+            horario_hoy.numero_dia_plan
+        )
+
+    if dia_hoy is not None:
+        ejercicios_hoy = [
+            ejercicio_programado
+            for ejercicio_programado
+            in dia_hoy.ejercicios_programados.all()
+            if (
+                ejercicio_programado.activo
+                and ejercicio_programado.ejercicio.activo
+            )
+        ]
+
+    context.update({
+        "fase_actual": fase_actual,
+        "semana_actual": asignacion.semana_actual,
+        "calendario_semana": calendario_semana,
+        "horario_hoy": horario_hoy,
+        "dia_hoy": dia_hoy,
+        "ejercicios_hoy": ejercicios_hoy,
+    })
+
+    return render(
+        request,
+        "mi_entrenamiento.html",
+        context,
+    )
 
 @login_required(login_url='login')
 def panel_moderador_view(request):

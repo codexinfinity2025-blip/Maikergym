@@ -18,6 +18,11 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('cuenta/', views.cuenta_view, name='cuenta'),
+    path(
+    'mi-entrenamiento/',
+    views.mi_entrenamiento_view,
+    name='mi_entrenamiento',
+),
     path('panel-moderador/', views.panel_moderador_view, name='panel_moderador'),
     path('panel-admin/', views.panel_admin_view, name='panel_admin'),
 ]
