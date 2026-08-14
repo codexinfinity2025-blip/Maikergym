@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Entrenamiento en curso{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/reproductor_entrenamiento.css' %}">
+{% endblock %}
+
+{% block content %}
+<main
+    class="workout-player"
+    data-session-id="{{ sesion.id }}"
+>
+    <header class="player-header">
+        <a
+            class="player-back"
+            href="{% url 'mi_entrenamiento' %}"
+            aria-label="Volver a mi entrenamiento"
+        >
+            <span aria-hidden="true">←</span>
+            <span>Salir</span>
+        </a>
+
+        <div class="player-brand">
+            <span class="player-brand-mark">M</span>
+            <div>
+                <strong>MaikerGym</strong>
+                <small>{{ sesion.dia_plan.nombre }}</small>
+            </div>
+        </div>
+
+        <div class="player-progress-copy">
+            <span>{{ series_completadas }} de {{ total_series }} series</span>
+            <strong>{{ progreso_porcentaje }}%</strong>
+        </div>
+    </header>
+
+    <div
+        class="player-progress-bar"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="{{ progreso_porcentaje }}"
+    >
+        <span style="width: {{ progreso_porcentaje }}%;"></span>
+    </div>
+
+    {% if messages %}
+        <div class="player-messages" aria-live="polite">
+            {% for message in messages %}
+                <div class="player-message {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if sesion.estado == "completada" %}
+        <section class="workout-finished">
+            <div class="finished-icon" aria-hidden="true">✓</div>
+            <span class="player-eyebrow">Sesión finalizada</span>
+            <h1>¡Entrenamiento completado!</h1>
+            <p>
+                Terminaste {{ sesion.dia_plan.nombre }} y sumaste
+                <strong>{{ sesion.puntos_obtenidos }} puntos</strong>.
+            </p>
+            <a href="{% url 'mi_entrenamiento' %}">
+                Volver a mi entrenamiento
+            </a>
+        </section>
+    {% elif ejercicio_actual and serie_actual %}
+        {% with programado=ejercicio_actual.ejercicio_programado %}
+            {% with ejercicio=programado.ejercicio %}
+                <section class="player-layout">
+                    <article class="exercise-stage">
+                        <div class="exercise-stage-top">
+                            <div>
+                                <span class="player-eyebrow">
+                                    Ejercicio {{ numero_ejercicio }}
+                                    de {{ total_ejercicios }}
+                                </span>
+                                <h1>{{ ejercicio.nombre }}</h1>
+                            </div>
+
+                            <div class="points-pill">
+                                +{{ ejercicio.puntos_base }} puntos
+                            </div>
+                        </div>
+
+                        <div class="model-shell">
+                            {% if ejercicio.modelo_3d %}
+                                <model-viewer
+                                    id="exerciseModel"
+                                    src="{{ ejercicio.modelo_3d.url }}"
+                                    alt="Demostración 3D de {{ ejercicio.nombre }}"
+                                    camera-controls
+                                    touch-action="pan-y"
+                                    autoplay
+                                    shadow-intensity="1.4"
+                                    exposure="1.05"
+                                    environment-image="neutral"
+                                    interaction-prompt="auto"
+                                    loading="eager"
+                                    {% if ejercicio.imagen_portada %}
+                                        poster="{{ ejercicio.imagen_portada.url }}"
+                                    {% endif %}
+                                ></model-viewer>
+
+                                <div class="model-hint">
+                                    Arrastra para girar · Pellizca para acercar
+                                </div>
+                            {% elif ejercicio.imagen_portada %}
+                                <img
+                                    class="exercise-fallback-image"
+                                    src="{{ ejercicio.imagen_portada.url }}"
+                                    alt="Demostración de {{ ejercicio.nombre }}"
+                                >
+                                <div class="model-missing-badge">
+                                    Modelo 3D pendiente
+                                </div>
+                            {% else %}
+                                <div class="model-placeholder">
+                                    <span class="model-placeholder-icon">3D</span>
+                                    <strong>Demostración 3D pendiente</strong>
+                                    <p>
+                                        Carga el archivo GLB animado de este
+                                        ejercicio desde el administrador.
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="exercise-meta">
+                            <span>
+                                <small>Zona</small>
+                                {{ ejercicio.get_grupo_muscular_display }}
+                            </span>
+                            <span>
+                                <small>Equipo</small>
+                                {{ ejercicio.equipo_necesario|default:ejercicio.get_tipo_equipo_display }}
+                            </span>
+                            <span>
+                                <small>Esfuerzo</small>
+                                {{ programado.esfuerzo_objetivo }}/10
+                            </span>
+                        </div>
+
+                        <details class="technique-card">
+                            <summary>Cómo realizarlo correctamente</summary>
+                            <div class="technique-content">
+                                <p>{{ ejercicio.instrucciones|linebreaksbr }}</p>
+
+                                {% if ejercicio.precauciones %}
+                                    <div class="warning-note">
+                                        <strong>Precaución</strong>
+                                        <p>
+                                            {{ ejercicio.precauciones|linebreaksbr }}
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </details>
+                    </article>
+
+                    <aside class="series-console">
+                        {% if descanso_activo %}
+                            <div class="console-state rest-state">
+                                <span class="console-label">Recuperación</span>
+                                <h2>Tiempo de descanso</h2>
+
+                                <div
+                                    id="restTimer"
+                                    class="rest-timer"
+                                    data-seconds="{{ segundos_descanso }}"
+                                    aria-live="polite"
+                                >
+                                    00:00
+                                </div>
+
+                                <p>
+                                    Respira, hidrátate y prepárate para la
+                                    serie {{ serie_actual.numero }}.
+                                </p>
+
+                                <form method="post" class="player-action-form">
+                                    {% csrf_token %}
+                                    <input
+                                        type="hidden"
+                                        name="accion"
+                                        value="omitir_descanso"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="serie_id"
+                                        value="{{ ultima_serie_completada.id }}"
+                                    >
+                                    <button
+                                        class="secondary-player-button"
+                                        type="submit"
+                                    >
+                                        Omitir descanso
+                                    </button>
+                                </form>
+                            </div>
+                        {% elif serie_en_progreso %}
+                            <div class="console-state active-state">
+                                <span class="console-label">
+                                    Serie en curso
+                                </span>
+                                <h2>
+                                    Serie {{ serie_actual.numero }}
+                                    de {{ programado.series }}
+                                </h2>
+
+                                <div
+                                    id="seriesTimer"
+                                    class="series-timer"
+                                    data-started="{{ serie_en_progreso.fecha_inicio|date:'c' }}"
+                                    aria-live="polite"
+                                >
+                                    00:00
+                                </div>
+
+                                <div class="target-card">
+                                    <small>Objetivo</small>
+
+                                    {% if ejercicio.tipo_medicion == "repeticiones" %}
+                                        <strong>
+                                            {{ programado.repeticiones_min }}
+                                            – {{ programado.repeticiones_max }}
+                                            repeticiones
+                                        </strong>
+                                    {% elif ejercicio.tipo_medicion == "tiempo" %}
+                                        <strong>
+                                            {{ programado.duracion_segundos }}
+                                            segundos
+                                        </strong>
+                                    {% else %}
+                                        <strong>
+                                            {{ programado.distancia_metros }}
+                                            metros
+                                        </strong>
+                                    {% endif %}
+                                </div>
+
+                                <form
+                                    method="post"
+                                    class="player-action-form result-form"
+                                >
+                                    {% csrf_token %}
+                                    <input
+                                        type="hidden"
+                                        name="accion"
+                                        value="completar_serie"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="serie_id"
+                                        value="{{ serie_actual.id }}"
+                                    >
+
+                                    {% if ejercicio.tipo_medicion == "repeticiones" %}
+                                        <label class="quick-field">
+                                            <span>Repeticiones realizadas</span>
+                                            <div class="stepper">
+                                                <button
+                                                    type="button"
+                                                    data-stepper-target="repetitionsInput"
+                                                    data-step="-1"
+                                                    aria-label="Restar una repetición"
+                                                >
+                                                    −
+                                                </button>
+                                                <input
+                                                    id="repetitionsInput"
+                                                    type="number"
+                                                    name="repeticiones_realizadas"
+                                                    min="{{ programado.repeticiones_min }}"
+                                                    value="{{ programado.repeticiones_min }}"
+                                                    required
+                                                >
+                                                <button
+                                                    type="button"
+                                                    data-stepper-target="repetitionsInput"
+                                                    data-step="1"
+                                                    aria-label="Sumar una repetición"
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        </label>
+                                    {% elif ejercicio.tipo_medicion == "tiempo" %}
+                                        <input
+                                            id="durationInput"
+                                            type="hidden"
+                                            name="duracion_realizada_segundos"
+                                            value="0"
+                                        >
+                                    {% else %}
+                                        <label class="quick-field">
+                                            <span>Distancia realizada</span>
+                                            <div class="input-with-unit">
+                                                <input
+                                                    type="number"
+                                                    name="distancia_realizada_metros"
+                                                    min="{{ programado.distancia_metros }}"
+                                                    value="{{ programado.distancia_metros }}"
+                                                    required
+                                                >
+                                                <span>m</span>
+                                            </div>
+                                        </label>
+                                    {% endif %}
+
+                                    <label class="quick-field">
+                                        <span>Peso utilizado (opcional)</span>
+                                        <div class="input-with-unit">
+                                            <input
+                                                type="number"
+                                                name="peso_utilizado_kg"
+                                                min="0"
+                                                step="0.5"
+                                                inputmode="decimal"
+                                                placeholder="0"
+                                            >
+                                            <span>kg</span>
+                                        </div>
+                                    </label>
+
+                                    <button
+                                        class="finish-series-button"
+                                        type="submit"
+                                    >
+                                        <span aria-hidden="true">✓</span>
+                                        Finalizar serie
+                                    </button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <div class="console-state ready-state">
+                                <span class="console-label">
+                                    Listo para comenzar
+                                </span>
+                                <h2>
+                                    Serie {{ serie_actual.numero }}
+                                    de {{ programado.series }}
+                                </h2>
+
+                                <div class="target-card">
+                                    <small>Tu objetivo</small>
+
+                                    {% if ejercicio.tipo_medicion == "repeticiones" %}
+                                        <strong>
+                                            {{ programado.repeticiones_min }}
+                                            – {{ programado.repeticiones_max }}
+                                            repeticiones
+                                        </strong>
+                                    {% elif ejercicio.tipo_medicion == "tiempo" %}
+                                        <strong>
+                                            {{ programado.duracion_segundos }}
+                                            segundos
+                                        </strong>
+                                    {% else %}
+                                        <strong>
+                                            {{ programado.distancia_metros }}
+                                            metros
+                                        </strong>
+                                    {% endif %}
+
+                                    <span>
+                                        Descanso posterior:
+                                        {{ programado.descanso_segundos }} s
+                                    </span>
+                                </div>
+
+                                <form method="post" class="player-action-form">
+                                    {% csrf_token %}
+                                    <input
+                                        type="hidden"
+                                        name="accion"
+                                        value="iniciar_serie"
+                                    >
+                                    <input
+                                        type="hidden"
+                                        name="serie_id"
+                                        value="{{ serie_actual.id }}"
+                                    >
+                                    <button
+                                        class="start-series-button"
+                                        type="submit"
+                                    >
+                                        <span aria-hidden="true">▶</span>
+                                        Comenzar serie
+                                    </button>
+                                </form>
+                            </div>
+                        {% endif %}
+
+                        <div class="series-dots" aria-label="Progreso del ejercicio">
+                            {% for serie in ejercicio_actual.series_ordenadas %}
+                                <span
+                                    class="series-dot {{ serie.estado }}"
+                                    title="Serie {{ serie.numero }}: {{ serie.get_estado_display }}"
+                                >
+                                    {{ serie.numero }}
+                                </span>
+                            {% endfor %}
+                        </div>
+
+                        {% if siguiente_ejercicio %}
+                            <div class="next-exercise">
+                                <small>Siguiente ejercicio</small>
+                                <strong>
+                                    {{ siguiente_ejercicio.ejercicio_programado.ejercicio.nombre }}
+                                </strong>
+                            </div>
+                        {% else %}
+                            <div class="next-exercise">
+                                <small>Último ejercicio</small>
+                                <strong>Termina fuerte</strong>
+                            </div>
+                        {% endif %}
+                    </aside>
+                </section>
+            {% endwith %}
+        {% endwith %}
+    {% else %}
+        <section class="workout-empty">
+            <span aria-hidden="true">!</span>
+            <h1>No hay series disponibles</h1>
+            <p>
+                Revisa la configuración de esta sesión desde el
+                administrador.
+            </p>
+            <a href="{% url 'mi_entrenamiento' %}">Volver</a>
+        </section>
+    {% endif %}
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script
+    type="module"
+    src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"
+></script>
+<script src="{% static 'js/reproductor_entrenamiento.js' %}" defer></script>
+{% endblock %}

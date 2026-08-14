@@ -592,3 +592,35 @@
         transform: none;
     }
 }
+
+
+.session-action-bar {
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.continue-session-button {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px;
+    border: 1px solid rgba(245, 160, 0, 0.55);
+    border-radius: 10px;
+    color: #111111;
+    background: linear-gradient(135deg, #f5a000, #ffc247);
+    box-shadow: 0 14px 30px rgba(245, 160, 0, 0.2);
+    text-decoration: none;
+    font-weight: 900;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.continue-session-button:hover {
+    color: #111111;
+    transform: translateY(-2px);
+    box-shadow: 0 18px 36px rgba(245, 160, 0, 0.3);
+}
+
+.exercise-completion-form {
+    display: none;
+}

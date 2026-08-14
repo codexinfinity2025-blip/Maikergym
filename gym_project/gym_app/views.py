@@ -10,13 +10,20 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from gym_project.gym_app.models import (
     EstadoAsignacionChoice,
+    EstadoSerieChoice,
+    EstadoSesionChoice,
     PerfilUsuario,
     RolChoice,
+    SesionEntrenamiento,
 )
 from gym_project.gym_app.services import (
     asignar_plan_por_objetivo,
+    asegurar_series_sesion,
     completar_ejercicio_sesion,
+    completar_serie_entrenamiento,
+    iniciar_serie_entrenamiento,
     iniciar_sesion_entrenamiento,
+    omitir_descanso_serie,
 )
 
 DIETAS_POR_OBJETIVO = {
@@ -434,6 +441,11 @@ def mi_entrenamiento_view(request):
                             "Tu entrenamiento ya estaba iniciado.",
                         )
 
+                    return redirect(
+                        "reproductor_entrenamiento",
+                        sesion_id=sesion.pk,
+                    )
+
         elif accion == "completar_ejercicio":
             try:
                 registro, puntos_entregados, sesion = (
@@ -534,6 +546,262 @@ def mi_entrenamiento_view(request):
     return render(
         request,
         "mi_entrenamiento.html",
+        context,
+    )
+
+
+@login_required(login_url="login")
+@require_http_methods(["GET", "POST"])
+def reproductor_entrenamiento_view(request, sesion_id):
+    sesion = (
+        SesionEntrenamiento.objects
+        .filter(
+            pk=sesion_id,
+            asignacion__usuario=request.user,
+        )
+        .select_related(
+            "asignacion__plan",
+            "dia_plan__fase",
+        )
+        .first()
+    )
+
+    if sesion is None:
+        messages.error(
+            request,
+            "No se encontró el entrenamiento solicitado.",
+        )
+        return redirect("mi_entrenamiento")
+
+    asegurar_series_sesion(sesion)
+
+    if request.method == "POST":
+        accion = request.POST.get("accion", "")
+        serie_id = request.POST.get("serie_id")
+
+        try:
+            if not str(serie_id or "").isdigit():
+                raise ValidationError(
+                    "La serie seleccionada no es válida."
+                )
+
+            if accion == "iniciar_serie":
+                serie, iniciada = iniciar_serie_entrenamiento(
+                    usuario=request.user,
+                    serie_id=serie_id,
+                )
+
+                if iniciada:
+                    messages.success(
+                        request,
+                        f"Serie {serie.numero} iniciada.",
+                    )
+                else:
+                    messages.info(
+                        request,
+                        "La serie ya estaba en progreso.",
+                    )
+
+            elif accion == "completar_serie":
+                serie, guardada, registro, sesion = (
+                    completar_serie_entrenamiento(
+                        usuario=request.user,
+                        serie_id=serie_id,
+                        repeticiones_realizadas=request.POST.get(
+                            "repeticiones_realizadas"
+                        ),
+                        duracion_realizada_segundos=request.POST.get(
+                            "duracion_realizada_segundos"
+                        ),
+                        distancia_realizada_metros=request.POST.get(
+                            "distancia_realizada_metros"
+                        ),
+                        peso_utilizado_kg=request.POST.get(
+                            "peso_utilizado_kg"
+                        ),
+                    )
+                )
+
+                if not guardada:
+                    messages.info(
+                        request,
+                        "Esta serie ya estaba completada.",
+                    )
+                elif sesion.estado == EstadoSesionChoice.COMPLETADA:
+                    messages.success(
+                        request,
+                        "¡Entrenamiento completado! "
+                        f"Ganaste {sesion.puntos_obtenidos} puntos.",
+                    )
+                elif registro.completado:
+                    messages.success(
+                        request,
+                        "Ejercicio completado. "
+                        f"Ganaste {registro.puntos_obtenidos} puntos.",
+                    )
+                else:
+                    messages.success(
+                        request,
+                        f"Serie {serie.numero} completada.",
+                    )
+
+            elif accion == "omitir_descanso":
+                serie, omitido = omitir_descanso_serie(
+                    usuario=request.user,
+                    serie_id=serie_id,
+                )
+
+                if omitido:
+                    messages.info(
+                        request,
+                        "Descanso omitido. Puedes continuar.",
+                    )
+                else:
+                    messages.info(
+                        request,
+                        "El descanso ya había terminado.",
+                    )
+
+            else:
+                raise ValidationError(
+                    "La acción solicitada no es válida."
+                )
+
+        except ValidationError as error:
+            messages.error(
+                request,
+                " ".join(error.messages),
+            )
+
+        return redirect(
+            "reproductor_entrenamiento",
+            sesion_id=sesion.pk,
+        )
+
+    ejercicios_sesion = list(
+        sesion.ejercicios
+        .filter(
+            ejercicio_programado__activo=True,
+            ejercicio_programado__ejercicio__activo=True,
+        )
+        .select_related(
+            "ejercicio_programado__ejercicio",
+        )
+        .prefetch_related("series")
+        .order_by("ejercicio_programado__orden")
+    )
+
+    series_reproductor = []
+
+    for registro in ejercicios_sesion:
+        registro.series_ordenadas = list(
+            registro.series.all()
+        )
+        series_reproductor.extend(
+            registro.series_ordenadas
+        )
+
+    serie_en_progreso = next(
+        (
+            serie
+            for serie in series_reproductor
+            if serie.estado == EstadoSerieChoice.EN_PROGRESO
+        ),
+        None,
+    )
+    primera_pendiente = next(
+        (
+            serie
+            for serie in series_reproductor
+            if serie.estado == EstadoSerieChoice.PENDIENTE
+        ),
+        None,
+    )
+    serie_actual = serie_en_progreso or primera_pendiente
+    ejercicio_actual = (
+        serie_actual.ejercicio_sesion
+        if serie_actual is not None
+        else None
+    )
+
+    ultima_completada = next(
+        (
+            serie
+            for serie in reversed(series_reproductor)
+            if serie.estado == EstadoSerieChoice.COMPLETADA
+        ),
+        None,
+    )
+    ahora = timezone.now()
+    descanso_activo = bool(
+        serie_actual is not None
+        and serie_en_progreso is None
+        and ultima_completada is not None
+        and ultima_completada.descanso_hasta is not None
+        and not ultima_completada.descanso_omitido
+        and ultima_completada.descanso_hasta > ahora
+    )
+    segundos_descanso = 0
+
+    if descanso_activo:
+        segundos_descanso = (
+            int(
+                (
+                    ultima_completada.descanso_hasta - ahora
+                ).total_seconds()
+            )
+            + 1
+        )
+
+    total_series = len(series_reproductor)
+    series_completadas = sum(
+        1
+        for serie in series_reproductor
+        if serie.estado == EstadoSerieChoice.COMPLETADA
+    )
+    progreso_porcentaje = (
+        round(series_completadas * 100 / total_series)
+        if total_series
+        else 0
+    )
+
+    numero_ejercicio = None
+    siguiente_ejercicio = None
+
+    if ejercicio_actual is not None:
+        for indice, registro in enumerate(
+            ejercicios_sesion,
+            start=1,
+        ):
+            if registro.pk == ejercicio_actual.pk:
+                numero_ejercicio = indice
+
+                if indice < len(ejercicios_sesion):
+                    siguiente_ejercicio = ejercicios_sesion[indice]
+
+                break
+
+    context = {
+        "perfil": get_perfil(request.user),
+        "sesion": sesion,
+        "ejercicios_sesion": ejercicios_sesion,
+        "ejercicio_actual": ejercicio_actual,
+        "serie_actual": serie_actual,
+        "serie_en_progreso": serie_en_progreso,
+        "ultima_serie_completada": ultima_completada,
+        "descanso_activo": descanso_activo,
+        "segundos_descanso": segundos_descanso,
+        "series_completadas": series_completadas,
+        "total_series": total_series,
+        "progreso_porcentaje": progreso_porcentaje,
+        "numero_ejercicio": numero_ejercicio,
+        "total_ejercicios": len(ejercicios_sesion),
+        "siguiente_ejercicio": siguiente_ejercicio,
+    }
+
+    return render(
+        request,
+        "reproductor_entrenamiento.html",
         context,
     )
 

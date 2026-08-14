@@ -154,6 +154,17 @@
                                 {{ sesion_hoy.get_estado_display }}
                             </strong>
                         </div>
+
+                        <a
+                            class="continue-session-button"
+                            href="{% url 'reproductor_entrenamiento' sesion_hoy.id %}"
+                        >
+                            {% if sesion_hoy.estado == "completada" %}
+                                Ver resultados
+                            {% else %}
+                                Continuar entrenamiento
+                            {% endif %}
+                        </a>
                     {% else %}
                         <form method="POST">
                             {% csrf_token %}

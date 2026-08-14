@@ -23,6 +23,11 @@ urlpatterns = [
     views.mi_entrenamiento_view,
     name='mi_entrenamiento',
 ),
+    path(
+        'entrenamiento/sesion/<int:sesion_id>/',
+        views.reproductor_entrenamiento_view,
+        name='reproductor_entrenamiento',
+    ),
     path('panel-moderador/', views.panel_moderador_view, name='panel_moderador'),
     path('panel-admin/', views.panel_admin_view, name='panel_admin'),
 ]

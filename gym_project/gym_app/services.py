@@ -1,7 +1,8 @@
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Max, Sum
 from django.utils import timezone
 
 from .models import (
@@ -556,3 +557,399 @@ def asegurar_series_sesion(sesion):
         )
 
     return len(series_nuevas)
+
+
+@transaction.atomic
+def iniciar_serie_entrenamiento(usuario, serie_id):
+    try:
+        serie_objetivo = (
+            SerieEjercicioSesion.objects
+            .select_related(
+                "ejercicio_sesion__sesion__asignacion",
+            )
+            .get(pk=serie_id)
+        )
+    except SerieEjercicioSesion.DoesNotExist as error:
+        raise ValidationError(
+            "La serie seleccionada no existe."
+        ) from error
+
+    sesion = (
+        SesionEntrenamiento.objects
+        .select_for_update()
+        .select_related("asignacion")
+        .get(pk=serie_objetivo.ejercicio_sesion.sesion_id)
+    )
+
+    if sesion.asignacion.usuario_id != usuario.id:
+        raise ValidationError(
+            "No tienes permiso para usar esta serie."
+        )
+
+    if sesion.estado == EstadoSesionChoice.COMPLETADA:
+        raise ValidationError(
+            "Este entrenamiento ya fue completado."
+        )
+
+    series_sesion = list(
+        SerieEjercicioSesion.objects
+        .select_for_update()
+        .filter(
+            ejercicio_sesion__sesion_id=sesion.pk,
+        )
+        .select_related(
+            "ejercicio_sesion__ejercicio_programado__ejercicio",
+        )
+        .order_by(
+            "ejercicio_sesion__ejercicio_programado__orden",
+            "numero",
+        )
+    )
+
+    serie = next(
+        (
+            item
+            for item in series_sesion
+            if item.pk == serie_objetivo.pk
+        ),
+        None,
+    )
+
+    if serie is None:
+        raise ValidationError(
+            "La serie no pertenece a este entrenamiento."
+        )
+
+    otra_serie_activa = next(
+        (
+            item
+            for item in series_sesion
+            if (
+                item.estado == EstadoSerieChoice.EN_PROGRESO
+                and item.pk != serie.pk
+            )
+        ),
+        None,
+    )
+
+    if otra_serie_activa is not None:
+        raise ValidationError(
+            "Ya existe otra serie en progreso."
+        )
+
+    if serie.estado == EstadoSerieChoice.COMPLETADA:
+        raise ValidationError(
+            "Esta serie ya fue completada."
+        )
+
+    if serie.estado == EstadoSerieChoice.EN_PROGRESO:
+        return serie, False
+
+    serie_actual = next(
+        (
+            item
+            for item in series_sesion
+            if item.estado != EstadoSerieChoice.COMPLETADA
+        ),
+        None,
+    )
+
+    if serie_actual is None or serie_actual.pk != serie.pk:
+        raise ValidationError(
+            "Debes completar primero la serie indicada."
+        )
+
+    ahora = timezone.now()
+    ultima_completada = next(
+        (
+            item
+            for item in reversed(series_sesion)
+            if item.estado == EstadoSerieChoice.COMPLETADA
+        ),
+        None,
+    )
+
+    if (
+        ultima_completada is not None
+        and ultima_completada.descanso_hasta is not None
+        and not ultima_completada.descanso_omitido
+        and ultima_completada.descanso_hasta > ahora
+    ):
+        segundos_restantes = (
+            int(
+                (
+                    ultima_completada.descanso_hasta - ahora
+                ).total_seconds()
+            )
+            + 1
+        )
+        raise ValidationError(
+            f"Aún quedan {segundos_restantes} segundos "
+            "de descanso."
+        )
+
+    serie.estado = EstadoSerieChoice.EN_PROGRESO
+    serie.fecha_inicio = ahora
+    serie.fecha_finalizacion = None
+    serie.descanso_hasta = None
+    serie.descanso_omitido = False
+    serie.full_clean()
+    serie.save(
+        update_fields=[
+            "estado",
+            "fecha_inicio",
+            "fecha_finalizacion",
+            "descanso_hasta",
+            "descanso_omitido",
+            "fecha_actualizacion",
+        ]
+    )
+
+    campos_sesion = []
+
+    if sesion.estado == EstadoSesionChoice.PENDIENTE:
+        sesion.estado = EstadoSesionChoice.EN_PROGRESO
+        campos_sesion.append("estado")
+
+    if sesion.fecha_inicio is None:
+        sesion.fecha_inicio = ahora
+        campos_sesion.append("fecha_inicio")
+
+    if campos_sesion:
+        campos_sesion.append("fecha_actualizacion")
+        sesion.save(update_fields=campos_sesion)
+
+    return serie, True
+
+
+@transaction.atomic
+def completar_serie_entrenamiento(
+    usuario,
+    serie_id,
+    repeticiones_realizadas=None,
+    duracion_realizada_segundos=None,
+    distancia_realizada_metros=None,
+    peso_utilizado_kg=None,
+):
+    try:
+        serie = (
+            SerieEjercicioSesion.objects
+            .select_for_update()
+            .select_related(
+                "ejercicio_sesion__sesion__asignacion",
+                "ejercicio_sesion__ejercicio_programado__ejercicio",
+            )
+            .get(pk=serie_id)
+        )
+    except SerieEjercicioSesion.DoesNotExist as error:
+        raise ValidationError(
+            "La serie seleccionada no existe."
+        ) from error
+
+    registro = serie.ejercicio_sesion
+    sesion = registro.sesion
+    programado = registro.ejercicio_programado
+    ejercicio = programado.ejercicio
+
+    if sesion.asignacion.usuario_id != usuario.id:
+        raise ValidationError(
+            "No tienes permiso para completar esta serie."
+        )
+
+    if serie.estado == EstadoSerieChoice.COMPLETADA:
+        return serie, False, registro, sesion
+
+    if serie.estado != EstadoSerieChoice.EN_PROGRESO:
+        raise ValidationError(
+            "Debes comenzar la serie antes de finalizarla."
+        )
+
+    repeticiones = None
+    duracion = None
+    distancia = None
+
+    if ejercicio.tipo_medicion == TipoMedicionChoice.REPETICIONES:
+        repeticiones = _convertir_entero(
+            repeticiones_realizadas,
+            "las repeticiones de la serie",
+            requerido=True,
+        )
+
+        if (
+            programado.repeticiones_min is not None
+            and repeticiones < programado.repeticiones_min
+        ):
+            raise ValidationError(
+                "Debes realizar al menos "
+                f"{programado.repeticiones_min} repeticiones."
+            )
+
+    elif ejercicio.tipo_medicion == TipoMedicionChoice.TIEMPO:
+        duracion = _convertir_entero(
+            duracion_realizada_segundos,
+            "la duración de la serie en segundos",
+            requerido=True,
+        )
+
+        if (
+            programado.duracion_segundos is not None
+            and duracion < programado.duracion_segundos
+        ):
+            raise ValidationError(
+                "Debes completar al menos "
+                f"{programado.duracion_segundos} segundos."
+            )
+
+    elif ejercicio.tipo_medicion == TipoMedicionChoice.DISTANCIA:
+        distancia = _convertir_entero(
+            distancia_realizada_metros,
+            "la distancia de la serie en metros",
+            requerido=True,
+        )
+
+        if (
+            programado.distancia_metros is not None
+            and distancia < programado.distancia_metros
+        ):
+            raise ValidationError(
+                "Debes completar al menos "
+                f"{programado.distancia_metros} metros."
+            )
+
+    peso = _convertir_decimal(
+        peso_utilizado_kg,
+        "el peso utilizado",
+    )
+
+    ahora = timezone.now()
+    serie.estado = EstadoSerieChoice.COMPLETADA
+    serie.repeticiones_realizadas = repeticiones
+    serie.duracion_realizada_segundos = duracion
+    serie.distancia_realizada_metros = distancia
+    serie.peso_utilizado_kg = peso
+    serie.fecha_finalizacion = ahora
+    serie.descanso_hasta = ahora + timedelta(
+        seconds=programado.descanso_segundos
+    )
+    serie.descanso_omitido = False
+    serie.full_clean()
+    serie.save(
+        update_fields=[
+            "estado",
+            "repeticiones_realizadas",
+            "duracion_realizada_segundos",
+            "distancia_realizada_metros",
+            "peso_utilizado_kg",
+            "fecha_finalizacion",
+            "descanso_hasta",
+            "descanso_omitido",
+            "fecha_actualizacion",
+        ]
+    )
+
+    series_completadas = registro.series.filter(
+        estado=EstadoSerieChoice.COMPLETADA
+    )
+    resumen = series_completadas.aggregate(
+        repeticiones=Sum("repeticiones_realizadas"),
+        duracion=Sum("duracion_realizada_segundos"),
+        distancia=Sum("distancia_realizada_metros"),
+        peso=Max("peso_utilizado_kg"),
+    )
+    cantidad_completada = series_completadas.count()
+
+    registro.series_completadas = cantidad_completada
+    registro.repeticiones_realizadas = resumen["repeticiones"]
+    registro.duracion_realizada_segundos = resumen["duracion"]
+    registro.distancia_realizada_metros = resumen["distancia"]
+    registro.peso_utilizado_kg = resumen["peso"]
+    registro.save(
+        update_fields=[
+            "series_completadas",
+            "repeticiones_realizadas",
+            "duracion_realizada_segundos",
+            "distancia_realizada_metros",
+            "peso_utilizado_kg",
+            "fecha_actualizacion",
+        ]
+    )
+
+    if cantidad_completada >= programado.series:
+        registro, _, sesion = completar_ejercicio_sesion(
+            usuario=usuario,
+            ejercicio_sesion_id=registro.pk,
+            series_completadas=cantidad_completada,
+            repeticiones_realizadas=resumen["repeticiones"],
+            duracion_realizada_segundos=resumen["duracion"],
+            distancia_realizada_metros=resumen["distancia"],
+            peso_utilizado_kg=resumen["peso"],
+        )
+
+    return serie, True, registro, sesion
+
+
+@transaction.atomic
+def omitir_descanso_serie(usuario, serie_id):
+    try:
+        serie = (
+            SerieEjercicioSesion.objects
+            .select_for_update()
+            .select_related(
+                "ejercicio_sesion__sesion__asignacion",
+            )
+            .get(pk=serie_id)
+        )
+    except SerieEjercicioSesion.DoesNotExist as error:
+        raise ValidationError(
+            "La serie seleccionada no existe."
+        ) from error
+
+    sesion = serie.ejercicio_sesion.sesion
+
+    if sesion.asignacion.usuario_id != usuario.id:
+        raise ValidationError(
+            "No tienes permiso para modificar este descanso."
+        )
+
+    if serie.estado != EstadoSerieChoice.COMPLETADA:
+        raise ValidationError(
+            "Solo puedes omitir el descanso de una serie completada."
+        )
+
+    ultima_completada = (
+        SerieEjercicioSesion.objects
+        .select_for_update()
+        .filter(
+            ejercicio_sesion__sesion_id=sesion.pk,
+            estado=EstadoSerieChoice.COMPLETADA,
+        )
+        .order_by(
+            "-fecha_finalizacion",
+            "-pk",
+        )
+        .first()
+    )
+
+    if ultima_completada is None or ultima_completada.pk != serie.pk:
+        raise ValidationError(
+            "Solo puedes omitir el descanso de la última serie."
+        )
+
+    if serie.descanso_omitido:
+        return serie, False
+
+    if (
+        serie.descanso_hasta is None
+        or serie.descanso_hasta <= timezone.now()
+    ):
+        return serie, False
+
+    serie.descanso_omitido = True
+    serie.save(
+        update_fields=[
+            "descanso_omitido",
+            "fecha_actualizacion",
+        ]
+    )
+
+    return serie, True
