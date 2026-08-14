@@ -25,13 +25,15 @@
         <form class="photo-box" method="POST" enctype="multipart/form-data" data-ajax-form>
             {% csrf_token %}
             <input type="hidden" name="accion" value="actualizar_foto">
-            <label for="foto-perfil" class="photo-preview {% if perfil.foto %}has-preview{% endif %}">
-                {% if perfil.foto %}
+             <label for="foto-perfil" class="photo-preview {% if perfil.foto_disponible %}has-preview{% endif %}">
+                {% if perfil.foto_disponible %}
                     <img src="{{ perfil.foto.url }}" alt="Foto de perfil">
                 {% else %}
                     <span>{{ user.first_name|first|default:"M" }}</span>
                 {% endif %}
-            </label>
+</label>
+</label>
+             
             <input id="foto-perfil" type="file" name="foto" accept="image/*">
             <button type="submit">Cambiar foto</button>
         </form>
