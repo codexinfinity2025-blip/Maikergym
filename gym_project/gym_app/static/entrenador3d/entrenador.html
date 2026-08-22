@@ -884,7 +884,9 @@
             lat_pulldown: { joint: 'elbow', min: 60, max: 174 },
             leg_press: { joint: 'knee', min: 70, max: 175 },
             rdl: { joint: 'knee', min: 145, max: 179 },
-            hip_thrust: { joint: 'knee', min: 72, max: 112 },
+            // En la posición inferior la cadera desciende por debajo de la
+            // rodilla; por eso el ángulo válido es menor que en el bloqueo.
+            hip_thrust: { joint: 'knee', min: 54, max: 112 },
             leg_extension: { joint: 'knee', min: 82, max: 175 },
             leg_curl: { joint: 'knee', min: 42, max: 175 },
             hip_abduction: { joint: 'knee', min: 78, max: 105 },
@@ -2473,8 +2475,8 @@
             // La pelvis se desplaza verticalmente fuera del banco. El pequeño
             // ajuste posterior conserva el pliegue de la cadera bajo la barra
             // sin trasladar los pies ni convertir el gesto en un puente lumbar.
-            const pelvisDrop = THREE.MathUtils.lerp(-.585, -.45, amount);
-            const pelvisZ = THREE.MathUtils.lerp(-.20, -.22, amount);
+            const pelvisDrop = THREE.MathUtils.lerp(-.68, -.45, amount);
+            const pelvisZ = THREE.MathUtils.lerp(-.145, -.22, amount);
             const pelvisTilt = THREE.MathUtils.lerp(-.78, -.98, amount);
             setPelvisTransform(pelvisDrop, pelvisZ, pelvisTilt);
 
@@ -2482,14 +2484,14 @@
             // acompaña la pelvis como una unidad; arriba queda casi horizontal.
             // Estos extremos compensan exactamente el ascenso de la pelvis:
             // el centro escapular queda prácticamente inmóvil sobre el banco.
-            const spineY = THREE.MathUtils.lerp(.13, -.17, amount);
+            const spineY = THREE.MathUtils.lerp(.34, -.17, amount);
             const spineZ = -Math.sqrt(Math.max(1 - spineY * spineY, .001));
             setSpine([0, spineY, spineZ], [0, spineY, spineZ]);
 
             // Los pies permanecen plantados y las tibias verticales. La rodilla
             // se mantiene sobre el tobillo; en el bloqueo superior alcanza los
             // 90 grados sin que el talón se levante del suelo.
-            const thighY = THREE.MathUtils.lerp(.31, 0, amount);
+            const thighY = THREE.MathUtils.lerp(.57, 0, amount);
             const thighZ = Math.sqrt(Math.max(1 - thighY * thighY, .001));
             setLegs(
                 [.065, thighY, thighZ],
@@ -2508,12 +2510,18 @@
             const headRest = boneStates.supineAxialRest?.find(state => state.bone === head);
             if (neck && neckRest) {
                 neck.quaternion.copy(neckRest.quaternion);
-                reusable.poseQ.setFromAxisAngle(reusable.fingerAxis, .24);
+                reusable.poseQ.setFromAxisAngle(
+                    reusable.fingerAxis,
+                    THREE.MathUtils.lerp(.34, .18, amount)
+                );
                 neck.quaternion.multiply(reusable.poseQ);
             }
             if (head && headRest) {
                 head.quaternion.copy(headRest.quaternion);
-                reusable.poseQ.setFromAxisAngle(reusable.fingerAxis, .10);
+                reusable.poseQ.setFromAxisAngle(
+                    reusable.fingerAxis,
+                    THREE.MathUtils.lerp(.14, .06, amount)
+                );
                 head.quaternion.multiply(reusable.poseQ);
             }
             currentModel.updateMatrixWorld(true);
@@ -2540,8 +2548,8 @@
             // palmas. Un ajuste mínimo la deja sobre la cresta ilíaca, mientras
             // los discos heredan exactamente la misma matriz.
             boneStates.pelvis.getWorldPosition(reusable.mid);
-            bar.position.y = reusable.mid.y + .075;
-            bar.position.z = reusable.mid.z + .055;
+            bar.position.y = reusable.mid.y + .12;
+            bar.position.z = reusable.mid.z + .105;
         }
 
         function poseLegExtension(a) {
