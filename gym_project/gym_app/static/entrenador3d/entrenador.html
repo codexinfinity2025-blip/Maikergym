@@ -2262,13 +2262,16 @@
 
         function standingLowerBody(amount = 0, depth = 0) {
             const knee = depth * amount;
-            setPelvisTransform(-knee * .40, knee * .15, knee * .20);
+            const footLockThighX = THREE.MathUtils.lerp(.05, .0397, knee);
+            setPelvisTransform(-knee * .3860, -knee * .0354, knee * .20);
             setSpine([0, 1, knee * .30], [0, 1, knee * .22]);
             setLegs(
-                [.05 + knee * .09, -1 + knee * .62, knee * .72],
-                [-.05 - knee * .09, -1 + knee * .62, knee * .72],
+                [footLockThighX, -1 + knee * .62, knee * .72],
+                [-footLockThighX, -1 + knee * .62, knee * .72],
                 [.02, -1 + knee * .38, -knee * .72],
-                [-.02, -1 + knee * .38, -knee * .72]
+                [-.02, -1 + knee * .38, -knee * .72],
+                [0, -.18, .984],
+                [0, -.18, .984]
             );
         }
 
