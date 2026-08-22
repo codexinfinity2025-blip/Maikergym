@@ -1216,8 +1216,14 @@
                 rubberMaterial,
                 new THREE.Vector3(angle, 0, 0)
             );
-            const legFront = addEquipmentBox('bench-leg-front', new THREE.Vector3(.09, y * 1.8, .09), new THREE.Vector3(0, y * .48, z + length * .32));
-            const legRear = addEquipmentBox('bench-leg-rear', new THREE.Vector3(.09, y * 1.8, .09), new THREE.Vector3(0, y * .48, z - length * .32));
+            // Las patas terminan exactamente en el suelo. La fórmula anterior
+            // multiplicaba la altura y hacía que atravesaran la plataforma.
+            const legHeight = Math.max(y - .045, .12);
+            const legCenterY = legHeight * .5;
+            const legFront = addEquipmentBox('bench-leg-front', new THREE.Vector3(.09, legHeight, .09), new THREE.Vector3(0, legCenterY, z + length * .32));
+            const legRear = addEquipmentBox('bench-leg-rear', new THREE.Vector3(.09, legHeight, .09), new THREE.Vector3(0, legCenterY, z - length * .32));
+            legFront.userData.baseHeight = legHeight;
+            legRear.userData.baseHeight = legHeight;
             bench.userData.legFront = legFront;
             bench.userData.legRear = legRear;
             bench.userData.length = length;
@@ -1326,9 +1332,10 @@
                     }
                     break;
                 case 'bench_barbell':
-                    addBench({ y: .44, z: .02, length: 1.78 });
-                    addEquipmentBox('rack-left', new THREE.Vector3(.07, 1.25, .07), new THREE.Vector3(-.67, .63, .55));
-                    addEquipmentBox('rack-right', new THREE.Vector3(.07, 1.25, .07), new THREE.Vector3(.67, .63, .55));
+                    movingBench = addBench({ y: .44, z: .02, length: 1.78 });
+                    // El rack queda fuera del encuadre técnico: sus postes
+                    // ocultaban codos y muñecas desde la vista de tres cuartos.
+                    // La demostración comienza con la barra ya asegurada.
                     break;
                 case 'leg_press':
                     addEquipmentBox('leg-press-back', new THREE.Vector3(.72, .10, .88), new THREE.Vector3(0, .42, -.30), padMaterial, new THREE.Vector3(-.58, 0, 0));
@@ -2268,18 +2275,18 @@
             );
         }
 
-        function setSupineBase({ incline = 0, pelvisY = -.36, pelvisZ = -.16 } = {}) {
+        function setSupineBase({ incline = 0, pelvisY = -.30, pelvisZ = -.16 } = {}) {
             const vertical = Math.sin(incline);
             const forward = Math.cos(incline);
             setPelvisTransform(pelvisY, pelvisZ, -Math.PI / 2 + incline);
             setSpine([0, vertical, forward], [0, vertical, forward]);
             setLegs(
-                [.05, -.45, .89],
-                [-.05, -.45, .89],
-                [0, -.70, -.714],
-                [0, -.70, -.714],
-                [0, -.18, .984],
-                [0, -.18, .984]
+                [.07, -.40, -.914],
+                [-.07, -.40, -.914],
+                [0, -.995, -.10],
+                [0, -.995, -.10],
+                [0, -.06, -.998],
+                [0, -.06, -.998]
             );
         }
 
@@ -2306,12 +2313,16 @@
             const foreOut = THREE.MathUtils.lerp(-.05, .20, a);
             const foreUp = Math.sqrt(Math.max(1 - foreOut * foreOut - .09 * .09, .01));
             setArms(
-                [out, up, .12],
-                [-out, up, .12],
-                [foreOut, foreUp, .09],
-                [-foreOut, foreUp, .09],
+                [out, up, -.06],
+                [-out, up, -.06],
+                [foreOut, foreUp, -.04],
+                [-foreOut, foreUp, -.04],
                 'pronated_bar'
             );
+            currentModel.updateMatrixWorld(true);
+            // El acolchado sigue el eje real hombros-cadera: cabeza, espalda y
+            // glúteos quedan apoyados, mientras las piernas permanecen libres.
+            syncBenchUnderTorso(.48, .13);
             updateHeldEquipment();
         }
 
@@ -2334,27 +2345,45 @@
         }
 
         function poseRDL(a) {
-            setPelvisTransform(-a * .05, a * .07, a * .58);
-            setSpine([0, 1 - a * .48, a * .76], [0, 1 - a * .48, a * .76]);
-            setLegs([.05, -.99, .14], [-.05, -.99, .14], [0, -.99, -.08], [0, -.99, -.08]);
-            setArms([.22, -.96, .10], [-.22, -.96, .10], [0, -.98, .18], [0, -.98, .18]);
+            // Bisagra de cadera moderada: espalda neutra, rodillas blandas y
+            // barra descendiendo verticalmente pegada a los muslos/espinillas.
+            const torsoY = THREE.MathUtils.lerp(1, .64, a);
+            const torsoZ = THREE.MathUtils.lerp(0, .77, a);
+            setPelvisTransform(-a * .035, a * .035, a * .46);
+            setSpine([0, torsoY, torsoZ], [0, torsoY, torsoZ]);
+            setLegs(
+                [.055, -.996, .075],
+                [-.055, -.996, .075],
+                [0, -.998, -.055],
+                [0, -.998, -.055]
+            );
+            setArms(
+                [.16, -.982, .08],
+                [-.16, -.982, .08],
+                [0, -.996, .085],
+                [0, -.996, .085],
+                'pronated_bar'
+            );
             updateHeldEquipment();
         }
 
         function poseHipThrust(a) {
-            setPelvisTransform(-.78 + a * .28, -.25, -.96);
-            setSpine([0, .20 + a * .06, -.98], [0, .20, -.98]);
-            const calfY = THREE.MathUtils.lerp(-.85, -.99, a);
-            const calfZ = THREE.MathUtils.lerp(-.52, .06, a);
+            // Los hombros permanecen en el banco; la pelvis asciende hasta
+            // alinear hombros-cadera-rodillas sin hiperextender la zona lumbar.
+            setPelvisTransform(THREE.MathUtils.lerp(-.845, -.465, a), -.24, -.96);
+            const spineY = THREE.MathUtils.lerp(.34, .05, a);
+            setSpine([0, spineY, -.999], [0, spineY, -.999]);
+            const calfY = THREE.MathUtils.lerp(-.94, -.998, a);
+            const calfZ = THREE.MathUtils.lerp(-.34, .055, a);
             setLegs(
-                [.06, -.56 + a * .54, .83],
-                [-.06, -.56 + a * .54, .83],
+                [.07, THREE.MathUtils.lerp(-.48, -.03, a), .999],
+                [-.07, THREE.MathUtils.lerp(-.48, -.03, a), .999],
                 [0, calfY, calfZ],
                 [0, calfY, calfZ]
             );
             setArms([.28, -.24, .93], [-.28, -.24, .93], [-.04, -.18, .98], [.04, -.18, .98], 'bar_stabilization');
             currentModel.updateMatrixWorld(true);
-            syncBenchUnderTorso(.22, .18);
+            syncBenchUnderTorso(.08, .15);
             boneStates.pelvis.getWorldPosition(reusable.mid);
             bar.position.set(reusable.mid.x, reusable.mid.y + .05, reusable.mid.z + .10);
             bar.rotation.set(0, 0, Math.PI / 2);
@@ -2373,9 +2402,11 @@
         }
 
         function poseLegCurl(a) {
-            setPelvisTransform(-.38, -.10, Math.PI / 2);
-            setSpine([0, .05, 1], [0, .05, 1]);
-            const kneeBend = .08 + a * 1.14;
+            // El abdomen y la pelvis descansan por encima del banco, no dentro
+            // de él. La flexión nace exclusivamente en la rodilla.
+            setPelvisTransform(-.22, -.08, Math.PI / 2);
+            setSpine([0, .035, 1], [0, .035, 1]);
+            const kneeBend = .06 + a * 1.08;
             setLegs(
                 [.06, -.03, -1],
                 [-.06, -.03, -1],
@@ -2439,9 +2470,15 @@
 
         function poseShoulderPress(a) {
             seatedLowerBody({ torsoBack: .04 });
-            const lateral = THREE.MathUtils.lerp(.72, .16, a);
-            const vertical = THREE.MathUtils.lerp(.55, .98, a);
-            setArms([lateral, vertical, .12], [-lateral, vertical, .12], [.04, .995, .05], [-.04, .995, .05]);
+            const lateral = THREE.MathUtils.lerp(.92, .18, a);
+            const vertical = THREE.MathUtils.lerp(.36, .984, a);
+            setArms(
+                [lateral, vertical, .08],
+                [-lateral, vertical, .08],
+                [.02, .999, .025],
+                [-.02, .999, .025],
+                'neutral_dumbbell'
+            );
             syncSeatedMachineContacts();
             updateHeldEquipment();
         }
@@ -2474,11 +2511,17 @@
             // la mano termina delante del abdomen. La versión anterior llevaba
             // también el antebrazo hacia atrás y dejaba el agarre detrás de la
             // pelvis, una posición imposible y peligrosa de imitar.
-            const upperZ = THREE.MathUtils.lerp(.99, -.92, a);
-            const upperY = THREE.MathUtils.lerp(-.10, -.35, a);
-            const foreY = THREE.MathUtils.lerp(-.08, .08, a);
-            const foreZ = THREE.MathUtils.lerp(.997, .98, a);
-            setArms([.14, upperY, upperZ], [-.14, upperY, upperZ], [.05, foreY, foreZ], [-.05, foreY, foreZ]);
+            const upperZ = THREE.MathUtils.lerp(.975, -.68, a);
+            const upperY = THREE.MathUtils.lerp(-.18, -.72, a);
+            const foreY = THREE.MathUtils.lerp(-.04, -.18, a);
+            const foreZ = THREE.MathUtils.lerp(.998, .982, a);
+            setArms(
+                [.14, upperY, upperZ],
+                [-.14, upperY, upperZ],
+                [.04, foreY, foreZ],
+                [-.04, foreY, foreZ],
+                'neutral_handle'
+            );
             updateHeldEquipment();
             syncSeatedRowContacts();
             updateCableFromHands(0, .26, .82);
@@ -2608,7 +2651,13 @@
                 heldEquipment[0].position.copy(reusable.equipmentLeft);
                 heldEquipment[1].position.copy(reusable.equipmentRight);
                 const neutralAxisProfiles = ['hammer_curl', 'farmer_walk', 'lateral_raise'];
-                if (neutralAxisProfiles.includes(currentExercise.profile)) {
+                if (currentExercise.profile === 'shoulder_press') {
+                    // En el press vertical los dos mangos quedan horizontales y
+                    // paralelos en el plano frontal. La mano conserva el agarre
+                    // neutro sin transmitir al implemento una torsión espuria.
+                    heldEquipment[0].quaternion.identity();
+                    heldEquipment[1].quaternion.identity();
+                } else if (neutralAxisProfiles.includes(currentExercise.profile)) {
                     // En agarre neutro el eje de la mancuerna va de delante
                     // hacia atrás. Así la muñeca no aparece girada como en un
                     // curl supinado y las placas no atraviesan el antebrazo.
@@ -2748,8 +2797,12 @@
             const length = movingBench.userData.length || .72;
             const legFront = movingBench.userData.legFront;
             const legRear = movingBench.userData.legRear;
-            if (legFront) legFront.position.z = movingBench.position.z + length * .32;
-            if (legRear) legRear.position.z = movingBench.position.z - length * .32;
+            const supportHeight = Math.max(movingBench.position.y - .045, .12);
+            for (const [leg, zDirection] of [[legFront, 1], [legRear, -1]]) {
+                if (!leg) continue;
+                leg.position.set(0, supportHeight * .5, movingBench.position.z + length * .32 * zDirection);
+                leg.scale.y = supportHeight / (leg.userData.baseHeight || supportHeight);
+            }
         }
 
         function syncCalfShoulderPads() {
@@ -3100,7 +3153,7 @@
                 lat_pulldown: 1.03,
                 bench_press: .67,
                 leg_press: .78,
-                hip_thrust: .67,
+                hip_thrust: .53,
                 leg_curl: .62,
                 incline_press: .76,
                 plank: .28,
@@ -3126,6 +3179,7 @@
                 calf_raise: 6.80,
                 rdl: 5.85,
                 bent_row: 5.85,
+                hip_thrust: 7.20,
                 farmer_walk: 5.85,
                 treadmill_walk: 6.10,
                 erg_row: 7.10
@@ -3164,7 +3218,7 @@
             const approvedCount = exerciseCatalog.filter(item => approvedExerciseSlugs.has(item.slug)).length;
             const pendingCount = exerciseCatalog.length - approvedCount;
             exerciseCounter.textContent = approvedExerciseSlugs.has(exercise.slug)
-                ? `${approvedCount} animación aprobada · ${pendingCount} en revisión`
+                ? `${approvedCount} animaciones aprobadas · ${pendingCount} en revisión`
                 : `Revisión técnica pendiente · ejercicio ${index + 1}`;
             muscleChip.textContent = `${exercise.muscleShort} · máscara anatómica`;
             transportExerciseName.textContent = exercise.short;
@@ -3397,7 +3451,7 @@
         selectExercise(initialExercise, false);
         loadAvatar(initialGender);
         window.MaikerGym3D = Object.freeze({
-            version: 'catalogo-revision-tecnica-v4',
+            version: 'catalogo-revision-tecnica-v5',
             exercises: exerciseCatalog.map(exercise => ({
                 slug: exercise.slug,
                 name: exercise.name,
