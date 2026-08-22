@@ -2997,9 +2997,9 @@
         }
 
         function poseKneeRaise(a) {
-            // Offset global fijo: adelanta el avatar 8,5 cm respecto al
+            // Offset global fijo: adelanta el avatar 30 cm respecto al
             // respaldo sin modificar la cinemática ni el ROM de las piernas.
-            currentModel.position.z = .085;
+            currentModel.position.z = .30;
             // Pequeña retroversión al final; el respaldo no recibe un arco
             // lumbar y las piernas no arrastran la pelvis fuera de la máquina.
             setPelvisTransform(-.02 + a * .04, -.06, -a * .10);
