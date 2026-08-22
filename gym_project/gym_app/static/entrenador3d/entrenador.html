@@ -1440,7 +1440,9 @@
                     movingShoulderPadRight = addEquipmentBox('shoulder-pad-right', new THREE.Vector3(.22, .09, .34), new THREE.Vector3(.25, 1.55, .02), padMaterial);
                     break;
                 case 'incline_dumbbells':
-                    movingBench = addBench({ y: .48, z: -.05, length: 1.08, angle: -.36 });
+                    // El respaldo debe ascender en la misma dirección que el
+                    // torso. El signo negativo anterior lo cruzaba en diagonal.
+                    movingBench = addBench({ y: .48, z: -.05, length: 1.08, angle: .36 });
                     heldEquipment.push(addDumbbell('dumbbell-left', new THREE.Vector3()), addDumbbell('dumbbell-right', new THREE.Vector3()));
                     break;
                 case 'dumbbells':
