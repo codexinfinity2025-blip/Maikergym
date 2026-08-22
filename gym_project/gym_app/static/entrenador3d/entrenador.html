@@ -1469,7 +1469,9 @@
                     movingPlatform = addEquipmentBox('training-mat', new THREE.Vector3(.82, .025, 1.95), new THREE.Vector3(0, .015, .12), new THREE.MeshPhysicalMaterial({ color: 0x0c6d9d, roughness: .82 }));
                     break;
                 case 'roman_chair':
-                    movingBack = addEquipmentBox('roman-back', new THREE.Vector3(.66, .76, .09), new THREE.Vector3(0, 1.05, -.14), padMaterial);
+                    // Almohadilla dorsal compacta: sostiene la espalda sin
+                    // convertirse en un panel que cubra pelvis y hombros.
+                    movingBack = addEquipmentBox('roman-back', new THREE.Vector3(.46, .44, .09), new THREE.Vector3(0, 1.20, -.14), padMaterial);
                     movingPadLeft = addEquipmentBox('roman-arm-left', new THREE.Vector3(.18, .08, .52), new THREE.Vector3(-.38, 1.26, .12), padMaterial);
                     movingPadRight = addEquipmentBox('roman-arm-right', new THREE.Vector3(.18, .08, .52), new THREE.Vector3(.38, 1.26, .12), padMaterial);
                     addEquipmentBox('roman-frame', new THREE.Vector3(.09, 1.35, .09), new THREE.Vector3(0, .67, -.14));
@@ -3185,7 +3187,9 @@
             reusable.a.add(reusable.b).multiplyScalar(.5);
             movingBack.position.set(
                 0,
-                (reusable.mid.y + reusable.a.y) * .5 - .14,
+                // Centrada entre zona lumbar y escápulas, por encima de la
+                // pelvis para que el glúteo quede completamente libre.
+                (reusable.mid.y + reusable.a.y) * .5 + .02,
                 // El respaldo queda detrás de la superficie dorsal. El offset
                 // anterior positivo lo colocaba delante y atravesaba el cuerpo.
                 (reusable.mid.z + reusable.a.z) * .5 - .14
