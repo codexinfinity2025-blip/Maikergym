@@ -3092,7 +3092,15 @@
                 heldEquipment[0].position.copy(reusable.equipmentLeft);
                 heldEquipment[1].position.copy(reusable.equipmentRight);
                 const neutralAxisProfiles = ['hammer_curl', 'farmer_walk', 'lateral_raise'];
-                if (currentExercise.profile === 'shoulder_press') {
+                if (currentExercise.profile === 'incline_press') {
+                    // Las manos giran para cerrar el agarre prono, pero las
+                    // mancuernas conservan la orientación vertical que tenían
+                    // antes de esa corrección. Si copiamos directamente el
+                    // cuaternión de la mano, el giro de la muñeca también
+                    // tumba el implemento.
+                    copyGripWorldQuaternion('Left', 'neutral_dumbbell', heldEquipment[0].quaternion);
+                    copyGripWorldQuaternion('Right', 'neutral_dumbbell', heldEquipment[1].quaternion);
+                } else if (currentExercise.profile === 'shoulder_press') {
                     // En el press vertical los dos mangos quedan horizontales y
                     // paralelos en el plano frontal. La mano conserva el agarre
                     // neutro sin transmitir al implemento una torsión espuria.
@@ -3122,6 +3130,31 @@
             bar.position.copy(reusable.equipmentMid);
             bar.quaternion.setFromUnitVectors(reusable.equipmentYAxis, reusable.equipmentDirection.normalize());
             bar.scale.set(1, length, 1);
+        }
+
+        function copyGripWorldQuaternion(side, profileName, targetQuaternion) {
+            const profile = gripProfiles[profileName] || gripProfiles.open_relaxed;
+            const mirror = side === 'Left' ? -1 : 1;
+            const hand = boneStates[`hand${side}`];
+            const restQ = boneStates[`hand${side}RestQ`];
+
+            hand.parent.updateWorldMatrix(true, false);
+            hand.parent.getWorldQuaternion(reusable.parentQ);
+            reusable.wristFlexQ.setFromAxisAngle(reusable.wristFlexAxis, profile.flex);
+            reusable.wristQ.setFromAxisAngle(
+                boneStates[`hand${side}LocalAxis`],
+                profile.roll * mirror
+            );
+            reusable.wristDeviationQ.setFromAxisAngle(
+                reusable.wristDeviationAxis,
+                profile.deviation * mirror
+            );
+            reusable.localQ
+                .copy(restQ)
+                .multiply(reusable.wristFlexQ)
+                .multiply(reusable.wristQ)
+                .multiply(reusable.wristDeviationQ);
+            targetQuaternion.copy(reusable.parentQ).multiply(reusable.localQ);
         }
 
         function updateCableFromHands(anchorX, anchorY, anchorZ) {
