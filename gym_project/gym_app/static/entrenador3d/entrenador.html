@@ -2393,26 +2393,56 @@
             syncPlatformToFeet();
         }
 
-        function poseRDL(a) {
-            // Bisagra de cadera moderada: espalda neutra, rodillas blandas y
-            // barra descendiendo verticalmente pegada a los muslos/espinillas.
-            const torsoY = THREE.MathUtils.lerp(1, .64, a);
-            const torsoZ = THREE.MathUtils.lerp(0, .77, a);
-            setPelvisTransform(-a * .035, a * .035, a * .46);
-            setSpine([0, torsoY, torsoZ], [0, torsoY, torsoZ]);
-            setLegs(
-                [.055, -.996, .075],
-                [-.055, -.996, .075],
-                [0, -.998, -.055],
-                [0, -.998, -.055]
+        function setDeadliftBase(a) {
+            const hinge = THREE.MathUtils.lerp(
+                0,
+                THREE.MathUtils.degToRad(75),
+                a
             );
+            const pelvisBack = THREE.MathUtils.lerp(0, -.045, a);
+
+            // La pelvis es la única articulación que genera la inclinación.
+            // Su altura permanece fija para conservar el apoyo plantar y la
+            // traslación posterior solo compensa la bisagra de cadera.
+            setPelvisTransform(-.052, pelvisBack, hinge);
+
+            // Restaurar los cuaterniones locales originales mantiene pelvis,
+            // columna, cuello y cabeza como una cadena rígida. Al heredar la
+            // rotación de la pelvis, la mirada acompaña al torso sin extender
+            // el cuello ni redondear ningún segmento vertebral.
+            for (const state of boneStates.supineAxialRest) {
+                if (state.bone === boneStates.pelvis) continue;
+                state.bone.position.copy(state.position);
+                state.bone.quaternion.copy(state.quaternion);
+                state.bone.scale.copy(state.scale);
+            }
+            currentModel.updateMatrixWorld(true);
+
+            // Flexión constante cercana a 19°: rodillas blandas, sin convertir
+            // la bisagra en una sentadilla. Los pies conservan su apoyo plano.
+            setLegs(
+                [.045, -.984, .172],
+                [-.045, -.984, .172],
+                [0, -.985, -.173],
+                [0, -.985, -.173],
+                [0, -.18, .984],
+                [0, -.18, .984]
+            );
+        }
+
+        function poseDeadlift(a) {
+            setDeadliftBase(a);
+
+            // Hombros, codos y muñecas quedan alineados por gravedad. El perfil
+            // prono cierra los dedos alrededor de la barra sin quebrar la mano.
             setArms(
-                [.16, -.982, .08],
-                [-.16, -.982, .08],
-                [0, -.996, .085],
-                [0, -.996, .085],
+                [.035, -.999, 0],
+                [-.035, -.999, 0],
+                [0, -1, 0],
+                [0, -1, 0],
                 'pronated_bar'
             );
+            applyGripProfile('pronated_bar');
             updateHeldEquipment();
         }
 
@@ -3060,7 +3090,7 @@
                 squat: poseSquat,
                 bench_press: poseBenchPress,
                 leg_press: poseLegPress,
-                rdl: poseRDL,
+                rdl: poseDeadlift,
                 hip_thrust: poseHipThrust,
                 leg_extension: poseLegExtension,
                 leg_curl: poseLegCurl,
@@ -3246,10 +3276,13 @@
             const obliqueSideProfiles = ['bench_press', 'rdl', 'bent_row', 'incline_press'];
             const isSupinePress = ['bench_press', 'incline_press'].includes(currentExercise.profile);
             const isProneMachine = currentExercise.profile === 'leg_curl';
+            const isDeadlift = currentExercise.profile === 'rdl';
             const technicalSidePosition = isSupinePress
                 ? new THREE.Vector3(distance * .72, targetY + .36, targetZ + distance * .62)
                 : isProneMachine
                     ? new THREE.Vector3(distance * .82, targetY + .46, targetZ + distance * .45)
+                : isDeadlift
+                    ? new THREE.Vector3(distance * .58, targetY + .14, targetZ + distance * .78)
                 : obliqueSideProfiles.includes(currentExercise.profile)
                     ? new THREE.Vector3(distance * .88, targetY + .14, targetZ + distance * .34)
                     : new THREE.Vector3(distance, targetY + .10, targetZ);
