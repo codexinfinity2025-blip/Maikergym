@@ -2488,6 +2488,12 @@
         function setHipThrustBase(a) {
             const amount = THREE.MathUtils.clamp(a, 0, 1);
 
+            // Adelanto global constante: el banco queda bajo las escápulas y no
+            // debajo del cuello, los codos o la pelvis. Al ser constante no
+            // introduce deslizamiento de los pies durante la repetición.
+            currentModel.position.z = .045;
+            currentModel.updateMatrixWorld(true);
+
             // La pelvis se desplaza verticalmente fuera del banco. El pequeño
             // ajuste posterior conserva el pliegue de la cadera bajo la barra
             // sin trasladar los pies ni convertir el gesto en un puente lumbar.
@@ -2528,7 +2534,7 @@
                 neck.quaternion.copy(neckRest.quaternion);
                 reusable.poseQ.setFromAxisAngle(
                     reusable.fingerAxis,
-                    THREE.MathUtils.lerp(.34, .18, amount)
+                    THREE.MathUtils.lerp(.52, .40, amount)
                 );
                 neck.quaternion.multiply(reusable.poseQ);
             }
@@ -2536,7 +2542,7 @@
                 head.quaternion.copy(headRest.quaternion);
                 reusable.poseQ.setFromAxisAngle(
                     reusable.fingerAxis,
-                    THREE.MathUtils.lerp(.14, .06, amount)
+                    THREE.MathUtils.lerp(.24, .18, amount)
                 );
                 head.quaternion.multiply(reusable.poseQ);
             }
@@ -2628,10 +2634,12 @@
                 .normalize();
             if (reusable.hipNormal.y < 0) reusable.hipNormal.multiplyScalar(-1);
 
-            // La combinación mantiene aproximadamente +0.08 en la normal de la
-            // cadera y adelanta la barra sobre el pliegue ilíaco sin incrustarla.
-            const surfaceOffset = THREE.MathUtils.lerp(.12, .084, a);
-            const creaseOffset = THREE.MathUtils.lerp(.04, .08, a);
+            // Offset exacto en el marco corporal: +0.12 sobre la superficie
+            // (Y local) y +0.05 hacia las rodillas (Z local). Las manos se
+            // resuelven después hacia este mismo punto, por lo que la barra no
+            // queda flotando separada del agarre.
+            const surfaceOffset = .12;
+            const creaseOffset = .05;
             reusable.hipAnchor
                 .copy(reusable.hipPelvis)
                 .addScaledVector(reusable.hipNormal, surfaceOffset)
@@ -2653,24 +2661,24 @@
                 .copy(reusable.hipAnchor)
                 .setX(-gripHalfWidth);
 
-            // Los polos dejan los codos a los lados del tronco y ligeramente
-            // apoyados hacia el banco, evitando que se crucen sobre el abdomen.
+            // Los polos dejan los codos abiertos, por encima y por delante del
+            // borde del banco; así no se incrustan en el cojín al descender.
             reusable.hipPoleLeft.set(
-                reusable.hipShoulderLeft.x + .34,
-                reusable.hipScapula.y - .18,
-                reusable.hipScapula.z + .20
+                reusable.hipShoulderLeft.x + .46,
+                reusable.hipScapula.y + .05,
+                reusable.hipScapula.z + .30
             );
             reusable.hipPoleRight.set(
-                reusable.hipShoulderRight.x - .34,
-                reusable.hipScapula.y - .18,
-                reusable.hipScapula.z + .20
+                reusable.hipShoulderRight.x - .46,
+                reusable.hipScapula.y + .05,
+                reusable.hipScapula.z + .30
             );
             reusable.hipWristTargetLeft.copy(reusable.hipTargetLeft);
             reusable.hipWristTargetRight.copy(reusable.hipTargetRight);
 
             // Las iteraciones compensan la longitud de la palma: el objetivo de
             // contacto es el agarre real, no solamente el pivote de la muñeca.
-            for (let iteration = 0; iteration < 7; iteration += 1) {
+            for (let iteration = 0; iteration < 10; iteration += 1) {
                 solveHipThrustArmToTarget(
                     boneStates.upperLeft,
                     boneStates.foreLeft,
