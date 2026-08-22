@@ -1065,6 +1065,22 @@
             equipmentXAxis: new THREE.Vector3(1, 0, 0),
             equipmentZAxis: new THREE.Vector3(0, 0, 1),
             equipmentYAxis: new THREE.Vector3(0, 1, 0),
+            hipScapula: new THREE.Vector3(),
+            hipPelvis: new THREE.Vector3(),
+            hipTangent: new THREE.Vector3(),
+            hipNormal: new THREE.Vector3(),
+            hipAnchor: new THREE.Vector3(),
+            hipTargetLeft: new THREE.Vector3(),
+            hipTargetRight: new THREE.Vector3(),
+            hipWristTargetLeft: new THREE.Vector3(),
+            hipWristTargetRight: new THREE.Vector3(),
+            hipPoleLeft: new THREE.Vector3(),
+            hipPoleRight: new THREE.Vector3(),
+            hipShoulderLeft: new THREE.Vector3(),
+            hipShoulderRight: new THREE.Vector3(),
+            hipGripActualLeft: new THREE.Vector3(),
+            hipGripActualRight: new THREE.Vector3(),
+            hipGripCorrection: new THREE.Vector3(),
             wristPoint: new THREE.Vector3(),
             elbowPoint: new THREE.Vector3(),
             knucklePoint: new THREE.Vector3(),
@@ -2527,29 +2543,176 @@
             currentModel.updateMatrixWorld(true);
         }
 
+        function solveHipThrustArmToTarget(upperInfo, foreInfo, target, poleTarget, sideSign) {
+            currentModel.updateMatrixWorld(true);
+            upperInfo.bone.getWorldPosition(reusable.shoulder);
+
+            reusable.targetDirection.copy(target).sub(reusable.shoulder);
+            const rawDistance = reusable.targetDirection.length();
+            const upperLength = upperInfo.restLength;
+            const foreLength = foreInfo.restLength;
+            const distance = THREE.MathUtils.clamp(
+                rawDistance,
+                Math.abs(upperLength - foreLength) + .003,
+                upperLength + foreLength - .004
+            );
+            reusable.targetDirection.normalize();
+
+            const along = (
+                upperLength * upperLength
+                + distance * distance
+                - foreLength * foreLength
+            ) / (2 * distance);
+            const bendHeight = Math.sqrt(Math.max(
+                upperLength * upperLength - along * along,
+                0
+            ));
+
+            reusable.elbowCircleCenter
+                .copy(reusable.shoulder)
+                .addScaledVector(reusable.targetDirection, along);
+            reusable.bendHint
+                .copy(poleTarget)
+                .sub(reusable.elbowCircleCenter);
+            reusable.bendPerpendicular
+                .copy(reusable.bendHint)
+                .addScaledVector(
+                    reusable.targetDirection,
+                    -reusable.bendHint.dot(reusable.targetDirection)
+                );
+            if (reusable.bendPerpendicular.lengthSq() < .0001) {
+                reusable.bendPerpendicular.set(sideSign, 0, 0);
+            }
+            reusable.bendPerpendicular.normalize();
+
+            reusable.elbow
+                .copy(reusable.elbowCircleCenter)
+                .addScaledVector(reusable.bendPerpendicular, bendHeight);
+            reusable.solvedDirection
+                .copy(reusable.elbow)
+                .sub(reusable.shoulder)
+                .normalize();
+            applyWorldDirection(upperInfo, reusable.solvedDirection);
+            currentModel.updateMatrixWorld(true);
+
+            foreInfo.bone.getWorldPosition(reusable.actualElbow);
+            reusable.solvedDirection
+                .copy(target)
+                .sub(reusable.actualElbow)
+                .normalize();
+            applyWorldDirection(foreInfo, reusable.solvedDirection);
+        }
+
         function poseHipThrust(a) {
             setHipThrustBase(a);
 
-            // Los brazos estabilizan la barra sobre el pliegue de la cadera. La
-            // dirección se adapta al descenso para que manos y antebrazos no
-            // atraviesen el torso ni pierdan el agarre prono.
-            const armDrop = THREE.MathUtils.lerp(-.42, -.15, a);
-            setArms(
-                [.24, armDrop, .94],
-                [-.24, armDrop, .94],
-                [-.03, THREE.MathUtils.lerp(-.25, -.08, a), .99],
-                [.03, THREE.MathUtils.lerp(-.25, -.08, a), .99],
-                'pronated_bar'
-            );
-            applyGripProfile('pronated_bar');
-            updateHeldEquipment();
+            currentModel.updateMatrixWorld(true);
+            boneStates.pelvis.getWorldPosition(reusable.hipPelvis);
+            boneStates.clavicleLeft.getWorldPosition(reusable.a);
+            boneStates.clavicleRight.getWorldPosition(reusable.b);
+            reusable.hipScapula
+                .copy(reusable.a)
+                .add(reusable.b)
+                .multiplyScalar(.5);
 
-            // La llamada anterior orienta la barra por el centro real de ambas
-            // palmas. Un ajuste mínimo la deja sobre la cresta ilíaca, mientras
-            // los discos heredan exactamente la misma matriz.
-            boneStates.pelvis.getWorldPosition(reusable.mid);
-            bar.position.y = reusable.mid.y + .12;
-            bar.position.z = reusable.mid.z + .105;
+            // Base ortonormal solidaria al tronco: el vector tangente une el
+            // apoyo escapular con la cadera y la normal apunta fuera del cuerpo.
+            // Así el anclaje desciende y rota con la pelvis, no en línea recta
+            // respecto al escenario.
+            reusable.hipTangent
+                .copy(reusable.hipPelvis)
+                .sub(reusable.hipScapula)
+                .normalize();
+            reusable.hipNormal
+                .set(0, reusable.hipTangent.z, -reusable.hipTangent.y)
+                .normalize();
+            if (reusable.hipNormal.y < 0) reusable.hipNormal.multiplyScalar(-1);
+
+            // La combinación mantiene aproximadamente +0.08 en la normal de la
+            // cadera y adelanta la barra sobre el pliegue ilíaco sin incrustarla.
+            const surfaceOffset = THREE.MathUtils.lerp(.12, .084, a);
+            const creaseOffset = THREE.MathUtils.lerp(.04, .08, a);
+            reusable.hipAnchor
+                .copy(reusable.hipPelvis)
+                .addScaledVector(reusable.hipNormal, surfaceOffset)
+                .addScaledVector(reusable.hipTangent, creaseOffset);
+
+            boneStates.upperLeft.bone.getWorldPosition(reusable.hipShoulderLeft);
+            boneStates.upperRight.bone.getWorldPosition(reusable.hipShoulderRight);
+            const gripHalfWidth = Math.max(
+                (
+                    Math.abs(reusable.hipShoulderLeft.x)
+                    + Math.abs(reusable.hipShoulderRight.x)
+                ) * .59,
+                .19
+            );
+            reusable.hipTargetLeft
+                .copy(reusable.hipAnchor)
+                .setX(gripHalfWidth);
+            reusable.hipTargetRight
+                .copy(reusable.hipAnchor)
+                .setX(-gripHalfWidth);
+
+            // Los polos dejan los codos a los lados del tronco y ligeramente
+            // apoyados hacia el banco, evitando que se crucen sobre el abdomen.
+            reusable.hipPoleLeft.set(
+                reusable.hipShoulderLeft.x + .34,
+                reusable.hipScapula.y - .18,
+                reusable.hipScapula.z + .20
+            );
+            reusable.hipPoleRight.set(
+                reusable.hipShoulderRight.x - .34,
+                reusable.hipScapula.y - .18,
+                reusable.hipScapula.z + .20
+            );
+            reusable.hipWristTargetLeft.copy(reusable.hipTargetLeft);
+            reusable.hipWristTargetRight.copy(reusable.hipTargetRight);
+
+            // Las iteraciones compensan la longitud de la palma: el objetivo de
+            // contacto es el agarre real, no solamente el pivote de la muñeca.
+            for (let iteration = 0; iteration < 7; iteration += 1) {
+                solveHipThrustArmToTarget(
+                    boneStates.upperLeft,
+                    boneStates.foreLeft,
+                    reusable.hipWristTargetLeft,
+                    reusable.hipPoleLeft,
+                    1
+                );
+                solveHipThrustArmToTarget(
+                    boneStates.upperRight,
+                    boneStates.foreRight,
+                    reusable.hipWristTargetRight,
+                    reusable.hipPoleRight,
+                    -1
+                );
+                applyGripProfile('pronated_bar');
+                currentModel.updateMatrixWorld(true);
+
+                boneStates.handLeft.getWorldPosition(reusable.hipGripActualLeft);
+                boneStates.palmLeft.getWorldPosition(reusable.palmA);
+                reusable.hipGripActualLeft.lerp(reusable.palmA, .68);
+                reusable.hipGripCorrection
+                    .copy(reusable.hipTargetLeft)
+                    .sub(reusable.hipGripActualLeft);
+                reusable.hipWristTargetLeft.add(reusable.hipGripCorrection);
+
+                boneStates.handRight.getWorldPosition(reusable.hipGripActualRight);
+                boneStates.palmRight.getWorldPosition(reusable.palmB);
+                reusable.hipGripActualRight.lerp(reusable.palmB, .68);
+                reusable.hipGripCorrection
+                    .copy(reusable.hipTargetRight)
+                    .sub(reusable.hipGripActualRight);
+                reusable.hipWristTargetRight.add(reusable.hipGripCorrection);
+            }
+
+            applyGripProfile('pronated_bar');
+            currentModel.updateMatrixWorld(true);
+            // La barra se coloca entre las palmas reales; no recibe ningún
+            // desplazamiento mundial posterior que pueda separarla del agarre.
+            updateHeldEquipment();
+            stage.dataset.hipAnchorError = bar.position
+                .distanceTo(reusable.hipAnchor)
+                .toFixed(4);
         }
 
         function poseLegExtension(a) {
