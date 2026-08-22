@@ -1608,10 +1608,14 @@
             boneStates.handRightRestQ = byName.hand_r.quaternion.clone();
             boneStates.spineBase = restInfo(byName.spine_01, byName.spine_02);
             boneStates.spineUpper = restInfo(byName.spine_02, byName.spine_03);
-            boneStates.spineTop = restInfo(byName.spine_03, byName.neck_01);
-            boneStates.neckAxis = restInfo(byName.neck_01, byName.Head);
-            boneStates.head = byName.Head;
-            boneStates.headRestPosition = byName.Head.position.clone();
+            boneStates.supineAxialRest = [
+                'pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head'
+            ].map(name => ({
+                bone: byName[name],
+                position: byName[name].position.clone(),
+                quaternion: byName[name].quaternion.clone(),
+                scale: byName[name].scale.clone()
+            }));
             boneStates.thighLeft = restInfo(byName.thigh_l, byName.calf_l);
             boneStates.thighRight = restInfo(byName.thigh_r, byName.calf_r);
             boneStates.calfLeft = restInfo(byName.calf_l, byName.foot_l);
@@ -2279,46 +2283,33 @@
             );
         }
 
-        function setSupineBase({ incline = 0, pelvisY = -.11, pelvisZ = -.16 } = {}) {
-            // Un único eje longitudinal gobierna pelvis, columna, cuello y
-            // cabeza. En banco plano vale [0, 0, 1], por lo que toda la cadena
-            // queda inmóvil y horizontal durante la repetición.
-            const axialY = Math.sin(incline);
-            const axialZ = Math.cos(incline);
-            const axialDirection = [0, axialY, axialZ];
-
-            // -PI/2 convierte el avatar de bipedestación a decúbito supino.
-            // El offset -0.11 eleva la espalda sobre la cara superior del pad.
-            setPelvisTransform(pelvisY, pelvisZ, -Math.PI / 2 + incline);
-            setSpine(axialDirection, axialDirection);
-            applyPoseDirection(boneStates.spineTop, ...axialDirection);
-            currentModel.updateMatrixWorld(true);
-            applyPoseDirection(boneStates.neckAxis, ...axialDirection);
-
-            // El cuello ya comparte el eje del tórax. La cabeza queda con una
-            // rotación local neutra (0°) para mirar al techo sin flexión X.
-            boneStates.head.position.copy(boneStates.headRestPosition);
-            boneStates.head.quaternion.identity();
+        function setSupineBase({ incline = 0, rootY = .45, rootZ = 0 } = {}) {
+            // La postura supina se aplica al contenedor completo del avatar.
+            // Ningún hueso axial compensa ni cancela esta transformación.
+            currentModel.position.set(0, rootY, rootZ);
+            currentModel.rotation.set(-Math.PI / 2 + incline, 0, 0);
             currentModel.updateMatrixWorld(true);
 
-            // Abducción moderada de cadera para sacar las rodillas del ancho
-            // del banco; tibias verticales y pies apoyados en el suelo.
+            // Un vector [0,0,0] no puede utilizarse con setSpine porque el motor
+            // lo normaliza. La neutralidad correcta de este rig consiste en
+            // restaurar los cuaterniones locales originales del GLTF.
+            for (const state of boneStates.supineAxialRest) {
+                state.bone.position.copy(state.position);
+                state.bone.quaternion.copy(state.quaternion);
+                state.bone.scale.copy(state.scale);
+            }
+            currentModel.updateMatrixWorld(true);
+
+            // Las piernas sí se articulan después de rotar la raíz: rodillas a
+            // los lados del banco, tibias hacia el suelo y pies en apoyo plano.
             setLegs(
-                [.40, -.82, -.42],
-                [-.40, -.82, -.42],
-                [0, -.995, -.10],
-                [0, -.995, -.10],
-                [0, -.08, -.997],
-                [0, -.08, -.997]
+                [.45, -.25, .86],
+                [-.45, -.25, .86],
+                [0, -.62, .785],
+                [0, -.62, .785],
+                [0, -.04, .999],
+                [0, -.04, .999]
             );
-
-            // Compensa diferencias de talla entre los avatares masculino y
-            // femenino: el tobillo queda a 7.5 cm del plano Y=0 para que la
-            // planta, no el centro del hueso, sea la que contacte el suelo.
-            boneStates.footLeft.bone.getWorldPosition(reusable.a);
-            boneStates.footRight.bone.getWorldPosition(reusable.b);
-            const ankleY = (reusable.a.y + reusable.b.y) * .5;
-            currentModel.position.y += .075 - ankleY;
             currentModel.updateMatrixWorld(true);
         }
 
@@ -2344,14 +2335,14 @@
             // con los hombros. El cambio de Z crea el recorrido diagonal real.
             const upperOut = THREE.MathUtils.lerp(.65, .45, a);
             const upperY = THREE.MathUtils.lerp(-.42, .95, a);
-            const upperZ = THREE.MathUtils.lerp(-.44, 0, a);
+            const upperZ = THREE.MathUtils.lerp(.44, 0, a);
 
             // Los antebrazos conservan una componente vertical dominante. La
             // pequeña compensación lateral impide que cambie el ancho de agarre
             // al extender los codos sin torcer la muñeca.
             const foreOut = THREE.MathUtils.lerp(-.12, .20, a);
             const foreY = 1.0;
-            const foreZ = THREE.MathUtils.lerp(-.03, 0, a);
+            const foreZ = THREE.MathUtils.lerp(.03, 0, a);
 
             setArms(
                 [upperOut, upperY, upperZ],
@@ -2485,7 +2476,7 @@
         function poseInclinePress(a) {
             // Banco moderado (~21°): suficiente para enfatizar el pectoral
             // superior sin convertir el gesto en un press de hombro.
-            setSupineBase({ incline: .36, pelvisY: -.36, pelvisZ: -.12 });
+            setSupineBase({ incline: .36, rootY: .48, rootZ: -.05 });
             const out = THREE.MathUtils.lerp(.78, .20, a);
             const up = THREE.MathUtils.lerp(.38, .98, a);
             setArms([out, up, .30], [-out, up, .30], [.05, .96, .28], [-.05, .96, .28]);
@@ -3194,11 +3185,11 @@
             const tallProfiles = ['assisted_pullup'];
             const targetYOverrides = {
                 lat_pulldown: 1.03,
-                bench_press: .67,
+                bench_press: .42,
                 leg_press: .78,
                 hip_thrust: .53,
                 leg_curl: .62,
-                incline_press: .76,
+                incline_press: .55,
                 plank: .28,
                 calf_raise: .88,
                 erg_row: .55,
@@ -3208,17 +3199,19 @@
             const targetY = targetYOverrides[currentExercise.profile]
                 ?? (lowProfiles.includes(currentExercise.profile) ? .73 : tallProfiles.includes(currentExercise.profile) ? 1.14 : .95);
             const targetZOverrides = {
-                bench_press: .26,
+                bench_press: -.88,
                 leg_press: .18,
                 hip_thrust: -.20,
                 leg_curl: -.02,
-                incline_press: .24,
+                incline_press: -.90,
                 plank: .34,
                 erg_row: .38
             };
             const targetZ = targetZOverrides[currentExercise.profile] ?? 0;
             const distanceOverrides = {
                 lat_pulldown: 5.25,
+                bench_press: 6.10,
+                incline_press: 6.20,
                 calf_raise: 6.80,
                 rdl: 5.85,
                 bent_row: 5.85,
