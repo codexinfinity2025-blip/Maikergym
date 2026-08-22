@@ -735,7 +735,7 @@
                 avoid: 'No conviertas la bisagra en sentadilla ni alejes la barra del cuerpo.'
             },
             hip_thrust: {
-                grip: 'bar_stabilization', cycleDuration: 4.8,
+                grip: 'pronated_bar', cycleDuration: 4.8,
                 rom: 'Eleva hasta alinear hombros, cadera y rodillas con costillas contenidas.',
                 contact: 'Escápulas sobre el banco, pies completos y barra acolchada sobre el pliegue de la cadera.',
                 avoid: 'No hiperextiendas la zona lumbar ni termines sobre las puntas de los pies.'
@@ -1175,6 +1175,22 @@
             metalness: .08
         });
 
+        // Discos exclusivos del Hip Thrust. Son hijos de la barra para que
+        // acompañen exactamente su posición, giro y recorrido sobre la cadera.
+        const hipThrustPlateLeft = new THREE.Mesh(
+            new THREE.CylinderGeometry(.145, .145, .055, 32),
+            rubberMaterial
+        );
+        const hipThrustPlateRight = hipThrustPlateLeft.clone();
+        hipThrustPlateLeft.position.y = -.47;
+        hipThrustPlateRight.position.y = .47;
+        for (const plate of [hipThrustPlateLeft, hipThrustPlateRight]) {
+            plate.castShadow = true;
+            plate.receiveShadow = true;
+            plate.visible = false;
+            bar.add(plate);
+        }
+
         function addMachineBox(name, size, position, material = frameMaterial, rotation = null) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), material);
             mesh.name = name;
@@ -1322,6 +1338,9 @@
             cable.visible = isLatPulldown || ['triceps_pushdown', 'seated_row', 'erg_row'].includes(exercise.profile);
             pulley.visible = isLatPulldown || exercise.profile === 'triceps_pushdown';
             bar.visible = ['lat_pulldown', 'squat', 'bench_press', 'rdl', 'hip_thrust', 'bent_row', 'ez_curl', 'triceps_pushdown', 'seated_row', 'erg_row'].includes(exercise.profile);
+            const showHipThrustPlates = exercise.profile === 'hip_thrust';
+            hipThrustPlateLeft.visible = showHipThrustPlates;
+            hipThrustPlateRight.visible = showHipThrustPlates;
             floor.visible = !['leg_press', 'leg_curl', 'plank', 'bench_press', 'incline_press'].includes(exercise.profile);
 
             switch (exercise.equipment) {
@@ -1347,7 +1366,9 @@
                     movingPlatform = addEquipmentBox('leg-press-platform', new THREE.Vector3(1.08, .72, .09), new THREE.Vector3(0, 1.02, .92), rubberMaterial, new THREE.Vector3(-.56, 0, 0));
                     break;
                 case 'hip_thrust':
-                    movingBench = addBench({ y: .48, z: -.50, length: .72 });
+                    // Banco corto y retrasado: su borde delantero queda bajo
+                    // las escápulas, nunca debajo de la pelvis.
+                    movingBench = addBench({ y: .46, z: -.84, length: .44 });
                     break;
                 case 'leg_extension':
                 case 'hip_abduction':
@@ -2446,27 +2467,81 @@
             updateHeldEquipment();
         }
 
-        function poseHipThrust(a) {
-            // Los hombros permanecen en el banco; la pelvis asciende hasta
-            // alinear hombros-cadera-rodillas sin hiperextender la zona lumbar.
-            setPelvisTransform(THREE.MathUtils.lerp(-.845, -.465, a), -.24, -.96);
-            const spineY = THREE.MathUtils.lerp(.34, .05, a);
-            setSpine([0, spineY, -.999], [0, spineY, -.999]);
-            const calfY = THREE.MathUtils.lerp(-.94, -.998, a);
-            const calfZ = THREE.MathUtils.lerp(-.34, .055, a);
+        function setHipThrustBase(a) {
+            const amount = THREE.MathUtils.clamp(a, 0, 1);
+
+            // La pelvis se desplaza verticalmente fuera del banco. El pequeño
+            // ajuste posterior conserva el pliegue de la cadera bajo la barra
+            // sin trasladar los pies ni convertir el gesto en un puente lumbar.
+            const pelvisDrop = THREE.MathUtils.lerp(-.585, -.45, amount);
+            const pelvisZ = THREE.MathUtils.lerp(-.20, -.22, amount);
+            const pelvisTilt = THREE.MathUtils.lerp(-.78, -.98, amount);
+            setPelvisTransform(pelvisDrop, pelvisZ, pelvisTilt);
+
+            // El banco soporta solo la zona dorsal alta. Al bajar, el tronco
+            // acompaña la pelvis como una unidad; arriba queda casi horizontal.
+            // Estos extremos compensan exactamente el ascenso de la pelvis:
+            // el centro escapular queda prácticamente inmóvil sobre el banco.
+            const spineY = THREE.MathUtils.lerp(.13, -.17, amount);
+            const spineZ = -Math.sqrt(Math.max(1 - spineY * spineY, .001));
+            setSpine([0, spineY, spineZ], [0, spineY, spineZ]);
+
+            // Los pies permanecen plantados y las tibias verticales. La rodilla
+            // se mantiene sobre el tobillo; en el bloqueo superior alcanza los
+            // 90 grados sin que el talón se levante del suelo.
+            const thighY = THREE.MathUtils.lerp(.31, 0, amount);
+            const thighZ = Math.sqrt(Math.max(1 - thighY * thighY, .001));
             setLegs(
-                [.07, THREE.MathUtils.lerp(-.48, -.03, a), .999],
-                [-.07, THREE.MathUtils.lerp(-.48, -.03, a), .999],
-                [0, calfY, calfZ],
-                [0, calfY, calfZ]
+                [.065, thighY, thighZ],
+                [-.065, thighY, thighZ],
+                [0, -1, 0],
+                [0, -1, 0],
+                [0, -.04, .999],
+                [0, -.04, .999]
             );
-            setArms([.28, -.24, .93], [-.28, -.24, .93], [-.04, -.18, .98], [.04, -.18, .98], 'bar_stabilization');
+
+            // Flexión cervical continua: la mirada acompaña las rodillas en vez
+            // de perderse hacia el techo. No se altera el resto de la columna.
+            const neck = boneStates.byName?.neck_01;
+            const head = boneStates.byName?.Head;
+            const neckRest = boneStates.supineAxialRest?.find(state => state.bone === neck);
+            const headRest = boneStates.supineAxialRest?.find(state => state.bone === head);
+            if (neck && neckRest) {
+                neck.quaternion.copy(neckRest.quaternion);
+                reusable.poseQ.setFromAxisAngle(reusable.fingerAxis, .24);
+                neck.quaternion.multiply(reusable.poseQ);
+            }
+            if (head && headRest) {
+                head.quaternion.copy(headRest.quaternion);
+                reusable.poseQ.setFromAxisAngle(reusable.fingerAxis, .10);
+                head.quaternion.multiply(reusable.poseQ);
+            }
             currentModel.updateMatrixWorld(true);
-            syncBenchUnderTorso(.08, .15);
+        }
+
+        function poseHipThrust(a) {
+            setHipThrustBase(a);
+
+            // Los brazos estabilizan la barra sobre el pliegue de la cadera. La
+            // dirección se adapta al descenso para que manos y antebrazos no
+            // atraviesen el torso ni pierdan el agarre prono.
+            const armDrop = THREE.MathUtils.lerp(-.42, -.15, a);
+            setArms(
+                [.24, armDrop, .94],
+                [-.24, armDrop, .94],
+                [-.03, THREE.MathUtils.lerp(-.25, -.08, a), .99],
+                [.03, THREE.MathUtils.lerp(-.25, -.08, a), .99],
+                'pronated_bar'
+            );
+            applyGripProfile('pronated_bar');
+            updateHeldEquipment();
+
+            // La llamada anterior orienta la barra por el centro real de ambas
+            // palmas. Un ajuste mínimo la deja sobre la cresta ilíaca, mientras
+            // los discos heredan exactamente la misma matriz.
             boneStates.pelvis.getWorldPosition(reusable.mid);
-            bar.position.set(reusable.mid.x, reusable.mid.y + .05, reusable.mid.z + .10);
-            bar.rotation.set(0, 0, Math.PI / 2);
-            bar.scale.set(1, .90, 1);
+            bar.position.y = reusable.mid.y + .075;
+            bar.position.z = reusable.mid.z + .055;
         }
 
         function poseLegExtension(a) {
@@ -2751,7 +2826,12 @@
             if (!bar.visible) return;
             reusable.equipmentMid.copy(reusable.equipmentLeft).add(reusable.equipmentRight).multiplyScalar(.5);
             reusable.equipmentDirection.copy(reusable.equipmentRight).sub(reusable.equipmentLeft);
-            const length = Math.max(reusable.equipmentDirection.length(), .44);
+            // En Hip Thrust la barra debe sobresalir más allá de las manos para
+            // que los discos queden fuera de la cadera, no encima del agarre.
+            const gripWidth = reusable.equipmentDirection.length();
+            const length = currentExercise.profile === 'hip_thrust'
+                ? Math.max(gripWidth * 1.65, .86)
+                : Math.max(gripWidth, .44);
             bar.position.copy(reusable.equipmentMid);
             bar.quaternion.setFromUnitVectors(reusable.equipmentYAxis, reusable.equipmentDirection.normalize());
             bar.scale.set(1, length, 1);
