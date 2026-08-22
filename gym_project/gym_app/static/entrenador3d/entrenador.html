@@ -717,7 +717,7 @@
                 avoid: 'No abras los codos a 90° ni dobles la muñeca hacia atrás bajo la carga.'
             },
             lat_pulldown: {
-                grip: 'wide_pronated', cycleDuration: 5.0,
+                grip: 'lat_pulldown_pronated', cycleDuration: 5.0,
                 rom: 'Desde brazos casi extendidos hasta la barra frente a la parte alta del pecho.',
                 contact: 'Muslos bajo el rodillo, pies apoyados y palma centrada alrededor de la barra.',
                 avoid: 'No lleves la barra detrás de la nuca, no balancees el torso y no quiebres las muñecas.'
@@ -871,6 +871,7 @@
             pronated_bar: { roll: 1.50, flex: 0, deviation: .02, fingerCurl: .82, thumbOpposition: .56 },
             back_rack_pronated: { roll: 1.48, flex: -.04, deviation: .05, fingerCurl: .84, thumbOpposition: .58 },
             wide_pronated: { roll: Math.PI / 2, flex: 0, deviation: 0, fingerCurl: .86, thumbOpposition: .60 },
+            lat_pulldown_pronated: { roll: 1.50, flex: 0, deviation: 0, fingerCurl: .86, thumbOpposition: .60 },
             pronated_cable: { roll: 1.48, flex: 0, deviation: 0, fingerCurl: .84, thumbOpposition: .58 },
             semi_supinated_ez: { roll: .96, flex: 0, deviation: .04, fingerCurl: .84, thumbOpposition: .58 },
             bar_stabilization: { roll: 1.45, flex: 0, deviation: 0, fingerCurl: .58, thumbOpposition: .38 },
@@ -1833,6 +1834,15 @@
 
         function setSeatedMachinePose() {
             if (!boneStates.thighLeft) return;
+
+            // El press de banca orienta el contenedor completo para acostar al
+            // avatar. El jalón tiene una base propia y no puede heredar esa
+            // matriz: se restaura la raíz antes de colocar pelvis y piernas.
+            currentModel.position.set(0, 0, 0);
+            currentModel.rotation.set(0, 0, 0);
+            currentModel.scale.set(1, 1, 1);
+            currentModel.updateMatrixWorld(true);
+
             boneStates.pelvis.position.copy(boneStates.pelvisRestPosition);
             reusable.pelvisTiltQ.setFromAxisAngle(reusable.fingerAxis, technique.pelvisTilt);
             boneStates.pelvis.quaternion.copy(boneStates.pelvisRestQ).multiply(reusable.pelvisTiltQ);
@@ -2135,7 +2145,9 @@
                     deltaSeconds
                 );
                 applyFrontalArmMechanics(eased);
-                applyGripProfile('wide_pronated');
+                // Perfil prono exclusivo: conserva la palma centrada en la
+                // barra con muñeca neutra, sin alterar el IK de hombro/codo.
+                applyGripProfile('lat_pulldown_pronated');
                 currentModel.updateMatrixWorld(true);
 
                 if (iteration < 7) {
