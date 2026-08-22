@@ -2276,10 +2276,18 @@
         }
 
         function setSupineBase({ incline = 0, pelvisY = -.30, pelvisZ = -.16 } = {}) {
+            // La pelvis se rota en el espacio global, no en los ejes heredados
+            // del archivo GLTF. -PI/2 coloca el tronco en decúbito supino.
             const vertical = Math.sin(incline);
             const forward = Math.cos(incline);
             setPelvisTransform(pelvisY, pelvisZ, -Math.PI / 2 + incline);
+
+            // Pelvis, columna lumbar y columna torácica comparten un único eje
+            // horizontal. Esta cadena no cambia durante la repetición.
             setSpine([0, vertical, forward], [0, vertical, forward]);
+
+            // Los muslos salen hacia el extremo de los pies (Z negativo), las
+            // rodillas caen fuera del banco y las tibias bajan hasta el suelo.
             setLegs(
                 [.07, -.40, -.914],
                 [-.07, -.40, -.914],
@@ -2306,17 +2314,22 @@
 
         function poseBenchPress(a) {
             setSupineBase();
-            const out = THREE.MathUtils.lerp(.25, .65, a);
-            // El descenso termina con un ángulo de codo seguro (sin hundir la
-            // barra por debajo del plano del pecho ni cerrar el codo en exceso).
-            const up = THREE.MathUtils.lerp(.96, -.50, a);
-            const foreOut = THREE.MathUtils.lerp(-.05, .20, a);
-            const foreUp = Math.sqrt(Math.max(1 - foreOut * foreOut - .09 * .09, .01));
+
+            // Progreso 0: barra sobre el pecho y codos a unos 57° del torso.
+            // Progreso 1: brazos casi extendidos y perpendiculares al suelo.
+            // Solo se anima hombro-codo-muñeca; la columna permanece rígida.
+            const upperOut = THREE.MathUtils.lerp(.62, .18, a);
+            const upperY = THREE.MathUtils.lerp(-.48, .98, a);
+            const upperZ = THREE.MathUtils.lerp(-.40, -.04, a);
+            const foreOut = THREE.MathUtils.lerp(-.12, -.04, a);
+            const foreY = THREE.MathUtils.lerp(.988, .998, a);
+            const foreZ = THREE.MathUtils.lerp(-.08, -.03, a);
+
             setArms(
-                [out, up, -.06],
-                [-out, up, -.06],
-                [foreOut, foreUp, -.04],
-                [-foreOut, foreUp, -.04],
+                [upperOut, upperY, upperZ],
+                [-upperOut, upperY, upperZ],
+                [foreOut, foreY, foreZ],
+                [-foreOut, foreY, foreZ],
                 'pronated_bar'
             );
             currentModel.updateMatrixWorld(true);
@@ -3292,11 +3305,11 @@
         }
 
         function phaseLabel(exercise, fraction) {
-            const working = fraction < .5;
+            const working = fraction <= .5;
             const nearRest = fraction < .10 || fraction > .90;
             const profileLabels = {
                 squat: ['Descenso controlado', 'Empuje y subida'],
-                bench_press: ['Descenso al pecho', 'Empuje de la barra'],
+                bench_press: ['Empuje de la barra', 'Descenso al pecho'],
                 lat_pulldown: ['Contracción · baja los codos', 'Retorno lento'],
                 leg_press: ['Extensión de piernas', 'Flexión controlada'],
                 rdl: ['Bisagra de cadera', 'Extensión de cadera'],
