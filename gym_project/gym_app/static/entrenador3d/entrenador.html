@@ -3007,12 +3007,13 @@
             const thighZ = THREE.MathUtils.lerp(0, .82, a);
             setLegs([.06, thighY, thighZ], [-.06, thighY, thighZ], [0, -.995, .10], [0, -.995, .10]);
             // Brazos de soporte: húmero junto al torso y antebrazos
-            // horizontales sobre las almohadillas de la silla romana.
+            // horizontales hacia delante, sobre las almohadillas. El signo
+            // positivo en Z evita que codos, manos y soportes queden detrás.
             setArms(
                 [.20, -.98, 0],
                 [-.20, -.98, 0],
-                [0, 0, -1],
-                [0, 0, -1],
+                [0, 0, 1],
+                [0, 0, 1],
                 'machine_handle'
             );
             currentModel.updateMatrixWorld(true);
@@ -3198,7 +3199,9 @@
             boneStates.foreLeft.bone.getWorldPosition(reusable.a);
             boneStates.handLeft.getWorldPosition(reusable.b);
             reusable.mid.copy(reusable.a).lerp(reusable.b, .42);
-            reusable.desiredDir.set(0, -.035, .015);
+            // La cara superior queda tangente bajo el antebrazo; antes el
+            // centro del soporte coincidía con el brazo y ocultaba su malla.
+            reusable.desiredDir.set(0, -.085, .015);
             movingPadLeft.position.copy(reusable.mid).add(reusable.desiredDir);
 
             boneStates.foreRight.bone.getWorldPosition(reusable.a);
