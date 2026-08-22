@@ -776,7 +776,7 @@
                 avoid: 'No gires los tobillos hacia dentro o fuera ni uses impulso de rodillas.'
             },
             incline_press: {
-                grip: 'neutral_dumbbell', cycleDuration: 4.8,
+                grip: 'incline_press_dumbbell', cycleDuration: 4.8,
                 rom: 'Baja las mancuernas a los lados del pecho superior sin perder el control escapular.',
                 contact: 'Cabeza, espalda y pies apoyados; mancuernas centradas sobre cada muñeca.',
                 avoid: 'No arquees la espalda ni choques las mancuernas arriba.'
@@ -879,6 +879,10 @@
             machine_handle: { roll: 0, flex: 0, deviation: 0, fingerCurl: .72, thumbOpposition: .48 },
             neutral_handle: { roll: .05, flex: 0, deviation: 0, fingerCurl: .80, thumbOpposition: .55 },
             neutral_dumbbell: { roll: .02, flex: 0, deviation: 0, fingerCurl: .82, thumbOpposition: .56 },
+            // En el press inclinado la palma debe envolver el mango en agarre
+            // prono. Este perfil es exclusivo para no girar las muñecas de
+            // curls, caminata del granjero ni elevaciones laterales.
+            incline_press_dumbbell: { roll: 1.50, flex: 0, deviation: .01, fingerCurl: .90, thumbOpposition: .66 },
             pronated_bar: { roll: 1.50, flex: 0, deviation: .02, fingerCurl: .82, thumbOpposition: .56 },
             back_rack_pronated: { roll: 1.48, flex: -.04, deviation: .05, fingerCurl: .84, thumbOpposition: .58 },
             wide_pronated: { roll: Math.PI / 2, flex: 0, deviation: 0, fingerCurl: .86, thumbOpposition: .60 },
