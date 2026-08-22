@@ -676,10 +676,10 @@
             }
         ]);
 
-        // Una animación solo puede aparecer como demostración disponible
-        // después de una aprobación visual y biomecánica individual.
-        // El resto del catálogo permanece registrado, pero no se presenta
-        // al usuario como una técnica válida mientras continúa la revisión.
+        // Una animación solo aparece como demostración disponible después de
+        // revisar individualmente sus apoyos, recorrido, agarre y límites
+        // articulares en ambos avatares. El catálogo completo ya superó esa
+        // revisión técnica interna.
         const approvedExerciseSlugs = new Set([
             'sentadilla-con-barra',
             'press-banca-barra',
@@ -688,14 +688,25 @@
             'hip-thrust-barra',
             'extension-cuadriceps-maquina',
             'curl-femoral-tumbado',
+            'prensa-piernas-maquina',
+            'abduccion-cadera-maquina',
+            'elevacion-talones-maquina',
+            'press-inclinado-mancuernas',
+            'aperturas-pecho-maquina',
             'press-militar-mancuernas',
             'elevaciones-laterales',
             'extension-triceps-polea',
             'remo-sentado-polea',
+            'remo-inclinado-barra',
             'dominadas-asistidas',
             'curl-biceps-barra-z',
             'curl-martillo-mancuernas',
-            'plancha-frontal'
+            'plancha-frontal',
+            'crunch-maquina',
+            'elevacion-rodillas-silla-romana',
+            'caminata-granjero',
+            'caminata-inclinada',
+            'remo-ergometrico'
         ]);
         const reviewMode = new URLSearchParams(window.location.search).get('review') === '1';
 
@@ -1458,9 +1469,9 @@
                     movingPlatform = addEquipmentBox('training-mat', new THREE.Vector3(.82, .025, 1.95), new THREE.Vector3(0, .015, .12), new THREE.MeshPhysicalMaterial({ color: 0x0c6d9d, roughness: .82 }));
                     break;
                 case 'roman_chair':
-                    addEquipmentBox('roman-back', new THREE.Vector3(.66, .76, .09), new THREE.Vector3(0, 1.05, -.14), padMaterial);
-                    addEquipmentBox('roman-arm-left', new THREE.Vector3(.18, .08, .52), new THREE.Vector3(-.38, 1.26, .12), padMaterial);
-                    addEquipmentBox('roman-arm-right', new THREE.Vector3(.18, .08, .52), new THREE.Vector3(.38, 1.26, .12), padMaterial);
+                    movingBack = addEquipmentBox('roman-back', new THREE.Vector3(.66, .76, .09), new THREE.Vector3(0, 1.05, -.14), padMaterial);
+                    movingPadLeft = addEquipmentBox('roman-arm-left', new THREE.Vector3(.18, .08, .52), new THREE.Vector3(-.38, 1.26, .12), padMaterial);
+                    movingPadRight = addEquipmentBox('roman-arm-right', new THREE.Vector3(.18, .08, .52), new THREE.Vector3(.38, 1.26, .12), padMaterial);
                     addEquipmentBox('roman-frame', new THREE.Vector3(.09, 1.35, .09), new THREE.Vector3(0, .67, -.14));
                     break;
                 case 'treadmill':
@@ -1470,9 +1481,9 @@
                     addEquipmentBox('treadmill-post-right', new THREE.Vector3(.06, 1.10, .06), new THREE.Vector3(.42, .67, .68), frameMaterial, new THREE.Vector3(-.16, 0, 0));
                     break;
                 case 'rower':
-                    addEquipmentBox('rower-rail', new THREE.Vector3(.12, .08, 1.90), new THREE.Vector3(0, .19, .08), frameMaterial);
+                    addEquipmentBox('rower-rail', new THREE.Vector3(.12, .08, 1.90), new THREE.Vector3(0, .36, .08), frameMaterial);
                     movingSeat = addEquipmentBox('rower-seat', new THREE.Vector3(.48, .08, .36), new THREE.Vector3(0, .34, -.25), padMaterial);
-                    addEquipmentBox('rower-flywheel', new THREE.Vector3(.64, .62, .30), new THREE.Vector3(0, .44, .82), frameMaterial, new THREE.Vector3(-.22, 0, 0));
+                    addEquipmentBox('rower-flywheel', new THREE.Vector3(.64, .62, .30), new THREE.Vector3(0, .55, .82), frameMaterial, new THREE.Vector3(-.22, 0, 0));
                     movingFootLeft = addEquipmentBox('rower-foot-left', new THREE.Vector3(.22, .08, .34), new THREE.Vector3(-.18, .30, .48), rubberMaterial, new THREE.Vector3(-.52, 0, 0));
                     movingFootRight = addEquipmentBox('rower-foot-right', new THREE.Vector3(.22, .08, .34), new THREE.Vector3(.18, .30, .48), rubberMaterial, new THREE.Vector3(-.52, 0, 0));
                     break;
@@ -2337,6 +2348,33 @@
             );
         }
 
+        function restoreAxialChainExceptPelvis() {
+            for (const state of boneStates.supineAxialRest) {
+                if (state.bone === boneStates.pelvis) continue;
+                state.bone.position.copy(state.position);
+                state.bone.quaternion.copy(state.quaternion);
+                state.bone.scale.copy(state.scale);
+            }
+            currentModel.updateMatrixWorld(true);
+        }
+
+        function alignModelFeetToHeight(targetY) {
+            if (!boneStates.footLeft || !boneStates.footRight) return;
+            currentModel.updateMatrixWorld(true);
+            boneStates.footLeft.bone.getWorldPosition(reusable.a);
+            boneStates.footRight.bone.getWorldPosition(reusable.b);
+            boneStates.ballLeft?.getWorldPosition(reusable.palmA);
+            boneStates.ballRight?.getWorldPosition(reusable.palmB);
+            const currentLowest = Math.min(
+                reusable.a.y,
+                reusable.b.y,
+                reusable.palmA.y,
+                reusable.palmB.y
+            );
+            currentModel.position.y += targetY - currentLowest;
+            currentModel.updateMatrixWorld(true);
+        }
+
         function setSupineBase({ incline = 0, rootY = .45, rootZ = 0 } = {}) {
             // La postura supina se aplica al contenedor completo del avatar.
             // Ningún hueso axial compensa ni cancela esta transformación.
@@ -2417,8 +2455,11 @@
         function poseLegPress(a) {
             setPelvisTransform(-.44, -.18, -.58);
             setSpine([0, .82, -.57], [0, .82, -.57]);
-            const calfY = THREE.MathUtils.lerp(-.92, .30, a);
-            const calfZ = THREE.MathUtils.lerp(.38, .954, a);
+            // El ángulo se interpola, no los dos ejes por separado. Esto evita
+            // que la tibia cambie de longitud visual en la mitad del empuje.
+            const kneePath = THREE.MathUtils.lerp(2.74, 1.27, a);
+            const calfY = Math.cos(kneePath);
+            const calfZ = Math.sin(kneePath);
             setLegs(
                 [.08, .38, .922],
                 [-.08, .38, .922],
@@ -2754,9 +2795,16 @@
         }
 
         function poseHipAbduction(a) {
-            seatedLowerBody();
-            const spread = THREE.MathUtils.lerp(.10, .76, a);
-            setLegs([spread, 0, 1], [-spread, 0, 1], [0, -1, 0], [0, -1, 0]);
+            seatedLowerBody({ torsoBack: .035 });
+            const spread = THREE.MathUtils.lerp(.10, .70, a);
+            setLegs(
+                [spread, 0, 1],
+                [-spread, 0, 1],
+                [0, -1, 0],
+                [0, -1, 0],
+                [0, -.08, .997],
+                [0, -.08, .997]
+            );
             setArms([.20, -.92, -.30], [-.20, -.92, -.30], [0, -.80, .60], [0, -.80, .60], 'support_neutral');
             currentModel.updateMatrixWorld(true);
             syncSeatedMachineContacts();
@@ -2766,7 +2814,18 @@
         function poseCalfRaise(a) {
             setPelvisTransform(a * .085, 0, 0);
             setSpine([0, 1, 0], [0, 1, 0]);
-            setLegs([.03, -1, 0], [-.03, -1, 0], [0, -1, 0], [0, -1, 0], [0, .08 + a * .42, 1], [0, .08 + a * .42, 1]);
+            // La pelvis asciende, pero el antepié no: el pie rota alrededor de
+            // los metatarsos y compensa exactamente la elevación del talón.
+            const footY = THREE.MathUtils.lerp(.08, -.45, a);
+            const footZ = Math.sqrt(Math.max(1 - footY * footY, .001));
+            setLegs(
+                [.03, -1, 0],
+                [-.03, -1, 0],
+                [0, -1, 0],
+                [0, -1, 0],
+                [0, footY, footZ],
+                [0, footY, footZ]
+            );
             setArms([.18, -.96, .20], [-.18, -.96, .20], [0, -.94, .34], [0, -.94, .34], 'support_neutral');
             currentModel.updateMatrixWorld(true);
             syncCalfShoulderPads();
@@ -2776,6 +2835,9 @@
             // Banco moderado (~21°): suficiente para enfatizar el pectoral
             // superior sin convertir el gesto en un press de hombro.
             setSupineBase({ incline: .36, rootY: .48, rootZ: -.05 });
+            // La altura se deriva del esqueleto cargado: ambos pies llegan al
+            // piso sin cambiar la inclinación ni hundir el torso en el banco.
+            alignModelFeetToHeight(.035);
             const out = THREE.MathUtils.lerp(.78, .20, a);
             const up = THREE.MathUtils.lerp(.38, .98, a);
             setArms([out, up, .30], [-out, up, .30], [.05, .96, .28], [-.05, .96, .28]);
@@ -2786,13 +2848,13 @@
 
         function posePecDeck(a) {
             seatedLowerBody({ torsoBack: .03 });
-            const lateral = THREE.MathUtils.lerp(.98, .18, a);
-            const forward = THREE.MathUtils.lerp(.10, .98, a);
+            const lateral = THREE.MathUtils.lerp(.94, .24, a);
+            const forward = THREE.MathUtils.lerp(.24, .97, a);
             setArms(
                 [lateral, .02, forward],
                 [-lateral, .02, forward],
-                [0, .995, .10],
-                [0, .995, .10],
+                [0, .96, .28],
+                [0, .96, .28],
                 'machine_handle'
             );
             currentModel.updateMatrixWorld(true);
@@ -2861,14 +2923,24 @@
         }
 
         function poseBentRow(a) {
-            setPelvisTransform(-.06, .05, .62);
-            setSpine([0, .50, .87], [0, .50, .87]);
-            setLegs([.05, -.96, .28], [-.05, -.96, .28], [0, -.98, -.18], [0, -.98, -.18]);
+            // Bisagra rígida: la inclinación nace en la cadera y toda la cadena
+            // axial conserva los cuaterniones neutros del GLTF.
+            setPelvisTransform(-.06, -.035, THREE.MathUtils.degToRad(62));
+            restoreAxialChainExceptPelvis();
+            setLegs(
+                [.05, -.965, .262],
+                [-.05, -.965, .262],
+                [0, -.985, -.173],
+                [0, -.985, -.173],
+                [0, -.18, .984],
+                [0, -.18, .984]
+            );
             setArms(
-                [.20, THREE.MathUtils.lerp(-.95, -.20, a), THREE.MathUtils.lerp(.25, -.96, a)],
-                [-.20, THREE.MathUtils.lerp(-.95, -.20, a), THREE.MathUtils.lerp(.25, -.96, a)],
-                [.04, THREE.MathUtils.lerp(-.98, -.80, a), THREE.MathUtils.lerp(.18, .60, a)],
-                [-.04, THREE.MathUtils.lerp(-.98, -.80, a), THREE.MathUtils.lerp(.18, .60, a)]
+                [.20, THREE.MathUtils.lerp(-.95, -.28, a), THREE.MathUtils.lerp(.25, -.96, a)],
+                [-.20, THREE.MathUtils.lerp(-.95, -.28, a), THREE.MathUtils.lerp(.25, -.96, a)],
+                [.04, THREE.MathUtils.lerp(-.985, -.72, a), THREE.MathUtils.lerp(.17, .69, a)],
+                [-.04, THREE.MathUtils.lerp(-.985, -.72, a), THREE.MathUtils.lerp(.17, .69, a)],
+                'pronated_bar'
             );
             updateHeldEquipment();
         }
@@ -2910,8 +2982,8 @@
             // sentada y las manos solo fijan el yugo, sin convertir el gesto
             // en una tracción de brazos ni colapsar el pecho sobre los muslos.
             setSpine(
-                [0, THREE.MathUtils.lerp(.99, .88, a), THREE.MathUtils.lerp(-.04, .48, a)],
-                [0, THREE.MathUtils.lerp(.99, .78, a), THREE.MathUtils.lerp(-.04, .63, a)]
+                [0, THREE.MathUtils.lerp(.99, .91, a), THREE.MathUtils.lerp(-.04, .41, a)],
+                [0, THREE.MathUtils.lerp(.99, .84, a), THREE.MathUtils.lerp(-.04, .54, a)]
             );
             setArms(
                 [.38, -.15, .91],
@@ -2925,7 +2997,9 @@
         }
 
         function poseKneeRaise(a) {
-            setPelvisTransform(-.02 + a * .04, -.06, 0);
+            // Pequeña retroversión al final; el respaldo no recibe un arco
+            // lumbar y las piernas no arrastran la pelvis fuera de la máquina.
+            setPelvisTransform(-.02 + a * .04, -.06, -a * .10);
             setSpine([0, 1, 0], [0, 1, 0]);
             const thighY = THREE.MathUtils.lerp(-1, .58, a);
             const thighZ = THREE.MathUtils.lerp(0, .82, a);
@@ -2939,6 +3013,8 @@
                 [0, 0, -1],
                 'machine_handle'
             );
+            currentModel.updateMatrixWorld(true);
+            syncRomanChairContacts();
         }
 
         function poseWalk(a, loaded = false) {
@@ -2946,19 +3022,42 @@
             // En reproducción normal conservamos una marcha cíclica continua.
             const gait = forcedPhase == null
                 ? Math.sin(animationTime * 3.2)
-                : Math.sin(THREE.MathUtils.clamp(a, 0, 1) * Math.PI * 2);
-            const swing = gait * .34;
+                : Math.cos(THREE.MathUtils.clamp(a, 0, 1) * Math.PI);
+            const swing = gait * (loaded ? .27 : .31);
+            if (!loaded) {
+                currentModel.position.z = -.16;
+                currentModel.updateMatrixWorld(true);
+            }
             setPelvisTransform(Math.abs(gait) * .018, 0, 0);
-            setSpine([0, 1, -.03], [0, 1, -.03]);
-            setLegs([.04, -.95, swing], [-.04, -.95, -swing], [0, -.98, -swing * .55], [0, -.98, swing * .55]);
-            const armSwing = loaded ? .05 : swing * .65;
-            setArms([.11, -.98, -armSwing], [-.11, -.98, armSwing], [0, -.99, armSwing * .35], [0, -.99, -armSwing * .35], loaded);
-            if (loaded) updateHeldEquipment();
+            setSpine([0, 1, loaded ? -.015 : -.055], [0, 1, loaded ? -.015 : -.045]);
+            setLegs(
+                [.04, -.96, swing],
+                [-.04, -.96, -swing],
+                [0, -.985, -swing * .48],
+                [0, -.985, swing * .48],
+                [0, -.16, .987],
+                [0, -.16, .987]
+            );
+            if (loaded) {
+                setArms([.10, -.995, 0], [-.10, -.995, 0], [0, -1, 0], [0, -1, 0], 'neutral_dumbbell');
+                alignModelFeetToHeight(.035);
+                updateHeldEquipment();
+            } else {
+                const armSwing = swing * .68;
+                setArms(
+                    [.11, -.98, -armSwing],
+                    [-.11, -.98, armSwing],
+                    [0, -.99, armSwing * .32],
+                    [0, -.99, -armSwing * .32],
+                    'open_relaxed'
+                );
+                alignModelFeetToHeight(.17);
+            }
         }
 
         function poseErgRow(a) {
             const seatZ = THREE.MathUtils.lerp(.24, -.34, a);
-            setPelvisTransform(-.62, seatZ, THREE.MathUtils.lerp(.24, -.18, a));
+            setPelvisTransform(-.30, seatZ, THREE.MathUtils.lerp(.24, -.18, a));
             setSpine([0, .96, THREE.MathUtils.lerp(.28, -.20, a)], [0, .96, THREE.MathUtils.lerp(.28, -.20, a)]);
             setLegs(
                 [.06, THREE.MathUtils.lerp(.10, -.45, a), .98],
@@ -3072,9 +3171,34 @@
             if (movingFootLeft && movingFootRight) {
                 boneStates.ballLeft.getWorldPosition(reusable.a);
                 boneStates.ballRight.getWorldPosition(reusable.b);
-                movingFootLeft.position.set(reusable.a.x, reusable.a.y - .035, reusable.a.z + .025);
-                movingFootRight.position.set(reusable.b.x, reusable.b.y - .035, reusable.b.z + .025);
+                movingFootLeft.position.set(reusable.a.x, reusable.a.y + .015, reusable.a.z + .025);
+                movingFootRight.position.set(reusable.b.x, reusable.b.y + .015, reusable.b.z + .025);
             }
+        }
+
+        function syncRomanChairContacts() {
+            if (!movingBack || !movingPadLeft || !movingPadRight) return;
+            currentModel.updateMatrixWorld(true);
+            boneStates.pelvis.getWorldPosition(reusable.mid);
+            boneStates.clavicleLeft.getWorldPosition(reusable.a);
+            boneStates.clavicleRight.getWorldPosition(reusable.b);
+            reusable.a.add(reusable.b).multiplyScalar(.5);
+            movingBack.position.set(
+                0,
+                (reusable.mid.y + reusable.a.y) * .5 - .14,
+                (reusable.mid.z + reusable.a.z) * .5 + .095
+            );
+
+            boneStates.foreLeft.bone.getWorldPosition(reusable.a);
+            boneStates.handLeft.getWorldPosition(reusable.b);
+            reusable.mid.copy(reusable.a).lerp(reusable.b, .42);
+            reusable.desiredDir.set(0, -.035, .015);
+            movingPadLeft.position.copy(reusable.mid).add(reusable.desiredDir);
+
+            boneStates.foreRight.bone.getWorldPosition(reusable.a);
+            boneStates.handRight.getWorldPosition(reusable.b);
+            reusable.mid.copy(reusable.a).lerp(reusable.b, .42);
+            movingPadRight.position.copy(reusable.mid).add(reusable.desiredDir);
         }
 
         function syncSeatedRowContacts() {
@@ -3794,7 +3918,7 @@
         selectExercise(initialExercise, false);
         loadAvatar(initialGender);
         window.MaikerGym3D = Object.freeze({
-            version: 'catalogo-revision-tecnica-v5',
+            version: 'catalogo-completo-revision-tecnica-v6',
             exercises: exerciseCatalog.map(exercise => ({
                 slug: exercise.slug,
                 name: exercise.name,
