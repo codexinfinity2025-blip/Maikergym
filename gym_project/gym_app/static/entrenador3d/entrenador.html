@@ -1570,7 +1570,7 @@
             });
             boneStates.byName = byName;
             const required = [
-                'pelvis', 'spine_01', 'spine_02', 'spine_03',
+                'pelvis', 'spine_01', 'spine_02', 'spine_03', 'neck_01', 'Head',
                 'clavicle_l', 'clavicle_r',
                 'thigh_l', 'calf_l', 'foot_l',
                 'thigh_r', 'calf_r', 'foot_r',
@@ -1608,6 +1608,10 @@
             boneStates.handRightRestQ = byName.hand_r.quaternion.clone();
             boneStates.spineBase = restInfo(byName.spine_01, byName.spine_02);
             boneStates.spineUpper = restInfo(byName.spine_02, byName.spine_03);
+            boneStates.spineTop = restInfo(byName.spine_03, byName.neck_01);
+            boneStates.neckAxis = restInfo(byName.neck_01, byName.Head);
+            boneStates.head = byName.Head;
+            boneStates.headRestPosition = byName.Head.position.clone();
             boneStates.thighLeft = restInfo(byName.thigh_l, byName.calf_l);
             boneStates.thighRight = restInfo(byName.thigh_r, byName.calf_r);
             boneStates.calfLeft = restInfo(byName.calf_l, byName.foot_l);
@@ -2275,27 +2279,47 @@
             );
         }
 
-        function setSupineBase({ incline = 0, pelvisY = -.30, pelvisZ = -.16 } = {}) {
-            // La pelvis se rota en el espacio global, no en los ejes heredados
-            // del archivo GLTF. -PI/2 coloca el tronco en decúbito supino.
-            const vertical = Math.sin(incline);
-            const forward = Math.cos(incline);
+        function setSupineBase({ incline = 0, pelvisY = -.11, pelvisZ = -.16 } = {}) {
+            // Un único eje longitudinal gobierna pelvis, columna, cuello y
+            // cabeza. En banco plano vale [0, 0, 1], por lo que toda la cadena
+            // queda inmóvil y horizontal durante la repetición.
+            const axialY = Math.sin(incline);
+            const axialZ = Math.cos(incline);
+            const axialDirection = [0, axialY, axialZ];
+
+            // -PI/2 convierte el avatar de bipedestación a decúbito supino.
+            // El offset -0.11 eleva la espalda sobre la cara superior del pad.
             setPelvisTransform(pelvisY, pelvisZ, -Math.PI / 2 + incline);
+            setSpine(axialDirection, axialDirection);
+            applyPoseDirection(boneStates.spineTop, ...axialDirection);
+            currentModel.updateMatrixWorld(true);
+            applyPoseDirection(boneStates.neckAxis, ...axialDirection);
 
-            // Pelvis, columna lumbar y columna torácica comparten un único eje
-            // horizontal. Esta cadena no cambia durante la repetición.
-            setSpine([0, vertical, forward], [0, vertical, forward]);
+            // El cuello ya comparte el eje del tórax. La cabeza queda con una
+            // rotación local neutra (0°) para mirar al techo sin flexión X.
+            boneStates.head.position.copy(boneStates.headRestPosition);
+            boneStates.head.quaternion.identity();
+            currentModel.updateMatrixWorld(true);
 
-            // Los muslos salen hacia el extremo de los pies (Z negativo), las
-            // rodillas caen fuera del banco y las tibias bajan hasta el suelo.
+            // Abducción moderada de cadera para sacar las rodillas del ancho
+            // del banco; tibias verticales y pies apoyados en el suelo.
             setLegs(
-                [.07, -.40, -.914],
-                [-.07, -.40, -.914],
+                [.40, -.82, -.42],
+                [-.40, -.82, -.42],
                 [0, -.995, -.10],
                 [0, -.995, -.10],
-                [0, -.06, -.998],
-                [0, -.06, -.998]
+                [0, -.08, -.997],
+                [0, -.08, -.997]
             );
+
+            // Compensa diferencias de talla entre los avatares masculino y
+            // femenino: el tobillo queda a 7.5 cm del plano Y=0 para que la
+            // planta, no el centro del hueso, sea la que contacte el suelo.
+            boneStates.footLeft.bone.getWorldPosition(reusable.a);
+            boneStates.footRight.bone.getWorldPosition(reusable.b);
+            const ankleY = (reusable.a.y + reusable.b.y) * .5;
+            currentModel.position.y += .075 - ankleY;
+            currentModel.updateMatrixWorld(true);
         }
 
         function poseSquat(a) {
@@ -2315,15 +2339,19 @@
         function poseBenchPress(a) {
             setSupineBase();
 
-            // Progreso 0: barra sobre el pecho y codos a unos 57° del torso.
-            // Progreso 1: brazos casi extendidos y perpendiculares al suelo.
-            // Solo se anima hombro-codo-muñeca; la columna permanece rígida.
-            const upperOut = THREE.MathUtils.lerp(.62, .18, a);
-            const upperY = THREE.MathUtils.lerp(-.48, .98, a);
-            const upperZ = THREE.MathUtils.lerp(-.40, -.04, a);
-            const foreOut = THREE.MathUtils.lerp(-.12, -.04, a);
-            const foreY = THREE.MathUtils.lerp(.988, .998, a);
-            const foreZ = THREE.MathUtils.lerp(-.08, -.03, a);
+            // Barra abajo: codos abiertos 45°–60° y barra sobre el esternón
+            // medio/inferior. Barra arriba: manos separadas y barra alineada
+            // con los hombros. El cambio de Z crea el recorrido diagonal real.
+            const upperOut = THREE.MathUtils.lerp(.65, .45, a);
+            const upperY = THREE.MathUtils.lerp(-.42, .95, a);
+            const upperZ = THREE.MathUtils.lerp(-.44, 0, a);
+
+            // Los antebrazos conservan una componente vertical dominante. La
+            // pequeña compensación lateral impide que cambie el ancho de agarre
+            // al extender los codos sin torcer la muñeca.
+            const foreOut = THREE.MathUtils.lerp(-.12, .20, a);
+            const foreY = 1.0;
+            const foreZ = THREE.MathUtils.lerp(-.03, 0, a);
 
             setArms(
                 [upperOut, upperY, upperZ],
@@ -2335,7 +2363,9 @@
             currentModel.updateMatrixWorld(true);
             // El acolchado sigue el eje real hombros-cadera: cabeza, espalda y
             // glúteos quedan apoyados, mientras las piernas permanecen libres.
-            syncBenchUnderTorso(.48, .13);
+            // 0.155 deja la cara superior del pad tangente a la superficie
+            // dorsal sin atravesar la malla del torso ni dejarla suspendida.
+            syncBenchUnderTorso(.46, .155);
             updateHeldEquipment();
         }
 
