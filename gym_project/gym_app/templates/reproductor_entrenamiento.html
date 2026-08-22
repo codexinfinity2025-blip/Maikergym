@@ -89,46 +89,18 @@
                         </div>
 
                         <div class="model-shell">
-                            {% if ejercicio.modelo_3d %}
-                                <model-viewer
-                                    id="exerciseModel"
-                                    src="{{ ejercicio.modelo_3d.url }}"
-                                    alt="Demostración 3D de {{ ejercicio.nombre }}"
-                                    camera-controls
-                                    touch-action="pan-y"
-                                    autoplay
-                                    shadow-intensity="1.4"
-                                    exposure="1.05"
-                                    environment-image="neutral"
-                                    interaction-prompt="auto"
-                                    loading="eager"
-                                    {% if ejercicio.imagen_portada %}
-                                        poster="{{ ejercicio.imagen_portada.url }}"
-                                    {% endif %}
-                                ></model-viewer>
+                            <iframe
+                                id="exercise3DFrame"
+                                class="exercise-3d-frame"
+                                src="{% static 'entrenador3d/entrenador.html' %}?embedded=1&amp;exercise={{ ejercicio.nombre|urlencode }}&amp;gender={% if perfil.genero == 'femenino' %}female{% else %}male{% endif %}"
+                                title="Demostración 3D interactiva de {{ ejercicio.nombre }}"
+                                loading="eager"
+                                allow="fullscreen"
+                            ></iframe>
 
-                                <div class="model-hint">
-                                    Arrastra para girar · Pellizca para acercar
-                                </div>
-                            {% elif ejercicio.imagen_portada %}
-                                <img
-                                    class="exercise-fallback-image"
-                                    src="{{ ejercicio.imagen_portada.url }}"
-                                    alt="Demostración de {{ ejercicio.nombre }}"
-                                >
-                                <div class="model-missing-badge">
-                                    Modelo 3D pendiente
-                                </div>
-                            {% else %}
-                                <div class="model-placeholder">
-                                    <span class="model-placeholder-icon">3D</span>
-                                    <strong>Demostración 3D pendiente</strong>
-                                    <p>
-                                        Carga el archivo GLB animado de este
-                                        ejercicio desde el administrador.
-                                    </p>
-                                </div>
-                            {% endif %}
+                            <div class="model-hint">
+                                Arrastra para girar · Pellizca para acercar
+                            </div>
                         </div>
 
                         <div class="exercise-meta">
@@ -440,9 +412,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script
-    type="module"
-    src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"
-></script>
 <script src="{% static 'js/reproductor_entrenamiento.js' %}" defer></script>
 {% endblock %}

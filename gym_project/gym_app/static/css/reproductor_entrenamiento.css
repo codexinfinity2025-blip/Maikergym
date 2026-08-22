@@ -220,10 +220,63 @@ body {
         linear-gradient(160deg, #171a22, #0a0c11 72%);
 }
 
-model-viewer {
+.exercise-3d-frame {
+    display: block;
     width: 100%;
     height: clamp(350px, 53vh, 610px);
-    --poster-color: transparent;
+    border: 0;
+    background: transparent;
+}
+
+.model-review-placeholder {
+    display: grid;
+    justify-items: center;
+    width: min(680px, calc(100% - 40px));
+    padding: clamp(28px, 5vw, 52px);
+    border: 1px solid rgba(255, 174, 0, 0.3);
+    border-radius: 24px;
+    text-align: center;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(255, 174, 0, 0.12), transparent 52%),
+        rgba(7, 9, 13, 0.86);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+}
+
+.model-review-icon {
+    display: grid;
+    place-items: center;
+    width: 74px;
+    height: 74px;
+    margin-bottom: 22px;
+    border: 2px solid rgba(255, 174, 0, 0.5);
+    border-radius: 22px;
+    color: #090a0d;
+    background: var(--player-accent);
+    font-size: 1.35rem;
+    font-weight: 950;
+    box-shadow: 0 16px 42px rgba(255, 174, 0, 0.16);
+}
+
+.model-review-placeholder strong {
+    margin-top: 8px;
+    color: var(--player-text);
+    font-size: clamp(1.35rem, 3vw, 2rem);
+    line-height: 1.08;
+}
+
+.model-review-placeholder p {
+    max-width: 570px;
+    margin: 16px 0 12px;
+    color: #d7dce5;
+    font-size: 1rem;
+    line-height: 1.65;
+}
+
+.model-review-placeholder small {
+    max-width: 540px;
+    color: var(--player-muted);
+    font-size: 0.82rem;
+    line-height: 1.55;
 }
 
 .model-hint,
@@ -669,7 +722,7 @@ button:disabled {
     }
 
     .model-shell,
-    model-viewer,
+    .exercise-3d-frame,
     .exercise-fallback-image {
         min-height: 330px;
         height: 330px;
