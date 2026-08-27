@@ -12,8 +12,8 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.167.1/examples/jsm/"
+                "three": "./vendor/three/build/three.module.js",
+                "three/addons/": "./vendor/three/examples/jsm/"
             }
         }
     </script>
@@ -2434,13 +2434,16 @@
             // medio/inferior. Barra arriba: manos separadas y barra alineada
             // con los hombros. El cambio de Z crea el recorrido diagonal real.
             const upperOut = THREE.MathUtils.lerp(.65, .45, a);
-            const upperY = THREE.MathUtils.lerp(-.42, .95, a);
+            // En el punto inferior conservamos un micro-margen articular:
+            // reducir ligeramente la componente descendente evita cerrar el
+            // codo por debajo de 65° sin cambiar el recorrido de la barra.
+            const upperY = THREE.MathUtils.lerp(-.36, .95, a);
             const upperZ = THREE.MathUtils.lerp(.44, 0, a);
 
             // Los antebrazos conservan una componente vertical dominante. La
             // pequeña compensación lateral impide que cambie el ancho de agarre
             // al extender los codos sin torcer la muñeca.
-            const foreOut = THREE.MathUtils.lerp(-.12, .20, a);
+            const foreOut = THREE.MathUtils.lerp(0, .20, a);
             const foreY = 1.0;
             const foreZ = THREE.MathUtils.lerp(.03, 0, a);
 
@@ -3949,9 +3952,15 @@
 
         const initialParams = new URLSearchParams(window.location.search);
         const requestedInitialExercise = initialParams.get('exercise') || currentExercise.slug;
-        const initialExercise = exerciseCatalog.some(exercise => exercise.slug === requestedInitialExercise)
-            ? requestedInitialExercise
-            : currentExercise.slug;
+        // El aplicativo puede enviar el slug corto del catálogo o el nombre
+        // completo almacenado en MySQL. Resolvemos ambos formatos antes de
+        // cargar el avatar para que ningún ejercicio caiga en el jalón al
+        // pecho predeterminado por una diferencia de identificadores.
+        const requestedInitialNormalized = normalizeExerciseKey(requestedInitialExercise);
+        const initialExercise = exerciseCatalog.find(exercise => (
+            exercise.slug === requestedInitialExercise
+            || normalizeExerciseKey(exercise.name) === requestedInitialNormalized
+        )) || currentExercise;
         const initialGender = initialParams.get('gender') === 'female' ? 'female' : 'male';
         if (initialParams.has('phase')) {
             const requestedPhase = Number(initialParams.get('phase'));
@@ -3963,10 +3972,10 @@
             }
         }
         document.querySelectorAll('[data-gender]').forEach(item => item.classList.toggle('active', item.dataset.gender === initialGender));
-        selectExercise(initialExercise, false);
+        selectExercise(initialExercise.slug, false);
         loadAvatar(initialGender);
         window.MaikerGym3D = Object.freeze({
-            version: 'catalogo-completo-revision-tecnica-v6',
+            version: 'catalogo-completo-integrado-v7',
             exercises: exerciseCatalog.map(exercise => ({
                 slug: exercise.slug,
                 name: exercise.name,

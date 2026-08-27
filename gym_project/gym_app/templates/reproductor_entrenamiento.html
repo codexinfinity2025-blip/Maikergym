@@ -92,7 +92,7 @@
                             <iframe
                                 id="exercise3DFrame"
                                 class="exercise-3d-frame"
-                                src="{% static 'entrenador3d/entrenador.html' %}?embedded=1&amp;exercise={{ ejercicio.nombre|urlencode }}&amp;gender={% if perfil.genero == 'femenino' %}female{% else %}male{% endif %}"
+                                src="{% static 'entrenador3d/entrenador.html' %}?embedded=1&amp;exercise={{ ejercicio.nombre|urlencode }}&amp;gender={% if perfil.genero == 'femenino' %}female{% else %}male{% endif %}&amp;v=catalogo-completo-integrado-v7"
                                 title="Demostración 3D interactiva de {{ ejercicio.nombre }}"
                                 loading="eager"
                                 allow="fullscreen"
