@@ -1,14 +1,41 @@
 ﻿import os
 from pathlib import Path
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-test-key-change-in-production')
-
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
+SECRET_KEY = config(
+    'SECRET_KEY',
+    default='django-insecure-local-development-key',
+)
+
+if not DEBUG and SECRET_KEY.startswith('django-insecure-'):
+    raise ImproperlyConfigured(
+        'Debes configurar una SECRET_KEY segura antes de iniciar producción.'
+    )
+
+
+def config_list(nombre, default=''):
+    """Convierte una variable separada por comas en una lista limpia."""
+    valor = config(nombre, default=default)
+    return [elemento.strip() for elemento in valor.split(',') if elemento.strip()]
+
+
+ALLOWED_HOSTS = config_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+CSRF_TRUSTED_ORIGINS = config_list('CSRF_TRUSTED_ORIGINS')
+
+# Railway publica estas variables automáticamente cuando se genera el dominio.
+railway_public_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '').strip()
+if railway_public_domain:
+    ALLOWED_HOSTS.append(railway_public_domain)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{railway_public_domain}')
+
+# El healthcheck usa un host interno diferente al dominio público.
+if 'healthcheck.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('healthcheck.railway.app')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -22,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -50,17 +78,34 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gym_project.wsgi.application'
 
-MYSQL_DATABASE = config('MYSQL_DATABASE', default='')
+MYSQL_DATABASE = config(
+    'MYSQL_DATABASE',
+    default=config('MYSQLDATABASE', default=''),
+)
 
 if MYSQL_DATABASE:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
             'NAME': MYSQL_DATABASE,
-            'USER': config('MYSQL_USER', default='root'),
-            'PASSWORD': config('MYSQL_PASSWORD', default=''),
-            'HOST': config('MYSQL_HOST', default='127.0.0.1'),
-            'PORT': config('MYSQL_PORT', default='3306'),
+            'USER': config(
+                'MYSQL_USER',
+                default=config('MYSQLUSER', default='root'),
+            ),
+            'PASSWORD': config(
+                'MYSQL_PASSWORD',
+                default=config('MYSQLPASSWORD', default=''),
+            ),
+            'HOST': config(
+                'MYSQL_HOST',
+                default=config('MYSQLHOST', default='127.0.0.1'),
+            ),
+            'PORT': config(
+                'MYSQL_PORT',
+                default=config('MYSQLPORT', default='3306'),
+            ),
+            'CONN_MAX_AGE': 600,
+            'CONN_HEALTH_CHECKS': True,
             'OPTIONS': {
                 'charset': 'utf8mb4',
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -96,11 +141,36 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'gym_project/gym_app/static')]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'gym_project/gym_app/static']
+
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = Path(
+    config(
+        'MEDIA_ROOT',
+        default=os.environ.get('RAILWAY_VOLUME_MOUNT_PATH', BASE_DIR / 'media'),
+    )
+)
+
+if not DEBUG:
+    # Railway termina HTTPS en su proxy y Django recibe este encabezado.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
