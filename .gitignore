@@ -43,3 +43,6 @@ gym_project/gym_app/static/design-dev-icons/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Caché temporal de Railway CLI
+.railway_npm_cache/

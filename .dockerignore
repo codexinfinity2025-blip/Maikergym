@@ -17,3 +17,4 @@ codex_backups
 legacy_assets
 db.sqlite3
 *.sqlite3
+.railway_npm_cache
