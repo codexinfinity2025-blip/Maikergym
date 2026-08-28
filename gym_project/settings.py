@@ -165,6 +165,9 @@ if not DEBUG:
     # Railway termina HTTPS en su proxy y Django recibe este encabezado.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
+    # El sondeo interno de Railway llega por HTTP. Solo esta ruta queda exenta
+    # para que el healthcheck responda 200 sin desactivar HTTPS en el sitio.
+    SECURE_REDIRECT_EXEMPT = [r'^health/$']
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
