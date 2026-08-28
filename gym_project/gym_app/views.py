@@ -71,7 +71,7 @@ def siguiente_paso_personalizacion(perfil):
         return 'dieta'
     if not perfil.datos_completos:
         return 'datos_personales'
-    return 'cuenta'
+    return 'mi_entrenamiento'
 
 def inicio(request):
     return render(request, 'inicio.html')
@@ -90,12 +90,38 @@ def registrarse(request):
         email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
         confirmar_password = request.POST.get('confirmar_password', '')
+        fecha_nacimiento_texto = request.POST.get(
+            'fecha_nacimiento',
+            '',
+        ).strip()
+
+        contexto = {
+            'form_data': request.POST,
+        }
 
         if password != confirmar_password:
-            return render(request, 'registrarse.html', {'error': 'Las contraseñas no coinciden.'})
+            contexto['error'] = 'Las contraseñas no coinciden.'
+            return render(request, 'registrarse.html', contexto)
 
         if User.objects.filter(email=email).exists():
-            return render(request, 'registrarse.html', {'error': 'Ya existe una cuenta con ese correo.'})
+            contexto['error'] = 'Ya existe una cuenta con ese correo.'
+            return render(request, 'registrarse.html', contexto)
+
+        try:
+            fecha_nacimiento = date.fromisoformat(
+                fecha_nacimiento_texto,
+            )
+        except ValueError:
+            contexto['error'] = (
+                'Ingresa una fecha de nacimiento válida.'
+            )
+            return render(request, 'registrarse.html', contexto)
+
+        if fecha_nacimiento > date.today():
+            contexto['error'] = (
+                'La fecha de nacimiento no puede estar en el futuro.'
+            )
+            return render(request, 'registrarse.html', contexto)
 
         user = User.objects.create_user(
             username=email,
@@ -105,14 +131,22 @@ def registrarse(request):
             last_name=apellido,
         )
         perfil = get_perfil(user)
-        fecha_nacimiento = request.POST.get('fecha_nacimiento') or None
-        if fecha_nacimiento:
-            try:
-                perfil.fecha_nacimiento = date.fromisoformat(fecha_nacimiento)
-                perfil.edad = calcular_edad(perfil.fecha_nacimiento)
-                perfil.save()
-            except ValueError:
-                pass
+        perfil.fecha_nacimiento = fecha_nacimiento
+        perfil.edad = calcular_edad(fecha_nacimiento)
+        perfil.telefono = (
+            request.POST.get('telefono', '').strip() or None
+        )
+        perfil.direccion = (
+            request.POST.get('direccion', '').strip() or None
+        )
+        perfil.save(
+            update_fields=[
+                'fecha_nacimiento',
+                'edad',
+                'telefono',
+                'direccion',
+            ]
+        )
         login(request, user)
         return redirect('objetivo')
 
@@ -140,14 +174,26 @@ def objetivo(request):
     if request.method == 'POST':
         objetivo_elegido = request.POST.get('objetivo')
         if objetivo_elegido in DIETAS_POR_OBJETIVO:
+            objetivo_cambio = (
+                perfil.objetivo != objetivo_elegido
+            )
             perfil.objetivo = objetivo_elegido
-            perfil.dieta_aceptada = False
-            perfil.datos_completos = False
-            perfil.save()
+            if objetivo_cambio:
+                perfil.dieta_aceptada = False
+            perfil.save(
+                update_fields=[
+                    'objetivo',
+                    'dieta_aceptada',
+                ]
+            )
             asignar_plan_por_objetivo(
                 request.user,
                 objetivo_elegido,
-)
+            )
+            if perfil.dieta_aceptada:
+                if perfil.datos_completos:
+                    return redirect('mi_entrenamiento')
+                return redirect('datos_personales')
             return redirect('dieta')
         return render(request, 'objetivo.html', {'error': 'Escoge un objetivo válido.'})
     return render(request, 'objetivo.html', {'perfil': perfil})
@@ -160,6 +206,11 @@ def dieta_view(request):
         return redirect('objetivo')
 
     dieta = DIETAS_POR_OBJETIVO.get(perfil.objetivo, DIETAS_POR_OBJETIVO['salud'])
+    if request.method == 'GET' and perfil.dieta_aceptada:
+        if perfil.datos_completos:
+            return redirect('mi_entrenamiento')
+        return redirect('datos_personales')
+
     if request.method == 'POST':
         if request.POST.get('acepta_dieta') == 'on':
             perfil.dieta_aceptada = True
@@ -177,11 +228,17 @@ def datos_personales_view(request):
         return redirect('objetivo')
     if not perfil.dieta_aceptada:
         return redirect('dieta')
+    if request.method == 'GET' and perfil.datos_completos:
+        return redirect('mi_entrenamiento')
 
     if request.method == 'POST':
-        perfil.genero = request.POST.get('genero') or None
+        perfil.genero = (
+            request.POST.get('genero')
+            or perfil.genero
+            or None
+        )
         peso_registro = request.POST.get('peso') or None
-        perfil.peso = peso_registro
+        perfil.peso = peso_registro or perfil.peso
         if peso_registro and perfil.peso_inicial is None:
             perfil.peso_inicial = peso_registro
 
@@ -204,7 +261,11 @@ def datos_personales_view(request):
 
         perfil.datos_completos = True
         perfil.save()
-        return redirect('cuenta')
+        asignar_plan_por_objetivo(
+            request.user,
+            perfil.objetivo,
+        )
+        return redirect('mi_entrenamiento')
 
     return render(request, 'datos_personales.html', {'perfil': perfil})
 
@@ -322,6 +383,21 @@ def mi_entrenamiento_view(request):
         .prefetch_related("horarios")
         .first()
     )
+
+    if asignacion is None and perfil.objetivo:
+        asignar_plan_por_objetivo(
+            request.user,
+            perfil.objetivo,
+        )
+        asignacion = (
+            request.user.planes_asignados
+            .filter(
+                estado=EstadoAsignacionChoice.ACTIVO,
+            )
+            .select_related("plan")
+            .prefetch_related("horarios")
+            .first()
+        )
 
     context = {
         "perfil": perfil,

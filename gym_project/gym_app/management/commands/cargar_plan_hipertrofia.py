@@ -378,72 +378,110 @@ PROGRAMACION[3] = {
     numero_dia: aumentar_intensidad(ejercicios)
     for numero_dia, ejercicios in PROGRAMACION[2].items()
 }
+
+PLANES_INICIALES = [
+    {
+        "nombre": "Estética inicial de 12 semanas",
+        "objetivo": ObjetivoChoice.ESTETICO,
+        "descripcion": (
+            "Programa inicial de fuerza y acondicionamiento para mejorar "
+            "la composición corporal con una progresión segura."
+        ),
+    },
+    {
+        "nombre": "Hipertrofia inicial de 12 semanas",
+        "objetivo": ObjetivoChoice.HIPERTROFIA,
+        "descripcion": (
+            "Plan progresivo para aprender los ejercicios principales, "
+            "aumentar el volumen y desarrollar masa muscular."
+        ),
+    },
+    {
+        "nombre": "Salud y movimiento de 12 semanas",
+        "objetivo": ObjetivoChoice.SALUD,
+        "descripcion": (
+            "Programa de cuerpo completo orientado a mejorar fuerza, "
+            "movilidad y capacidad física general."
+        ),
+    },
+    {
+        "nombre": "Nutrición y acondicionamiento de 12 semanas",
+        "objetivo": ObjetivoChoice.NUTRICION,
+        "descripcion": (
+            "Programa de entrenamiento que acompaña la adopción de hábitos "
+            "saludables y una rutina física constante."
+        ),
+    },
+    {
+        "nombre": "Recuperación progresiva de 12 semanas",
+        "objetivo": ObjetivoChoice.RECUPERAR,
+        "descripcion": (
+            "Programa inicial de intensidad controlada para recuperar la "
+            "constancia, la fuerza básica y la confianza en el movimiento."
+        ),
+    },
+]
+
+
 class Command(BaseCommand):
-    help = "Carga el plan inicial de hipertrofia de MaikerGym."
+    help = "Carga los planes iniciales de MaikerGym para cada objetivo."
 
     @transaction.atomic
     def handle(self, *args, **options):
+        for configuracion in PLANES_INICIALES:
+            self.cargar_plan(configuracion)
+
+    def cargar_plan(self, configuracion):
         plan, plan_creado = PlanEntrenamiento.objects.update_or_create(
-            nombre="Hipertrofia inicial de 12 semanas",
+            nombre=configuracion["nombre"],
             defaults={
-                "objetivo": ObjetivoChoice.HIPERTROFIA,
+                "objetivo": configuracion["objetivo"],
                 "nivel": NivelEjercicioChoice.PRINCIPIANTE,
-                "descripcion": (
-                    "Plan progresivo de tres días semanales para aprender "
-                    "los ejercicios principales, aumentar el volumen de "
-                    "entrenamiento y desarrollar masa muscular."
-                ),
+                "descripcion": configuracion["descripcion"],
                 "duracion_semanas": 12,
                 "dias_por_semana": 3,
                 "activo": True,
             },
         )
 
-        fases_creadas = 0
-        fases_actualizadas = 0
-        dias_creados = 0
-        dias_actualizados = 0
-        programados_creados = 0
-        programados_actualizados = 0
+        contadores = {
+            "fases_creadas": 0,
+            "fases_actualizadas": 0,
+            "dias_creados": 0,
+            "dias_actualizados": 0,
+            "programados_creados": 0,
+            "programados_actualizados": 0,
+        }
 
         for datos in FASES:
             valores = datos.copy()
             orden = valores.pop("orden")
-
             fase, fase_creada = FasePlan.objects.update_or_create(
                 plan=plan,
                 orden=orden,
                 defaults=valores,
             )
-
-            if fase_creada:
-                fases_creadas += 1
-            else:
-                fases_actualizadas += 1
-
-            self.stdout.write(
-                f"Procesada: {fase.nombre} "
-                f"(semanas {fase.semana_inicio}-{fase.semana_fin})"
+            clave_fase = (
+                "fases_creadas"
+                if fase_creada
+                else "fases_actualizadas"
             )
+            contadores[clave_fase] += 1
 
             for datos_dia in DIAS:
                 valores_dia = datos_dia.copy()
                 numero_dia = valores_dia.pop("numero")
-
                 dia, dia_creado = DiaPlan.objects.update_or_create(
                     fase=fase,
                     numero=numero_dia,
                     defaults=valores_dia,
                 )
-
-                if dia_creado:
-                    dias_creados += 1
-                else:
-                    dias_actualizados += 1
-
-                self.stdout.write(
-                    f"  Día {dia.numero}: {dia.nombre}"
+                clave_dia = (
+                    "dias_creados"
+                    if dia_creado
+                    else "dias_actualizados"
                 )
+                contadores[clave_dia] += 1
 
                 ejercicios_del_dia = PROGRAMACION.get(
                     fase.orden,
@@ -455,11 +493,9 @@ class Command(BaseCommand):
                     nombre_ejercicio = valores_programados.pop(
                         "ejercicio"
                     )
-
                     ejercicio = Ejercicio.objects.filter(
                         nombre=nombre_ejercicio
                     ).first()
-
                     if ejercicio is None:
                         raise CommandError(
                             "No existe el ejercicio: "
@@ -467,35 +503,31 @@ class Command(BaseCommand):
                             "Ejecuta primero cargar_ejercicios."
                         )
 
-                    programado, programado_creado = (
+                    _, programado_creado = (
                         EjercicioProgramado.objects.update_or_create(
                             dia=dia,
                             ejercicio=ejercicio,
                             defaults=valores_programados,
                         )
                     )
-
-                    if programado_creado:
-                        programados_creados += 1
-                    else:
-                        programados_actualizados += 1
-
-                    self.stdout.write(
-                        f"    {programado.orden}. "
-                        f"{programado.ejercicio.nombre}"
+                    clave_programado = (
+                        "programados_creados"
+                        if programado_creado
+                        else "programados_actualizados"
                     )
+                    contadores[clave_programado] += 1
 
         estado_plan = "creado" if plan_creado else "actualizado"
-
         self.stdout.write(
             self.style.SUCCESS(
                 f"Plan {estado_plan}: {plan.nombre}. "
-                f"Fases creadas: {fases_creadas}. "
-                f"Fases actualizadas: {fases_actualizadas}. "
-                f"Días creados: {dias_creados}. "
-                f"Días actualizados: {dias_actualizados}. "
-                f"Ejercicios creados: {programados_creados}. "
-                f"Ejercicios actualizados: "
-                f"{programados_actualizados}."
+                f"Fases creadas: {contadores['fases_creadas']}. "
+                f"Fases actualizadas: {contadores['fases_actualizadas']}. "
+                f"Días creados: {contadores['dias_creados']}. "
+                f"Días actualizados: {contadores['dias_actualizados']}. "
+                "Ejercicios creados: "
+                f"{contadores['programados_creados']}. "
+                "Ejercicios actualizados: "
+                f"{contadores['programados_actualizados']}."
             )
         )

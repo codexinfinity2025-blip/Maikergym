@@ -7,8 +7,3 @@ from gym_project.gym_app.models import PerfilUsuario
 def crear_perfil_usuario(sender, instance, created, **kwargs):
     if created:
         PerfilUsuario.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
-def guardar_perfil_usuario(sender, instance, **kwargs):
-    if hasattr(instance, 'perfil'):
-        instance.perfil.save()

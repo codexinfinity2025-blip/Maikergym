@@ -13,11 +13,21 @@
 <main class="page profile-setup-page">
     <section class="profile-visual" data-motion="float">
         <img src="{% static 'img/generated/profile-setup.png' %}" alt="Preparación de perfil fitness">
-        <div class="profile-visual-note">Último paso antes de entrar a tu cuenta</div>
+        <div class="profile-visual-copy">
+            <span class="profile-visual-note">Último paso</span>
+            <h1>Tu plan ya casi está listo</h1>
+            <p>Solo necesitamos género y peso para adaptar la experiencia y el avatar 3D.</p>
+        </div>
     </section>
 
-    <section class="register-panel">
+    <section class="register-panel profile-setup-panel">
         <h2 class="panel-title">Personaliza tu cuenta</h2>
+        {% if perfil.fecha_nacimiento %}
+            <p class="saved-data-note">
+                <strong>Fecha de nacimiento guardada.</strong>
+                La registraste al crear tu cuenta y no necesitas escribirla otra vez.
+            </p>
+        {% endif %}
         {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
         <form method="POST" enctype="multipart/form-data" class="register-form">
             {% csrf_token %}
@@ -29,33 +39,22 @@
                 <label class="form-label">Género</label>
                 <select class="form-control" name="genero" required>
                     <option value="">Selecciona</option>
-                    <option value="femenino">Femenino</option>
-                    <option value="masculino">Masculino</option>
-                    <option value="otro">Otro</option>
+                    <option value="femenino" {% if perfil.genero == 'femenino' %}selected{% endif %}>Femenino</option>
+                    <option value="masculino" {% if perfil.genero == 'masculino' %}selected{% endif %}>Masculino</option>
+                    <option value="otro" {% if perfil.genero == 'otro' %}selected{% endif %}>Otro</option>
                 </select>
             </div>
             <div class="form-group">
                 <label class="form-label">Peso (kg)</label>
-                <input class="form-control" type="number" name="peso" min="1" step="0.01" required>
+                <input class="form-control" type="number" name="peso" value="{{ perfil.peso|default:'' }}" min="1" max="500" step="0.01" required>
             </div>
             {% if not perfil.fecha_nacimiento %}
             <div class="form-group">
                 <label class="form-label">Fecha de nacimiento</label>
                 <input class="form-control" type="date" name="fecha_nacimiento" required>
             </div>
-            {% else %}
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Fecha de nacimiento</label>
-                    <input class="form-control" type="date" value="{{ perfil.fecha_nacimiento }}" readonly>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Edad calculada</label>
-                    <input class="form-control" type="text" value="{{ perfil.edad }} años" readonly>
-                </div>
-            </div>
             {% endif %}
-            <button class="register-submit" type="submit">Entrar a mi cuenta</button>
+            <button class="register-submit" type="submit">Guardar y ver mi entrenamiento</button>
         </form>
     </section>
 </main>

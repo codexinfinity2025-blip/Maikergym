@@ -31,24 +31,24 @@
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Nombre</label>
-                    <input class="form-control" type="text" name="nombre" placeholder="Nombre completo" required>
+                    <input class="form-control" type="text" name="nombre" value="{{ form_data.nombre|default:'' }}" placeholder="Nombre" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Apellido</label>
-                    <input class="form-control" type="text" name="apellido" placeholder="Apellido" required>
+                    <input class="form-control" type="text" name="apellido" value="{{ form_data.apellido|default:'' }}" placeholder="Apellido" required>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group flex-grow">
                     <label class="form-label">Número de documento</label>
-                    <input class="form-control" type="text" name="documento" placeholder="Número de documento">
+                    <input class="form-control" type="text" name="documento" value="{{ form_data.documento|default:'' }}" placeholder="Número de documento">
                 </div>
                 <div class="form-group document-group">
                     <label class="form-label">Tipo</label>
                     <select class="form-control" name="tipo_documento">
-                        <option value="CC">CC</option>
-                        <option value="TI">TI</option>
+                        <option value="CC" {% if form_data.tipo_documento == 'CC' %}selected{% endif %}>CC</option>
+                        <option value="TI" {% if form_data.tipo_documento == 'TI' %}selected{% endif %}>TI</option>
                     </select>
                 </div>
             </div>
@@ -56,17 +56,17 @@
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Teléfono</label>
-                    <input class="form-control" type="tel" name="telefono" placeholder="Teléfono">
+                    <input class="form-control" type="tel" name="telefono" value="{{ form_data.telefono|default:'' }}" placeholder="Teléfono">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Dirección</label>
-                    <input class="form-control" type="text" name="direccion" placeholder="Dirección">
+                    <input class="form-control" type="text" name="direccion" value="{{ form_data.direccion|default:'' }}" placeholder="Dirección">
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Correo</label>
-                <input class="form-control" type="email" name="email" placeholder="correo@ejemplo.com" required>
+                <input class="form-control" type="email" name="email" value="{{ form_data.email|default:'' }}" placeholder="correo@ejemplo.com" required>
             </div>
 
             <div class="form-row">
@@ -82,7 +82,7 @@
 
             <div class="form-group">
                 <label class="form-label">Fecha de nacimiento</label>
-                <input class="form-control" type="date" name="fecha_nacimiento" required>
+                <input class="form-control" type="date" name="fecha_nacimiento" value="{{ form_data.fecha_nacimiento|default:'' }}" required>
             </div>
 
             <button class="register-submit" type="submit">Registrarse</button>
