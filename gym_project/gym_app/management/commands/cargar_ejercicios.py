@@ -868,6 +868,326 @@ EJERCICIOS.extend([
         "puntos_base": 12,
         "activo": True,
     },
+    {
+        "nombre": "Sentadilla goblet con mancuerna",
+        "descripcion": (
+            "Sentadilla con una mancuerna frente al pecho para reforzar "
+            "la técnica, los cuádriceps y los glúteos."
+        ),
+        "instrucciones": "\n".join([
+            "Sujeta una mancuerna vertical frente al pecho.",
+            "Separa los pies aproximadamente al ancho de los hombros.",
+            "Mantén el pecho elevado y el abdomen firme.",
+            "Desciende llevando rodillas y puntas de los pies en la misma dirección.",
+            "Empuja el suelo para volver a la posición inicial.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Separar la mancuerna del pecho.",
+            "Juntar las rodillas durante el descenso.",
+            "Levantar los talones.",
+            "Redondear la espalda.",
+        ]),
+        "precauciones": (
+            "Usa una carga que puedas sostener sin perder el apoyo completo "
+            "de los pies ni la posición neutral de la espalda."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.CUADRICEPS,
+        "musculos_secundarios": "Glúteos, femorales y abdomen",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.MANCUERNAS,
+        "equipo_necesario": "Una mancuerna",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 10,
+        "activo": True,
+    },
+    {
+        "nombre": "Zancada estática con mancuernas",
+        "descripcion": (
+            "Trabajo unilateral de piernas y glúteos manteniendo los pies "
+            "en una posición estable durante toda la serie."
+        ),
+        "instrucciones": "\n".join([
+            "Sostén una mancuerna a cada lado del cuerpo.",
+            "Da un paso amplio y conserva ambos pies en esa posición.",
+            "Baja la rodilla trasera hacia el suelo con el torso erguido.",
+            "Mantén la rodilla delantera alineada con el pie.",
+            "Empuja con el pie delantero y completa las repeticiones antes de cambiar.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Usar una base demasiado estrecha.",
+            "Dejar caer la rodilla delantera hacia dentro.",
+            "Impulsarse con la pierna trasera.",
+            "Inclinar excesivamente el torso.",
+        ]),
+        "precauciones": (
+            "Empieza sin carga si todavía no controlas el equilibrio y detén "
+            "el descenso antes de sentir dolor en la rodilla."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.GLUTEOS,
+        "musculos_secundarios": "Cuádriceps, femorales y abdomen",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.MANCUERNAS,
+        "equipo_necesario": "Par de mancuernas",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 12,
+        "activo": True,
+    },
+    {
+        "nombre": "Step-up al banco",
+        "descripcion": (
+            "Subida controlada a un banco bajo para desarrollar fuerza "
+            "unilateral, equilibrio y estabilidad de cadera."
+        ),
+        "instrucciones": "\n".join([
+            "Coloca todo el pie de trabajo sobre un banco estable.",
+            "Inclina apenas el torso y mantén la rodilla alineada.",
+            "Empuja el banco con la pierna elevada hasta quedar de pie.",
+            "Evita impulsarte con el pie que permanece en el suelo.",
+            "Desciende lentamente y completa las repeticiones antes de cambiar.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Apoyar solo la punta del pie sobre el banco.",
+            "Usar un banco demasiado alto.",
+            "Empujarse con la pierna inferior.",
+            "Dejar caer la rodilla hacia dentro.",
+        ]),
+        "precauciones": (
+            "Comprueba que el banco no se deslice y elige una altura que te "
+            "permita subir sin perder la alineación de la rodilla."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.GLUTEOS,
+        "musculos_secundarios": "Cuádriceps, femorales y pantorrillas",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.PESO_CORPORAL,
+        "equipo_necesario": "Banco o cajón bajo y estable",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 10,
+        "activo": True,
+    },
+    {
+        "nombre": "Puente de glúteos en suelo",
+        "descripcion": (
+            "Extensión de cadera desde el suelo para fortalecer glúteos "
+            "con una carga articular moderada."
+        ),
+        "instrucciones": "\n".join([
+            "Acuéstate boca arriba con las rodillas flexionadas.",
+            "Apoya los pies completos al ancho de la cadera.",
+            "Contrae el abdomen y empuja el suelo con los talones.",
+            "Eleva la pelvis hasta alinear hombros, cadera y rodillas.",
+            "Desciende de forma controlada sin arquear la espalda.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Empujar desde las puntas de los pies.",
+            "Separar demasiado los pies del cuerpo.",
+            "Hiperextender la zona lumbar.",
+            "Dejar caer las rodillas hacia dentro.",
+        ]),
+        "precauciones": (
+            "Detén la elevación cuando la cadera quede alineada; no busques "
+            "altura adicional arqueando la zona lumbar."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.GLUTEOS,
+        "musculos_secundarios": "Femorales y abdomen",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.PESO_CORPORAL,
+        "equipo_necesario": "Colchoneta",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 8,
+        "activo": True,
+    },
+    {
+        "nombre": "Press de pecho sentado en máquina",
+        "descripcion": (
+            "Empuje horizontal guiado para trabajar el pecho manteniendo "
+            "la espalda estable contra el respaldo."
+        ),
+        "instrucciones": "\n".join([
+            "Ajusta el asiento para que los agarres queden a la altura del pecho.",
+            "Apoya cabeza, espalda y pies.",
+            "Sujeta los mangos con las muñecas neutrales.",
+            "Empuja hacia delante sin bloquear los codos.",
+            "Regresa lentamente hasta un estiramiento cómodo.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Separar la espalda del respaldo.",
+            "Encoger los hombros.",
+            "Doblar las muñecas hacia atrás.",
+            "Dejar que el peso regrese sin control.",
+        ]),
+        "precauciones": (
+            "Ajusta el recorrido de la máquina para que los codos no queden "
+            "excesivamente detrás del torso."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.PECHO,
+        "musculos_secundarios": "Tríceps y deltoides anterior",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.MAQUINA,
+        "equipo_necesario": "Máquina de press de pecho",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 10,
+        "activo": True,
+    },
+    {
+        "nombre": "Face pull en polea",
+        "descripcion": (
+            "Tracción hacia el rostro para fortalecer la espalda alta, "
+            "deltoides posterior y rotadores externos del hombro."
+        ),
+        "instrucciones": "\n".join([
+            "Coloca una cuerda en una polea a la altura del rostro.",
+            "Da un paso atrás y mantén el torso estable.",
+            "Tira de la cuerda hacia la frente separando sus extremos.",
+            "Lleva los codos hacia fuera sin elevar los hombros.",
+            "Regresa despacio hasta extender casi por completo los brazos.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Convertir el gesto en un remo hacia el pecho.",
+            "Arquear la zona lumbar.",
+            "Encoger los hombros.",
+            "Usar una carga que impida separar la cuerda.",
+        ]),
+        "precauciones": (
+            "Usa una carga moderada y un recorrido sin dolor; no fuerces "
+            "los hombros detrás de una posición cómoda."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.ESPALDA,
+        "musculos_secundarios": "Deltoides posterior y rotadores externos",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.POLEA,
+        "equipo_necesario": "Polea ajustable y cuerda",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 10,
+        "activo": True,
+    },
+    {
+        "nombre": "Curl de bíceps en polea baja",
+        "descripcion": (
+            "Flexión de codos de pie con tensión continua proporcionada "
+            "por una polea baja."
+        ),
+        "instrucciones": "\n".join([
+            "Conecta una barra corta a la polea baja.",
+            "Sujétala con las palmas hacia arriba y el torso erguido.",
+            "Fija los codos junto a las costillas.",
+            "Flexiona los codos sin mover los hombros.",
+            "Extiende lentamente sin perder la tensión.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Balancear el torso.",
+            "Adelantar los codos.",
+            "Doblar las muñecas.",
+            "Soltar la carga al descender.",
+        ]),
+        "precauciones": (
+            "Mantén las muñecas alineadas y reduce la carga si necesitas "
+            "usar impulso para completar la flexión."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.BICEPS,
+        "musculos_secundarios": "Braquial y antebrazos",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.POLEA,
+        "equipo_necesario": "Polea baja y barra corta",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 8,
+        "activo": True,
+    },
+    {
+        "nombre": "Extensión de tríceps sobre la cabeza en polea",
+        "descripcion": (
+            "Extensión de codos con cuerda por encima de la cabeza para "
+            "trabajar el tríceps en una posición alargada."
+        ),
+        "instrucciones": "\n".join([
+            "Conecta una cuerda a la polea y colócate de espaldas a ella.",
+            "Adopta una base estable con un pie ligeramente adelantado.",
+            "Eleva los brazos y mantén los codos orientados al frente.",
+            "Extiende los antebrazos sin mover los hombros.",
+            "Regresa lentamente hasta una flexión cómoda.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Abrir demasiado los codos.",
+            "Arquear la zona lumbar.",
+            "Mover los hombros durante la extensión.",
+            "Usar una carga excesiva.",
+        ]),
+        "precauciones": (
+            "Evita este recorrido si causa dolor de hombro y mantén el "
+            "abdomen activo para proteger la zona lumbar."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.TRICEPS,
+        "musculos_secundarios": "Hombros y abdomen",
+        "nivel": NivelEjercicioChoice.INTERMEDIO,
+        "tipo_equipo": TipoEquipoChoice.POLEA,
+        "equipo_necesario": "Polea ajustable y cuerda",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 10,
+        "activo": True,
+    },
+    {
+        "nombre": "Press Pallof en polea",
+        "descripcion": (
+            "Ejercicio antirotación de pie para fortalecer el abdomen y "
+            "la estabilidad del tronco frente a una fuerza lateral."
+        ),
+        "instrucciones": "\n".join([
+            "Coloca la polea a la altura del pecho y ubícate de lado.",
+            "Sujeta el mango con ambas manos frente al esternón.",
+            "Separa los pies y activa abdomen y glúteos.",
+            "Extiende los brazos sin permitir que el torso gire.",
+            "Regresa el mango al pecho y cambia de lado al completar la serie.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Girar el torso hacia la polea.",
+            "Juntar demasiado los pies.",
+            "Elevar los hombros.",
+            "Extender los brazos con impulso.",
+        ]),
+        "precauciones": (
+            "Empieza con poca resistencia; la prioridad es impedir la "
+            "rotación del tronco, no desplazar una carga alta."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.ABDOMEN,
+        "musculos_secundarios": "Glúteos y estabilizadores de hombro",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.POLEA,
+        "equipo_necesario": "Polea ajustable y mango individual",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 10,
+        "activo": True,
+    },
+    {
+        "nombre": "Bird dog",
+        "descripcion": (
+            "Ejercicio de estabilidad en cuadrupedia que coordina brazo y "
+            "pierna contrarios manteniendo la columna neutral."
+        ),
+        "instrucciones": "\n".join([
+            "Coloca manos bajo hombros y rodillas bajo caderas.",
+            "Activa el abdomen sin redondear la espalda.",
+            "Extiende un brazo y la pierna contraria.",
+            "Mantén la pelvis paralela al suelo.",
+            "Regresa con control y alterna el lado.",
+        ]),
+        "errores_comunes": "\n".join([
+            "Arquear la zona lumbar.",
+            "Girar la pelvis.",
+            "Elevar la pierna por encima de la cadera.",
+            "Apresurar los cambios de lado.",
+        ]),
+        "precauciones": (
+            "Reduce el alcance del brazo o la pierna si no puedes mantener "
+            "el tronco estable y sin molestias."
+        ),
+        "grupo_muscular": GrupoMuscularChoice.ABDOMEN,
+        "musculos_secundarios": "Glúteos, espalda y hombros",
+        "nivel": NivelEjercicioChoice.PRINCIPIANTE,
+        "tipo_equipo": TipoEquipoChoice.PESO_CORPORAL,
+        "equipo_necesario": "Colchoneta",
+        "tipo_medicion": TipoMedicionChoice.REPETICIONES,
+        "puntos_base": 8,
+        "activo": True,
+    },
 ])
 class Command(BaseCommand):
     help = "Carga o actualiza el catálogo inicial de ejercicios."

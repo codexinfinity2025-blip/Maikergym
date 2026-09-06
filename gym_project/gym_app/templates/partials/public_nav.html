@@ -1,28 +1,38 @@
-﻿{% load static %}
+{% load static %}
 <header class="mg-nav">
-    <button class="mg-brand" onclick="window.location.href='{% url 'inicio' %}'">MaikerGym</button>
-    <nav class="mg-nav-links">
-        <button class="icon-link" onclick="window.location.href='{% url 'inicio' %}'">
+    <button type="button" class="mg-brand" onclick="window.location.href='{% url 'inicio' %}'">MaikerGym</button>
+    <button
+        type="button"
+        class="mg-nav-toggle"
+        aria-expanded="false"
+        aria-controls="publicNavLinks"
+        aria-label="Abrir menú de navegación"
+    >
+        <span class="mg-nav-toggle-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="mg-nav-toggle-text">Menú</span>
+    </button>
+    <nav class="mg-nav-links" id="publicNavLinks" aria-label="Navegación principal">
+        <button type="button" class="icon-link" onclick="window.location.href='{% url 'inicio' %}'">
             <img class="nav-mini-icon" src="{% static 'icons/home.svg' %}" alt="">Inicio
         </button>
-        <button class="icon-link" onclick="window.location.href='{% url 'escogenos' %}'">
+        <button type="button" class="icon-link" onclick="window.location.href='{% url 'escogenos' %}'">
             <img class="nav-mini-icon" src="{% static 'icons/objetivos.svg' %}" alt="">Esc&oacute;genos
         </button>
-        <button class="icon-link" onclick="window.location.href='{% url 'precios' %}'">
+        <button type="button" class="icon-link" onclick="window.location.href='{% url 'precios' %}'">
             <img class="nav-mini-icon" src="{% static 'icons/planes.svg' %}" alt="">Precios
         </button>
         {% if user.is_authenticated %}
-            <button class="icon-link" onclick="window.location.href='{% url 'cuenta' %}'">
+            <button type="button" class="icon-link" onclick="window.location.href='{% url 'cuenta' %}'">
                 <img class="nav-mini-icon" src="{% static 'icons/usuarios.svg' %}" alt="">Mi cuenta
             </button>
-            <button class="icon-link logout-link" onclick="window.location.href='{% url 'logout' %}'">
+            <button type="button" class="icon-link logout-link" onclick="window.location.href='{% url 'logout' %}'">
                 <img class="nav-mini-icon" src="{% static 'icons/logout.svg' %}" alt="">Salir
             </button>
         {% else %}
-            <button class="icon-link" onclick="window.location.href='{% url 'login' %}'">
+            <button type="button" class="icon-link" onclick="window.location.href='{% url 'login' %}'">
                 <img class="nav-mini-icon" src="{% static 'icons/usuarios.svg' %}" alt="">Iniciar sesi&oacute;n
             </button>
-            <button class="icon-link mg-nav-primary" onclick="window.location.href='{% url 'registrarse' %}'">
+            <button type="button" class="icon-link mg-nav-primary" onclick="window.location.href='{% url 'registrarse' %}'">
                 <img class="nav-mini-icon" src="{% static 'icons/admin.svg' %}" alt="">Registrarse
             </button>
         {% endif %}

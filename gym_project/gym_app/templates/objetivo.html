@@ -49,6 +49,16 @@
             </form>
             <p>Condición física, energía diaria y bienestar sostenible.</p>
         </article>
+
+        <article class="objetivo-card objetivo-card--perder-peso">
+            <img src="{% static 'img/generated/diet-plan.png' %}" alt="Entrenamiento para perder peso">
+            <form method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="objetivo" value="perder_peso">
+                <button class="objetivo-btn" type="submit">Perder peso</button>
+            </form>
+            <p>Fuerza y acondicionamiento progresivo para aumentar el gasto energético y conservar masa muscular.</p>
+        </article>
     </section>
 </main>
 {% endblock %}

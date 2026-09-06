@@ -23,7 +23,7 @@
 }
 .objetivo-grid{
     display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-columns:repeat(2,minmax(0,1fr));
     gap:1rem;
 }
 .objetivo-card{
@@ -40,6 +40,9 @@
     object-fit:cover;
     animation:objective-breathe 5s ease-in-out infinite;
     transition:transform .35s ease, filter .35s ease;
+}
+.objetivo-card--perder-peso img{
+    object-position:center 42%;
 }
 .objetivo-card:hover img{
     transform:scale(1.06);
@@ -66,6 +69,6 @@
     0%,100%{transform:scale(1)}
     50%{transform:scale(1.025)}
 }
-@media (max-width:900px){
+@media (max-width:760px){
     .objetivo-grid{grid-template-columns:1fr}
 }

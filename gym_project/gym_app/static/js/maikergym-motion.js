@@ -1,14 +1,75 @@
 (() => {
     const ready = (fn) => document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", fn) : fn();
     ready(() => {
-        document.body.insertAdjacentHTML("afterbegin", '<div class="mg-progress" aria-hidden="true"></div>');
-        const progress = document.querySelector(".mg-progress");
-        const updateProgress = () => {
-            const max = document.documentElement.scrollHeight - window.innerHeight;
-            progress.style.width = `${max > 0 ? (window.scrollY / max) * 100 : 0}%`;
-        };
-        updateProgress();
-        window.addEventListener("scroll", updateProgress, { passive: true });
+        const isTrainingScreen = document.querySelector(
+            ".training-page, .workout-player"
+        );
+
+        if (!isTrainingScreen) {
+            document.body.insertAdjacentHTML(
+                "afterbegin",
+                '<div class="mg-progress" aria-hidden="true"></div>'
+            );
+            const progress = document.querySelector(".mg-progress");
+            const updateProgress = () => {
+                const max = document.documentElement.scrollHeight - window.innerHeight;
+                progress.style.width = `${max > 0 ? (window.scrollY / max) * 100 : 0}%`;
+            };
+            updateProgress();
+            window.addEventListener("scroll", updateProgress, { passive: true });
+        }
+
+        document.querySelectorAll(".mg-nav-toggle").forEach((toggle) => {
+            const header = toggle.closest(".mg-nav");
+            const links = header && header.querySelector(".mg-nav-links");
+
+            if (!header || !links) {
+                return;
+            }
+
+            const closeMenu = () => {
+                links.classList.remove("is-open");
+                header.classList.remove("is-menu-open");
+                toggle.setAttribute("aria-expanded", "false");
+                toggle.setAttribute("aria-label", "Abrir menú de navegación");
+            };
+
+            toggle.addEventListener("click", () => {
+                const willOpen = !links.classList.contains("is-open");
+                links.classList.toggle("is-open", willOpen);
+                header.classList.toggle("is-menu-open", willOpen);
+                toggle.setAttribute("aria-expanded", String(willOpen));
+                toggle.setAttribute(
+                    "aria-label",
+                    willOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación"
+                );
+            });
+
+            links.addEventListener("click", (event) => {
+                if (event.target.closest("button, a")) {
+                    closeMenu();
+                }
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") {
+                    closeMenu();
+                    toggle.focus();
+                }
+            });
+
+            document.addEventListener("click", (event) => {
+                if (!header.contains(event.target)) {
+                    closeMenu();
+                }
+            });
+
+            window.addEventListener("resize", () => {
+                if (window.innerWidth > 860) {
+                    closeMenu();
+                }
+            });
+        });
 
         document.querySelectorAll("button, .btn, a").forEach((el) => {
             el.classList.add("mg-ripple");

@@ -39,15 +39,53 @@ DIETAS_POR_OBJETIVO = {
         'titulo': 'Dieta para salud',
         'descripcion': 'Plan con alimentos variados, hidratación y hábitos sostenibles para mejorar bienestar general.',
     },
-    'nutricion': {
-        'titulo': 'Dieta nutricional personalizada',
-        'descripcion': 'Plan inicial para ordenar horarios, grupos de alimentos y elecciones saludables según tus datos.',
-    },
-    'recuperar': {
-        'titulo': 'Dieta para recuperación',
-        'descripcion': 'Plan orientado a recuperación física, proteína suficiente, descanso y alimentos que apoyen el proceso.',
+    'perder_peso': {
+        'titulo': 'Dieta para pérdida de peso',
+        'descripcion': 'Plan equilibrado para crear hábitos sostenibles, controlar porciones y acompañar el entrenamiento sin dietas extremas.',
     },
 }
+
+# Este listado corresponde a las demostraciones validadas e integradas en
+# static/entrenador3d/entrenador.html. Un ejercicio nuevo queda en estado
+# pendiente hasta que tenga una animación propia y revisada.
+EJERCICIOS_CON_ANIMACION_3D = frozenset({
+    "Sentadilla con barra",
+    "Press de banca con barra",
+    "Jalón al pecho en polea",
+    "Prensa de piernas en máquina",
+    "Peso muerto rumano con barra",
+    "Hip thrust con barra",
+    "Extensión de cuádriceps en máquina",
+    "Curl femoral tumbado en máquina",
+    "Abducción de cadera en máquina",
+    "Elevación de talones de pie en máquina",
+    "Press inclinado con mancuernas",
+    "Aperturas de pecho en máquina",
+    "Press militar sentado con mancuernas",
+    "Elevaciones laterales con mancuernas",
+    "Extensión de tríceps en polea",
+    "Remo sentado en polea",
+    "Remo inclinado con barra",
+    "Dominadas asistidas en máquina",
+    "Curl de bíceps con barra Z",
+    "Curl martillo con mancuernas",
+    "Plancha frontal sobre antebrazos",
+    "Crunch abdominal en máquina",
+    "Elevación de rodillas en silla romana",
+    "Caminata del granjero con mancuernas",
+    "Caminata inclinada en caminadora",
+    "Remo en máquina ergométrica",
+    "Sentadilla goblet con mancuerna",
+    "Zancada estática con mancuernas",
+    "Step-up al banco",
+    "Puente de glúteos en suelo",
+    "Press de pecho sentado en máquina",
+    "Face pull en polea",
+    "Curl de bíceps en polea baja",
+    "Extensión de tríceps sobre la cabeza en polea",
+    "Press Pallof en polea",
+    "Bird dog",
+})
 
 def get_perfil(user):
     perfil, _ = PerfilUsuario.objects.get_or_create(user=user)
@@ -873,6 +911,11 @@ def reproductor_entrenamiento_view(request, sesion_id):
         "numero_ejercicio": numero_ejercicio,
         "total_ejercicios": len(ejercicios_sesion),
         "siguiente_ejercicio": siguiente_ejercicio,
+        "modelo_3d_disponible": bool(
+            ejercicio_actual
+            and ejercicio_actual.ejercicio_programado.ejercicio.nombre
+            in EJERCICIOS_CON_ANIMACION_3D
+        ),
     }
 
     return render(

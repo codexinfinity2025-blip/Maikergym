@@ -4,7 +4,7 @@
 {% block title %}MaikerGym - Entrenamiento en curso{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/reproductor_entrenamiento.css' %}">
+<link rel="stylesheet" href="{% static 'css/reproductor_entrenamiento.css' %}?v=series-ui-v1">
 {% endblock %}
 
 {% block content %}
@@ -89,18 +89,34 @@
                         </div>
 
                         <div class="model-shell">
-                            <iframe
-                                id="exercise3DFrame"
-                                class="exercise-3d-frame"
-                                src="{% static 'entrenador3d/entrenador.html' %}?embedded=1&amp;exercise={{ ejercicio.nombre|urlencode }}&amp;gender={% if perfil.genero == 'femenino' %}female{% else %}male{% endif %}&amp;v=catalogo-completo-integrado-v7"
-                                title="Demostración 3D interactiva de {{ ejercicio.nombre }}"
-                                loading="eager"
-                                allow="fullscreen"
-                            ></iframe>
+                            {% if modelo_3d_disponible %}
+                                <iframe
+                                    id="exercise3DFrame"
+                                    class="exercise-3d-frame"
+                                    src="{% static 'entrenador3d/entrenador.html' %}?embedded=1&amp;exercise={{ ejercicio.nombre|urlencode }}&amp;gender={% if perfil.genero == 'femenino' %}female{% else %}male{% endif %}&amp;v=catalogo-36-integrado-v9"
+                                    title="Demostración 3D interactiva de {{ ejercicio.nombre }}"
+                                    loading="eager"
+                                    allow="fullscreen"
+                                ></iframe>
 
-                            <div class="model-hint">
-                                Arrastra para girar · Pellizca para acercar
-                            </div>
+                                <div class="model-hint">
+                                    Arrastra para girar · Pellizca para acercar
+                                </div>
+                            {% else %}
+                                <div class="model-review-placeholder" role="status">
+                                    <span class="model-review-icon" aria-hidden="true">3D</span>
+                                    <span class="player-eyebrow">Demostración en preparación</span>
+                                    <strong>Modelo 3D pendiente</strong>
+                                    <p>
+                                        Estamos preparando una demostración específica y
+                                        técnicamente revisada para este ejercicio.
+                                    </p>
+                                    <small>
+                                        Mientras esté pendiente, sigue las instrucciones escritas
+                                        y solicita orientación profesional si tienes dudas.
+                                    </small>
+                                </div>
+                            {% endif %}
                         </div>
 
                         <div class="exercise-meta">
@@ -185,14 +201,27 @@
                                     de {{ programado.series }}
                                 </h2>
 
-                                <div
-                                    id="seriesTimer"
-                                    class="series-timer"
-                                    data-started="{{ serie_en_progreso.fecha_inicio|date:'c' }}"
-                                    aria-live="polite"
-                                >
-                                    00:00
-                                </div>
+                                {% if ejercicio.tipo_medicion == "tiempo" %}
+                                    <div
+                                        id="seriesTimer"
+                                        class="series-timer"
+                                        data-started="{{ serie_en_progreso.fecha_inicio|date:'c' }}"
+                                        aria-live="polite"
+                                    >
+                                        00:00
+                                    </div>
+                                {% else %}
+                                    <div class="series-guidance">
+                                        <strong>Ejecuta la serie con control</strong>
+                                        <span>
+                                            {% if ejercicio.tipo_medicion == "repeticiones" %}
+                                                Completa las repeticiones indicadas sin acelerar la técnica.
+                                            {% else %}
+                                                Completa la distancia indicada manteniendo una intensidad estable.
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                {% endif %}
 
                                 <div class="target-card">
                                     <small>Objetivo</small>
@@ -412,5 +441,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/reproductor_entrenamiento.js' %}" defer></script>
+<script src="{% static 'js/reproductor_entrenamiento.js' %}?v=series-ui-v1" defer></script>
 {% endblock %}

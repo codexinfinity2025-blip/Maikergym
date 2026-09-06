@@ -134,6 +134,31 @@ def ejercicio_por_tiempo(
         "activo": True,
     }
 
+
+def ejercicio_por_distancia(
+    nombre,
+    orden,
+    series,
+    distancia_metros,
+    descanso,
+    obligatorio=True,
+    esfuerzo=6,
+):
+    return {
+        "ejercicio": nombre,
+        "orden": orden,
+        "series": series,
+        "repeticiones_min": None,
+        "repeticiones_max": None,
+        "duracion_segundos": None,
+        "distancia_metros": distancia_metros,
+        "descanso_segundos": descanso,
+        "esfuerzo_objetivo": esfuerzo,
+        "obligatorio": obligatorio,
+        "notas": "",
+        "activo": True,
+    }
+
 PROGRAMACION = {
     1: {
         1: [
@@ -322,6 +347,11 @@ def aumentar_volumen(ejercicios):
         if progresado["duracion_segundos"] is not None:
             progresado["duracion_segundos"] += 10
 
+        if progresado["distancia_metros"] is not None:
+            progresado["distancia_metros"] = round(
+                progresado["distancia_metros"] * 1.15,
+            )
+
         progresado["notas"] = (
             "Fase de progresión. Aumenta la carga solamente si "
             "completas el rango manteniendo una técnica correcta."
@@ -364,6 +394,11 @@ def aumentar_intensidad(ejercicios):
         if intensificado["duracion_segundos"] is not None:
             intensificado["duracion_segundos"] += 10
 
+        if intensificado["distancia_metros"] is not None:
+            intensificado["distancia_metros"] = round(
+                intensificado["distancia_metros"] * 1.10,
+            )
+
         intensificado["notas"] = (
             "Fase de intensificación. Utiliza una carga mayor únicamente "
             "si puedes mantener la técnica y completar el rango indicado."
@@ -379,10 +414,423 @@ PROGRAMACION[3] = {
     for numero_dia, ejercicios in PROGRAMACION[2].items()
 }
 
+
+def construir_programacion(base):
+    volumen = {
+        numero_dia: aumentar_volumen(ejercicios)
+        for numero_dia, ejercicios in base.items()
+    }
+    intensidad = {
+        numero_dia: aumentar_intensidad(ejercicios)
+        for numero_dia, ejercicios in volumen.items()
+    }
+    return {1: base, 2: volumen, 3: intensidad}
+
+
+def progresar_perdida_peso(ejercicios, fase):
+    progresados = []
+    incremento_repeticiones = 2 if fase == 2 else 4
+    factor_cardio = 1.15 if fase == 2 else 1.30
+    reduccion_descanso = 10 if fase == 2 else 15
+
+    for datos in ejercicios:
+        progresado = datos.copy()
+        progresado["series"] = min(progresado["series"] + 1, 4)
+        progresado["esfuerzo_objetivo"] = 6 if fase == 2 else 7
+        progresado["descanso_segundos"] = max(
+            progresado["descanso_segundos"] - reduccion_descanso,
+            30,
+        )
+
+        if progresado["repeticiones_min"] is not None:
+            progresado["repeticiones_min"] += incremento_repeticiones
+            progresado["repeticiones_max"] = min(
+                progresado["repeticiones_max"]
+                + incremento_repeticiones,
+                20,
+            )
+
+        if progresado["duracion_segundos"] is not None:
+            progresado["duracion_segundos"] = round(
+                progresado["duracion_segundos"] * factor_cardio,
+            )
+
+        if progresado["distancia_metros"] is not None:
+            progresado["distancia_metros"] = round(
+                progresado["distancia_metros"] * factor_cardio,
+            )
+
+        progresado["notas"] = (
+            "Progresa solamente si completas el trabajo con respiración "
+            "controlada y técnica estable. Detente ante dolor, mareo o "
+            "dificultad respiratoria fuera de lo habitual."
+        )
+        progresados.append(progresado)
+
+    return progresados
+
+
+def construir_programacion_perdida_peso(base):
+    return {
+        1: base,
+        2: {
+            numero_dia: progresar_perdida_peso(ejercicios, 2)
+            for numero_dia, ejercicios in base.items()
+        },
+        3: {
+            numero_dia: progresar_perdida_peso(ejercicios, 3)
+            for numero_dia, ejercicios in base.items()
+        },
+    }
+
+
+PROGRAMACION_ESTETICA = construir_programacion({
+    1: [
+        ejercicio_por_repeticiones(
+            "Sentadilla goblet con mancuerna", 1, 3, 10, 12, 75,
+        ),
+        ejercicio_por_repeticiones(
+            "Zancada estática con mancuernas", 2, 3, 10, 12, 75,
+        ),
+        ejercicio_por_repeticiones(
+            "Hip thrust con barra", 3, 3, 10, 12, 75,
+        ),
+        ejercicio_por_repeticiones(
+            "Step-up al banco", 4, 2, 10, 12, 60,
+        ),
+        ejercicio_por_repeticiones(
+            "Abducción de cadera en máquina", 5, 2, 15, 20, 45,
+        ),
+        ejercicio_por_repeticiones(
+            "Elevación de talones de pie en máquina",
+            6, 3, 15, 20, 45, obligatorio=False,
+        ),
+    ],
+    2: [
+        ejercicio_por_repeticiones(
+            "Press de pecho sentado en máquina", 1, 3, 10, 12, 75,
+        ),
+        ejercicio_por_repeticiones(
+            "Press inclinado con mancuernas", 2, 3, 10, 12, 75,
+        ),
+        ejercicio_por_repeticiones(
+            "Jalón al pecho en polea", 3, 3, 10, 12, 75,
+        ),
+        ejercicio_por_repeticiones(
+            "Face pull en polea", 4, 2, 12, 15, 60,
+        ),
+        ejercicio_por_repeticiones(
+            "Elevaciones laterales con mancuernas", 5, 2, 12, 15, 45,
+        ),
+        ejercicio_por_repeticiones(
+            "Extensión de tríceps sobre la cabeza en polea",
+            6, 2, 10, 15, 60, obligatorio=False,
+        ),
+    ],
+    3: [
+        ejercicio_por_repeticiones(
+            "Peso muerto rumano con barra", 1, 3, 10, 12, 90,
+        ),
+        ejercicio_por_repeticiones(
+            "Remo sentado en polea", 2, 3, 10, 12, 75,
+        ),
+        ejercicio_por_repeticiones(
+            "Curl de bíceps en polea baja", 3, 2, 10, 15, 60,
+        ),
+        ejercicio_por_repeticiones(
+            "Press Pallof en polea", 4, 3, 10, 12, 45,
+        ),
+        ejercicio_por_repeticiones(
+            "Bird dog", 5, 3, 8, 10, 45,
+        ),
+        ejercicio_por_tiempo(
+            "Caminata inclinada en caminadora",
+            6, 1, 600, 60, obligatorio=False, esfuerzo=5,
+        ),
+    ],
+})
+
+
+PROGRAMACION_SALUD = construir_programacion({
+    1: [
+        ejercicio_por_repeticiones(
+            "Sentadilla goblet con mancuerna", 1, 2, 10, 12, 75,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Step-up al banco", 2, 2, 8, 10, 60, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Puente de glúteos en suelo", 3, 3, 12, 15, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Abducción de cadera en máquina", 4, 2, 12, 15, 45,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Elevación de talones de pie en máquina", 5, 2, 12, 15, 45,
+            esfuerzo=5,
+        ),
+        ejercicio_por_tiempo(
+            "Caminata inclinada en caminadora",
+            6, 1, 480, 60, obligatorio=False, esfuerzo=4,
+        ),
+    ],
+    2: [
+        ejercicio_por_repeticiones(
+            "Press de pecho sentado en máquina", 1, 2, 10, 12, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Remo sentado en polea", 2, 2, 10, 12, 60, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Jalón al pecho en polea", 3, 2, 10, 12, 60, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Face pull en polea", 4, 2, 12, 15, 45, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Curl de bíceps en polea baja", 5, 2, 10, 12, 45,
+            obligatorio=False, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Extensión de tríceps en polea", 6, 2, 10, 12, 45,
+            obligatorio=False, esfuerzo=5,
+        ),
+    ],
+    3: [
+        ejercicio_por_repeticiones(
+            "Bird dog", 1, 3, 8, 10, 45, esfuerzo=4,
+        ),
+        ejercicio_por_repeticiones(
+            "Press Pallof en polea", 2, 3, 10, 12, 45, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Puente de glúteos en suelo", 3, 2, 12, 15, 45,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Caminata del granjero con mancuernas", 4, 3, 20, 30, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Zancada estática con mancuernas", 5, 2, 8, 10, 60,
+            obligatorio=False, esfuerzo=5,
+        ),
+        ejercicio_por_tiempo(
+            "Plancha frontal sobre antebrazos", 6, 2, 20, 45,
+            obligatorio=False, esfuerzo=5,
+        ),
+    ],
+})
+
+
+PROGRAMACION_PERDER_PESO = construir_programacion_perdida_peso({
+    1: [
+        ejercicio_por_repeticiones(
+            "Sentadilla goblet con mancuerna", 1, 3, 12, 15, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Zancada estática con mancuernas", 2, 2, 10, 12, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Step-up al banco", 3, 2, 10, 12, 60, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Puente de glúteos en suelo", 4, 3, 12, 15, 45,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Elevación de talones de pie en máquina", 5, 2, 15, 20, 45,
+            obligatorio=False, esfuerzo=5,
+        ),
+        ejercicio_por_tiempo(
+            "Caminata inclinada en caminadora", 6, 1, 600, 45,
+            esfuerzo=5,
+        ),
+    ],
+    2: [
+        ejercicio_por_repeticiones(
+            "Press de pecho sentado en máquina", 1, 3, 10, 12, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Jalón al pecho en polea", 2, 3, 10, 12, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Remo sentado en polea", 3, 3, 10, 12, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Face pull en polea", 4, 2, 12, 15, 45, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Curl de bíceps en polea baja", 5, 2, 10, 12, 45,
+            obligatorio=False, esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Extensión de tríceps sobre la cabeza en polea",
+            6, 2, 10, 12, 45, obligatorio=False, esfuerzo=5,
+        ),
+    ],
+    3: [
+        ejercicio_por_repeticiones(
+            "Peso muerto rumano con barra", 1, 3, 10, 12, 75,
+            esfuerzo=5,
+        ),
+        ejercicio_por_distancia(
+            "Caminata del granjero con mancuernas", 2, 3, 30, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_distancia(
+            "Remo en máquina ergométrica", 3, 2, 300, 60,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Press Pallof en polea", 4, 3, 10, 12, 45,
+            esfuerzo=5,
+        ),
+        ejercicio_por_repeticiones(
+            "Bird dog", 5, 3, 8, 10, 45, esfuerzo=5,
+        ),
+        ejercicio_por_tiempo(
+            "Plancha frontal sobre antebrazos", 6, 2, 25, 45,
+            obligatorio=False, esfuerzo=5,
+        ),
+    ],
+})
+
+
+DIAS_ESTETICA = [
+    {
+        "numero": 1,
+        "nombre": "Piernas y glúteos",
+        "enfoque": "Glúteos, cuádriceps, femorales y pantorrillas",
+        "descripcion": "Trabajo de tren inferior con énfasis unilateral.",
+        "activo": True,
+    },
+    {
+        "numero": 2,
+        "nombre": "Torso equilibrado",
+        "enfoque": "Pecho, espalda, hombros y tríceps",
+        "descripcion": "Empujes y tracciones para una postura equilibrada.",
+        "activo": True,
+    },
+    {
+        "numero": 3,
+        "nombre": "Cadena posterior y core",
+        "enfoque": "Femorales, espalda, bíceps y abdomen",
+        "descripcion": "Fuerza posterior, estabilidad y acondicionamiento.",
+        "activo": True,
+    },
+]
+
+FASES_PERDER_PESO = [
+    {
+        "orden": 1,
+        "nombre": "Adaptación y técnica",
+        "semana_inicio": 1,
+        "semana_fin": 4,
+        "descripcion": (
+            "Aprendizaje de los movimientos y creación de una base "
+            "cardiovascular con intensidad moderada."
+        ),
+        "activo": True,
+    },
+    {
+        "orden": 2,
+        "nombre": "Aumento de capacidad",
+        "semana_inicio": 5,
+        "semana_fin": 8,
+        "descripcion": (
+            "Incremento gradual del trabajo de fuerza y del tiempo de "
+            "acondicionamiento sin sacrificar la técnica."
+        ),
+        "activo": True,
+    },
+    {
+        "orden": 3,
+        "nombre": "Consolidación metabólica",
+        "semana_inicio": 9,
+        "semana_fin": 12,
+        "descripcion": (
+            "Consolidación de la resistencia, la fuerza y los hábitos de "
+            "entrenamiento mediante una progresión controlada."
+        ),
+        "activo": True,
+    },
+]
+
+
+DIAS_SALUD = [
+    {
+        "numero": 1,
+        "nombre": "Piernas y movilidad",
+        "enfoque": "Piernas, glúteos y equilibrio",
+        "descripcion": "Patrones básicos de tren inferior y bajo impacto.",
+        "activo": True,
+    },
+    {
+        "numero": 2,
+        "nombre": "Postura y tren superior",
+        "enfoque": "Pecho, espalda, hombros y brazos",
+        "descripcion": "Trabajo guiado para fuerza y postura cotidiana.",
+        "activo": True,
+    },
+    {
+        "numero": 3,
+        "nombre": "Estabilidad de cuerpo completo",
+        "enfoque": "Core, glúteos, equilibrio y capacidad funcional",
+        "descripcion": "Control del tronco y movimientos funcionales.",
+        "activo": True,
+    },
+]
+
+
+DIAS_PERDER_PESO = [
+    {
+        "numero": 1,
+        "nombre": "Piernas y cardio de bajo impacto",
+        "enfoque": "Piernas, glúteos y capacidad cardiovascular",
+        "descripcion": (
+            "Fuerza de tren inferior seguida de acondicionamiento "
+            "progresivo y controlado."
+        ),
+        "activo": True,
+    },
+    {
+        "numero": 2,
+        "nombre": "Tren superior completo",
+        "enfoque": "Pecho, espalda, hombros y brazos",
+        "descripcion": (
+            "Empujes y tracciones equilibrados para conservar fuerza y "
+            "masa muscular durante el proceso."
+        ),
+        "activo": True,
+    },
+    {
+        "numero": 3,
+        "nombre": "Cuerpo completo y acondicionamiento",
+        "enfoque": "Cadena posterior, core y resistencia",
+        "descripcion": (
+            "Sesión funcional para mejorar la estabilidad, el gasto "
+            "energético y la capacidad de trabajo."
+        ),
+        "activo": True,
+    },
+]
+
 PLANES_INICIALES = [
     {
         "nombre": "Estética inicial de 12 semanas",
         "objetivo": ObjetivoChoice.ESTETICO,
+        "dias": DIAS_ESTETICA,
+        "programacion": PROGRAMACION_ESTETICA,
         "descripcion": (
             "Programa inicial de fuerza y acondicionamiento para mejorar "
             "la composición corporal con una progresión segura."
@@ -399,25 +847,23 @@ PLANES_INICIALES = [
     {
         "nombre": "Salud y movimiento de 12 semanas",
         "objetivo": ObjetivoChoice.SALUD,
+        "dias": DIAS_SALUD,
+        "programacion": PROGRAMACION_SALUD,
         "descripcion": (
             "Programa de cuerpo completo orientado a mejorar fuerza, "
             "movilidad y capacidad física general."
         ),
     },
     {
-        "nombre": "Nutrición y acondicionamiento de 12 semanas",
-        "objetivo": ObjetivoChoice.NUTRICION,
+        "nombre": "Pérdida de peso inicial de 12 semanas",
+        "objetivo": ObjetivoChoice.PERDER_PESO,
+        "fases": FASES_PERDER_PESO,
+        "dias": DIAS_PERDER_PESO,
+        "programacion": PROGRAMACION_PERDER_PESO,
         "descripcion": (
-            "Programa de entrenamiento que acompaña la adopción de hábitos "
-            "saludables y una rutina física constante."
-        ),
-    },
-    {
-        "nombre": "Recuperación progresiva de 12 semanas",
-        "objetivo": ObjetivoChoice.RECUPERAR,
-        "descripcion": (
-            "Programa inicial de intensidad controlada para recuperar la "
-            "constancia, la fuerza básica y la confianza en el movimiento."
+            "Programa progresivo de fuerza y acondicionamiento para aumentar "
+            "el gasto energético, conservar masa muscular y construir una "
+            "rutina sostenible."
         ),
     },
 ]
@@ -428,6 +874,13 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        PlanEntrenamiento.objects.filter(
+            nombre__in=[
+                "Nutrición y acondicionamiento de 12 semanas",
+                "Recuperación progresiva de 12 semanas",
+            ],
+        ).update(activo=False)
+
         for configuracion in PLANES_INICIALES:
             self.cargar_plan(configuracion)
 
@@ -451,9 +904,14 @@ class Command(BaseCommand):
             "dias_actualizados": 0,
             "programados_creados": 0,
             "programados_actualizados": 0,
+            "programados_desactivados": 0,
         }
 
-        for datos in FASES:
+        dias_configurados = configuracion.get("dias", DIAS)
+        fases_configuradas = configuracion.get("fases", FASES)
+        programacion = configuracion.get("programacion", PROGRAMACION)
+
+        for datos in fases_configuradas:
             valores = datos.copy()
             orden = valores.pop("orden")
             fase, fase_creada = FasePlan.objects.update_or_create(
@@ -468,7 +926,7 @@ class Command(BaseCommand):
             )
             contadores[clave_fase] += 1
 
-            for datos_dia in DIAS:
+            for datos_dia in dias_configurados:
                 valores_dia = datos_dia.copy()
                 numero_dia = valores_dia.pop("numero")
                 dia, dia_creado = DiaPlan.objects.update_or_create(
@@ -483,39 +941,15 @@ class Command(BaseCommand):
                 )
                 contadores[clave_dia] += 1
 
-                ejercicios_del_dia = PROGRAMACION.get(
+                ejercicios_del_dia = programacion.get(
                     fase.orden,
                     {},
                 ).get(numero_dia, [])
-
-                for datos_programados in ejercicios_del_dia:
-                    valores_programados = datos_programados.copy()
-                    nombre_ejercicio = valores_programados.pop(
-                        "ejercicio"
-                    )
-                    ejercicio = Ejercicio.objects.filter(
-                        nombre=nombre_ejercicio
-                    ).first()
-                    if ejercicio is None:
-                        raise CommandError(
-                            "No existe el ejercicio: "
-                            f"{nombre_ejercicio}. "
-                            "Ejecuta primero cargar_ejercicios."
-                        )
-
-                    _, programado_creado = (
-                        EjercicioProgramado.objects.update_or_create(
-                            dia=dia,
-                            ejercicio=ejercicio,
-                            defaults=valores_programados,
-                        )
-                    )
-                    clave_programado = (
-                        "programados_creados"
-                        if programado_creado
-                        else "programados_actualizados"
-                    )
-                    contadores[clave_programado] += 1
+                self.sincronizar_ejercicios_del_dia(
+                    dia,
+                    ejercicios_del_dia,
+                    contadores,
+                )
 
         estado_plan = "creado" if plan_creado else "actualizado"
         self.stdout.write(
@@ -528,6 +962,92 @@ class Command(BaseCommand):
                 "Ejercicios creados: "
                 f"{contadores['programados_creados']}. "
                 "Ejercicios actualizados: "
-                f"{contadores['programados_actualizados']}."
+                f"{contadores['programados_actualizados']}. "
+                "Ejercicios anteriores desactivados: "
+                f"{contadores['programados_desactivados']}."
             )
         )
+
+    def sincronizar_ejercicios_del_dia(
+        self,
+        dia,
+        ejercicios_del_dia,
+        contadores,
+    ):
+        nombres = [
+            datos["ejercicio"]
+            for datos in ejercicios_del_dia
+        ]
+        ejercicios = {
+            ejercicio.nombre: ejercicio
+            for ejercicio in Ejercicio.objects.filter(nombre__in=nombres)
+        }
+        faltantes = sorted(set(nombres) - set(ejercicios))
+        if faltantes:
+            raise CommandError(
+                "No existen los ejercicios: "
+                f"{', '.join(faltantes)}. "
+                "Ejecuta primero cargar_ejercicios."
+            )
+
+        ordenes_deseados = {
+            datos["orden"]
+            for datos in ejercicios_del_dia
+        }
+
+        for datos_programados in ejercicios_del_dia:
+            valores_programados = datos_programados.copy()
+            nombre_ejercicio = valores_programados.pop("ejercicio")
+            ejercicio = ejercicios[nombre_ejercicio]
+            orden_deseado = valores_programados["orden"]
+
+            ocupante = (
+                EjercicioProgramado.objects
+                .select_for_update()
+                .filter(dia=dia, orden=orden_deseado)
+                .exclude(ejercicio=ejercicio)
+                .first()
+            )
+            if ocupante is not None:
+                ordenes_usados = set(
+                    EjercicioProgramado.objects.filter(dia=dia)
+                    .values_list("orden", flat=True)
+                )
+                orden_temporal = next(
+                    (
+                        orden
+                        for orden in range(50, 0, -1)
+                        if orden not in ordenes_usados
+                        and orden not in ordenes_deseados
+                    ),
+                    None,
+                )
+                if orden_temporal is None:
+                    raise CommandError(
+                        f"No hay un orden temporal libre en {dia}."
+                    )
+                ocupante.orden = orden_temporal
+                ocupante.activo = False
+                ocupante.save(update_fields=["orden", "activo"])
+
+            _, programado_creado = (
+                EjercicioProgramado.objects.update_or_create(
+                    dia=dia,
+                    ejercicio=ejercicio,
+                    defaults=valores_programados,
+                )
+            )
+            clave_programado = (
+                "programados_creados"
+                if programado_creado
+                else "programados_actualizados"
+            )
+            contadores[clave_programado] += 1
+
+        desactivados = (
+            EjercicioProgramado.objects
+            .filter(dia=dia, activo=True)
+            .exclude(ejercicio__nombre__in=nombres)
+            .update(activo=False)
+        )
+        contadores["programados_desactivados"] += desactivados

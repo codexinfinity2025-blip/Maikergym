@@ -25,8 +25,7 @@ class ObjetivoChoice(models.TextChoices):
     ESTETICO = "estetico", "Estético"
     HIPERTROFIA = "hipertrofia", "Hipertrofia"
     SALUD = "salud", "Salud"
-    NUTRICION = "nutricion", "Nutrición"
-    RECUPERAR = "recuperar", "Recuperación"
+    PERDER_PESO = "perder_peso", "Pérdida de peso"
 
 
 class GrupoMuscularChoice(models.TextChoices):
