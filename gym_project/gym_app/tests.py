@@ -27,6 +27,19 @@ from .services import crear_rutina_automatica, _segundos_estimados
 
 
 class FlujoRegistroTest(TestCase):
+    def test_sugerencias_alimentos_y_dos_platos_por_comida(self):
+        for objetivo in ObjetivoChoice.values:
+            guia = obtener_guia_nutricional(objetivo)
+            self.assertEqual(len(guia['dias']), 7)
+            platos = []
+            for dia in guia['dias']:
+                self.assertEqual(len(dia['comidas']), 4)
+                for comida in dia['comidas']:
+                    self.assertGreaterEqual(len(comida['alimentos']), 3)
+                    self.assertEqual(len(comida['opciones']), 2)
+                    platos.extend(comida['opciones'])
+            self.assertEqual(len(platos), len(set(platos)))
+
     def test_mensajes_se_entregan_separados_y_se_conservan(self):
         usuario = User.objects.create_user(username='avisos')
         self.client.force_login(usuario)

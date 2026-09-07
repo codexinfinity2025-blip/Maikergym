@@ -1,4 +1,7 @@
-body:has(.flow-page),body:has(.objetivo-page),body:has(.dieta-page),body:has(.notifications-page){background:linear-gradient(#f4f4f1df,#f4f4f1df),url('../img/generated/hero-gym.png') center/cover fixed}
+body:has(.flow-page),body:has(.objetivo-page),body:has(.dieta-page),body:has(.notifications-page){background:#111 url('../img/generated/hero-gym.png') center center/cover no-repeat fixed}
+body:has(.dieta-page){background-image:url('../img/generated/diet-plan.png')}
+.weekly-heading{background:#11151af2;color:#fff;border-radius:18px;padding:24px}.weekly-heading p{color:#e0e4ea!important}
+.weekly-heading .eyebrow{color:#ffd16b}
 .flow-heading,.objective-heading{background:#fffffff0;padding:24px;border-radius:20px}
 .dieta-page .step-pill{color:#ffd16b}
 .mg-nav{position:sticky!important;top:0;background:#f5a000!important}

@@ -1,4 +1,5 @@
 import random
+from .meal_suggestions import comidas_del_dia
 
 
 NUTRICION_POR_OBJETIVO = {
@@ -190,11 +191,12 @@ def obtener_guia_nutricional(objetivo):
         "dias": [
             {
                 "nombre": dia[0],
+                "comidas": comidas_del_dia(indice, objetivo),
                 "desayuno": dia[1],
                 "almuerzo": dia[2],
                 "merienda": dia[3],
                 "cena": dia[4],
             }
-            for dia in guia["dias"]
+            for indice, dia in enumerate(guia["dias"])
         ],
     }

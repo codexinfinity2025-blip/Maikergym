@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}MaikerGym - Nutrición semanal{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/Estilo_dieta.css' %}?v=nutricion-semanal-v1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/Estilo_dieta.css' %}?v=alimentos-opciones-4">{% endblock %}
 
 {% block content %}
 {% include "partials/app_nav.html" %}
@@ -23,19 +23,22 @@
 
     <section class="weekly-heading">
         <div><span class="eyebrow">Siete días, ideas diferentes</span><h2>Sugerencias fáciles para toda la semana</h2></div>
-        <p>Son ideas flexibles, no una dieta médica ni un menú obligatorio. Cambia ingredientes según disponibilidad, preferencias, alergias o indicación profesional.</p>
+        <p>Primero elige entre los alimentos sugeridos; después escoge una de las dos ideas de plato. Son alternativas, no tienes que comer ambas. Ajusta ingredientes según tus preferencias, alergias o indicación profesional.</p>
     </section>
 
     <section class="weekly-menu">
         {% for dia in dieta.dias %}
             <article class="day-menu" data-motion="rise">
                 <header><span>{{ forloop.counter }}</span><h3>{{ dia.nombre }}</h3></header>
-                <dl>
-                    <div><dt>Desayuno</dt><dd>{{ dia.desayuno }}</dd></div>
-                    <div><dt>Almuerzo</dt><dd>{{ dia.almuerzo }}</dd></div>
-                    <div><dt>Merienda</dt><dd>{{ dia.merienda }}</dd></div>
-                    <div><dt>Cena</dt><dd>{{ dia.cena }}</dd></div>
-                </dl>
+                {% for comida in dia.comidas %}
+                <section class="meal-suggestions">
+                    <h4>{{ comida.nombre }}</h4>
+                    <p class="meal-label">Alimentos para combinar</p>
+                    <ul class="food-chips">{% for alimento in comida.alimentos %}<li>{{ alimento }}</li>{% endfor %}</ul>
+                    <p class="meal-label">Dos ideas · elige la que más te guste</p>
+                    <ol class="recipe-options">{% for opcion in comida.opciones %}<li>{{ opcion }}</li>{% endfor %}</ol>
+                </section>
+                {% endfor %}
             </article>
         {% endfor %}
     </section>

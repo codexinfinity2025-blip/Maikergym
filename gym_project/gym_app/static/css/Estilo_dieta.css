@@ -19,6 +19,15 @@ body{background:#f2f3ef;color:#15171b}
 .day-menu header{display:flex;align-items:center;gap:.8rem;padding-bottom:.8rem;border-bottom:1px solid #eceef0}
 .day-menu header span{display:grid;place-items:center;width:39px;height:39px;border-radius:12px;background:#f5a000;color:#111;font-weight:950}
 .day-menu h3{margin:0;font-size:23px}
+.meal-suggestions{padding:18px 0;border-bottom:1px solid #e5e7eb}
+.meal-suggestions:last-child{border-bottom:0;padding-bottom:0}
+.meal-suggestions h4{font-size:19px;color:#171b20;margin:0 0 12px}
+.meal-label{font-size:12px;font-weight:800;color:#66707a;margin:12px 0 8px;text-transform:uppercase;letter-spacing:.04em}
+.food-chips{display:flex;flex-wrap:wrap;gap:6px;list-style:none;padding:0;margin:0}
+.food-chips li{background:#eef4e9;color:#315522;border:1px solid #d4e1c9;border-radius:20px;padding:5px 10px;font-size:14px}
+.recipe-options{display:grid;gap:8px;padding-left:24px;margin:0;color:#242a31}
+.recipe-options li{padding:8px 10px;background:#faf5e9;border-radius:8px;line-height:1.5}
+.recipe-options li::marker{color:#936000;font-weight:800}
 .day-menu dl{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin:1rem 0 0}
 .day-menu dl div{padding:.8rem;border-radius:11px;background:#f6f7f4}
 .day-menu dt{margin-bottom:.35rem;color:#9a5e00;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
