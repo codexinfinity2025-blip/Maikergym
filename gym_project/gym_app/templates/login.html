@@ -40,7 +40,7 @@
             <button type="submit" class="btn">Iniciar sesi&oacute;n</button>
         </form>
 
-        <button class="btn secondary" onclick="window.location.href='{% url 'inicio' %}'">Recuperar contrase&ntilde;a</button>
+        <a class="btn secondary" href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a>
     </section>
 </main>
 {% endblock %}

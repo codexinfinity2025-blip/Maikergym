@@ -2,6 +2,13 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
+from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.cache import never_cache
+from .security import limitar_acceso
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
@@ -182,6 +189,7 @@ def precios(request):
     return render(request, 'precios.html')
 
 @require_http_methods(["GET", "POST"])
+@sensitive_post_parameters('password', 'confirmar_password')
 def registrarse(request):
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
@@ -202,7 +210,13 @@ def registrarse(request):
             contexto['error'] = 'Las contraseñas no coinciden.'
             return render(request, 'registrarse.html', contexto)
 
-        if User.objects.filter(email=email).exists():
+        try:
+            validate_email(email)
+            validate_password(password, User(username=email, email=email, first_name=nombre, last_name=apellido))
+        except ValidationError as error:
+            contexto['error'] = ' '.join(error.messages)
+            return render(request, 'registrarse.html', contexto)
+        if User.objects.filter(email__iexact=email).exists() or User.objects.filter(username__iexact=email).exists():
             contexto['error'] = 'Ya existe una cuenta con ese correo.'
             return render(request, 'registrarse.html', contexto)
 
@@ -439,6 +453,10 @@ def configurar_rutina_view(request):
             contexto['error'] = 'Selecciona cómo deseas construir tu rutina.'
         else:
             perfil.dias_entrenamiento = dias
+            genero_previo = request.POST.get('genero_previo')
+            if genero_previo in ('femenino', 'masculino', 'otro'):
+                perfil.genero = genero_previo
+            perfil.priorizar_tren_inferior = request.POST.get('priorizar_tren_inferior') == 'si'
             perfil.minutos_por_dia = tiempos
             perfil.duracion_sesion_minutos = minutos
             perfil.descanso_preferido_segundos = descanso
@@ -450,6 +468,7 @@ def configurar_rutina_view(request):
                 'descanso_preferido_segundos', 'modalidad_rutina',
                 'configuracion_entrenamiento_completa',
                 'aviso_rutina_personalizada_aceptado',
+                'genero', 'priorizar_tren_inferior',
             ])
             if modalidad == ModalidadRutinaChoice.PERSONALIZADA:
                 return redirect('crear_rutina')
@@ -457,6 +476,7 @@ def configurar_rutina_view(request):
                 crear_rutina_automatica(
                     request.user, perfil.objetivo, perfil.nivel_entrenamiento,
                     dias, minutos, descanso, minutos_por_dia=tiempos,
+                    priorizar_tren_inferior=perfil.priorizar_tren_inferior,
                 )
             except ValidationError as error:
                 contexto['error'] = ' '.join(error.messages)
@@ -571,12 +591,14 @@ def dieta_view(request):
 
 @login_required(login_url='login')
 def notificaciones_view(request):
+    from .models import AvisoSocial
     perfil = get_perfil(request.user)
     hoy = timezone.localdate()
     return render(request, 'notificaciones.html', {
         'perfil': perfil,
         'fecha_hoy': hoy,
         'notificaciones': list(reversed(perfil.mensajes_entregados)),
+        'avisos_sociales': AvisoSocial.objects.filter(usuario=request.user).order_by('-creado')[:30],
     })
 
 
@@ -665,14 +687,17 @@ def contacto(request):
     return render(request, 'contacto.html')
 
 @require_http_methods(["GET", "POST"])
+@sensitive_post_parameters('password')
+@never_cache
+@limitar_acceso
 def login_view(request):
     if request.method == 'POST':
-        email = request.POST.get('email', '').strip()
+        email = request.POST.get('email', '').strip().lower()
         password = request.POST.get('password', '')
         rol = request.POST.get('rol', 'usuario')
 
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(email__iexact=email)
             usuario_auth = authenticate(request, username=user.username, password=password)
 
             if usuario_auth:
@@ -689,12 +714,28 @@ def login_view(request):
                 error = 'El rol no coincide con tu cuenta.'
             else:
                 error = 'Correo o contraseña inválidos.'
-        except User.DoesNotExist:
+        except (User.DoesNotExist, User.MultipleObjectsReturned):
+            User().set_password(password)
             error = 'Correo o contraseña inválidos.'
 
         return render(request, 'login.html', {'error': error})
 
     return render(request, 'login.html')
+
+
+@login_required(login_url='login')
+@sensitive_post_parameters('old_password', 'new_password1', 'new_password2')
+@never_cache
+@require_http_methods(['GET', 'POST'])
+@limitar_acceso
+def cambiar_password_view(request):
+    form = PasswordChangeForm(request.user, request.POST if request.method == 'POST' else None)
+    if request.method == 'POST' and form.is_valid():
+        usuario = form.save()
+        update_session_auth_hash(request, usuario)
+        messages.success(request, 'Contraseña actualizada. Las otras sesiones deberán iniciar sesión nuevamente.')
+        return redirect('cambiar_password')
+    return render(request, 'cambiar_password.html', {'form': form})
 
 @login_required(login_url='login')
 def logout_view(request):
@@ -713,9 +754,16 @@ def cuenta_view(request):
         accion = request.POST.get('accion')
 
         if accion == 'eliminar_cuenta':
+            if not request.user.check_password(request.POST.get('password_actual', '')):
+                return JsonResponse({'ok': False, 'error': 'Confirma tu contraseña actual para eliminar la cuenta.'}, status=400)
             user = request.user
+            from django.db.models.deletion import ProtectedError
+            try:
+                with transaction.atomic():
+                    user.delete()
+            except ProtectedError:
+                return JsonResponse({'ok': False, 'error': 'La cuenta tiene registros protegidos o administra un grupo. Contacta al administrador para gestionar su eliminación sin perder el historial compartido.'}, status=409)
             logout(request)
-            user.delete()
             return redirect('inicio')
 
         if accion in ['actualizar_cuenta', 'actualizar_foto']:
@@ -738,6 +786,15 @@ def cuenta_view(request):
                     request.user.last_name = ' '.join(partes[1:])
 
                 email = request.POST.get('email', '').strip().lower()
+                if email and email != request.user.email.lower():
+                    try:
+                        validate_email(email)
+                    except ValidationError:
+                        return JsonResponse({'ok': False, 'error': 'Correo inválido.'}, status=400)
+                    if not request.user.check_password(request.POST.get('password_actual', '')):
+                        return JsonResponse({'ok': False, 'error': 'Introduce tu contraseña actual para cambiar el correo.'}, status=400)
+                    if User.objects.exclude(pk=request.user.pk).filter(email__iexact=email).exists() or User.objects.exclude(pk=request.user.pk).filter(username__iexact=email).exists():
+                        return JsonResponse({'ok': False, 'error': 'No se puede utilizar ese correo.'}, status=400)
                 if email:
                     request.user.email = email
                     request.user.username = email
@@ -1045,6 +1102,10 @@ def reproductor_entrenamiento_view(request, sesion_id):
                 raise ValidationError(
                     "La serie seleccionada no es válida."
                 )
+
+            from .models import SerieEjercicioSesion
+            if not SerieEjercicioSesion.objects.filter(pk=serie_id, ejercicio_sesion__sesion=sesion).exists():
+                raise ValidationError('La serie no pertenece a este entrenamiento.')
 
             if accion == "iniciar_serie":
                 serie, iniciada = iniciar_serie_entrenamiento(

@@ -22,9 +22,10 @@
             <img class="nav-mini-icon" src="{% static 'icons/rutinas.svg' %}" alt="">Entrenamiento
         </button>
         <button type="button" class="icon-link nutrition-nav-link" onclick="window.location.href='{% url 'dieta' %}'">
-            <span class="food-nav-icon" aria-hidden="true">🍎</span>Nutrición
+              <span class="food-nav-icon" aria-hidden="true">🍎</span>Nutrición
         </button>
-        <button type="button" class="icon-link notification-nav-link" onclick="window.location.href='{% url 'notificaciones' %}'">
+          <button type="button" class="icon-link" onclick="window.location.href='{% url 'amigos' %}'">Amigos</button>
+          <button type="button" class="icon-link notification-nav-link" onclick="window.location.href='{% url 'notificaciones' %}'">
             <img class="nav-mini-icon" src="{% static 'icons/mensajes.svg' %}" alt="">Notificaciones
         </button>
         <button type="button" class="icon-link" onclick="window.location.href='{% url 'precios' %}'">

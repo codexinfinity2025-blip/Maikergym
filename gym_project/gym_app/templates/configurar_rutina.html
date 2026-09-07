@@ -17,6 +17,15 @@
     {% if error %}<div class="flow-alert" role="alert">{{ error }}</div>{% endif %}
     <form method="post">
         {% csrf_token %}
+        <section class="config-card" style="margin-bottom:16px">
+            <h2>Tu enfoque personal</h2>
+            <label class="field-block">Género
+                <select name="genero_previo"><option value="">Conservar mi perfil</option><option value="femenino" {% if perfil.genero == 'femenino' %}selected{% endif %}>Femenino</option><option value="masculino" {% if perfil.genero == 'masculino' %}selected{% endif %}>Masculino</option><option value="otro" {% if perfil.genero == 'otro' %}selected{% endif %}>Otro</option></select>
+            </label>
+            <label class="field-block">¿Quieres dar prioridad a piernas y glúteos?
+                <select name="priorizar_tren_inferior"><option value="no">No, prefiero un entrenamiento equilibrado</option><option value="si" {% if perfil.priorizar_tren_inferior %}selected{% endif %}>Sí, priorizar tren inferior</option></select>
+            </label><p>Es opcional y está disponible para cualquier persona. Solo adapta la rutina automática; conserva trabajo de torso y abdomen.</p>
+        </section>
         <section class="config-grid">
             <div class="config-card">
                 <h2>Días disponibles</h2>

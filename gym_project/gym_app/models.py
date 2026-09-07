@@ -97,6 +97,7 @@ class EstadoSerieChoice(models.TextChoices):
     COMPLETADA = "completada", "Completada"
 
 class PerfilUsuario(models.Model):
+    priorizar_tren_inferior = models.BooleanField(default=False)
     altura_cm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(50), MaxValueValidator(250)])
     mensajes_entregados = models.JSONField(default=list, blank=True)
 
@@ -1144,3 +1145,13 @@ class SerieEjercicioSesion(models.Model):
         ]
         verbose_name = "Serie realizada"
         verbose_name_plural = "Series realizadas"
+
+
+from .social_models import (GrupoAmigos, IntegranteGrupo, RecompensaEjercicio,
+    DiaComprometido, RutinaGrupal, ParticipacionGrupal, AvisoSocial, ResultadoGrupo)
+
+
+class LimiteAcceso(models.Model):
+    clave = models.CharField(max_length=64, unique=True)
+    ventana = models.BigIntegerField(db_index=True)
+    intentos = models.PositiveIntegerField(default=0)

@@ -1,7 +1,18 @@
 ﻿from django.urls import path
 from gym_project.gym_app import views
+from gym_project.gym_app import social_views
+from django.contrib.auth import views as auth_views
+from .password_reset import RecuperarPassword, ConfirmarPassword
 
 urlpatterns = [
+    path('recuperar-contrasena/', RecuperarPassword.as_view(), name='password_reset'),
+    path('recuperar-contrasena/enviado/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),
+    path('restablecer/<uidb64>/<token>/', ConfirmarPassword.as_view(), name='password_reset_confirm'),
+    path('restablecer/completado/', auth_views.PasswordResetCompleteView.as_view(template_name='password_reset_complete.html'), name='password_reset_complete'),
+    path('cuenta/cambiar-contrasena/', views.cambiar_password_view, name='cambiar_password'),
+    path('amigos/', social_views.amigos, name='amigos'),
+    path('amigos/rutina/nueva/', social_views.rutina_grupal, name='nueva_rutina_grupal'),
+    path('amigos/rutina/<int:pk>/', social_views.rutina_grupal, name='rutina_grupal'),
     path('', views.inicio, name='inicio'),
     path('escogenos/', views.escogenos, name='escogenos'),
     path('precios/', views.precios, name='precios'),

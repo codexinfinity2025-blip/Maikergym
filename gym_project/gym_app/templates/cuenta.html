@@ -17,6 +17,7 @@
             <form method="POST" data-confirm-delete>
                 {% csrf_token %}
                 <input type="hidden" name="accion" value="eliminar_cuenta">
+                <input type="password" name="password_actual" placeholder="Contraseña actual" autocomplete="current-password" aria-label="Contraseña actual para eliminar cuenta" required>
                 <button class="action-btn delete-btn" type="submit">Eliminar cuenta</button>
             </form>
             <button class="action-btn update-btn" type="submit" form="account-form">Actualizar cuenta</button>
@@ -64,6 +65,9 @@
             </label>
 
             <div class="weight-grid featured-weight">
+                <label>Contraseña actual (solo para cambiar el correo)
+                    <input type="password" name="password_actual" autocomplete="current-password">
+                </label>
                 <label>
                     <span>Peso inicial</span>
                     <input type="number" step="0.01" name="peso_inicial" value="{{ peso_inicial_value }}" placeholder="0.00">
@@ -83,6 +87,7 @@
             <span>{{ perfil.get_nivel_entrenamiento_display|default:"Nivel pendiente" }}</span>
             <small>{{ perfil.dias_entrenamiento|length }} días · {{ perfil.duracion_sesion_minutos }} min · {{ perfil.descanso_preferido_segundos }} s de descanso</small>
             <div class="summary-links">
+                <a href="{% url 'cambiar_password' %}">Cambiar contraseña</a>
                 <a href="{% url 'configurar_rutina' %}">Ajustar rutina</a>
                 {% if perfil.modalidad_rutina == 'personalizada' %}<a href="{% url 'crear_rutina' %}">Editar ejercicios de mi rutina</a>{% endif %}
                 <a href="{% url 'dieta' %}">🥗 Nutrición</a>

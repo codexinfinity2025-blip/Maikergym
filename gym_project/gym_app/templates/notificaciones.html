@@ -12,6 +12,7 @@
         <div class="notification-orbit" aria-hidden="true"><span>🔔</span></div>
     </header>
     <section class="notification-list">
+        {% for aviso in avisos_sociales %}<article class="notification-card"><div><small>{{ aviso.creado }}</small><p>{{ aviso.texto }}</p><a href="{% url 'amigos' %}">Ver mi grupo</a></div></article>{% endfor %}
         {% for notificacion in notificaciones %}
             <article class="notification-card" data-motion="rise">
                 <div class="notification-number">0{{ forloop.counter }}</div>

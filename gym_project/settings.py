@@ -179,3 +179,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'cuenta'
+
+# Credenciales únicamente en variables de entorno, nunca en Git.
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = config('EMAIL_HOST', default='')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='')
+PASSWORD_RESET_TIMEOUT = 1800  # 30 minutos; se invalida al guardar la nueva contraseña.
+PUBLIC_BASE_URL = config('PUBLIC_BASE_URL', default=(f'https://{railway_public_domain}' if railway_public_domain else 'http://127.0.0.1:8000' if DEBUG else ''))

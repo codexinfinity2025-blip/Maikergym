@@ -205,6 +205,8 @@ def _crear_asignacion_y_horario(usuario, plan, dias_semana):
         )
         for numero, dia_semana in enumerate(dias_semana, start=1)
     ])
+    from .social_services import guardar_calendario
+    guardar_calendario(asignacion)
     return asignacion
 
 
@@ -249,7 +251,7 @@ def _segundos_estimados(valores):
 
 
 @transaction.atomic
-def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, descanso, minutos_por_dia=None):
+def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, descanso, minutos_por_dia=None, priorizar_tren_inferior=False):
     _validar_preferencias(objetivo, nivel, dias_semana)
     minutos_por_dia = minutos_por_dia or {}
     presupuestos = [minutos_por_dia.get(str(dia), minutos) for dia in dias_semana]
@@ -267,6 +269,14 @@ def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, desc
         for ejercicio in Ejercicio.objects.filter(activo=True, nivel__in=niveles[:niveles.index(nivel) + 1])
     }
     enfoques = ENFOQUES_POR_CANTIDAD[len(dias_semana)]
+    if priorizar_tren_inferior:
+        enfoques = {
+            1: ['cuerpo_completo'], 2: ['cuerpo_completo', 'piernas_gluteos'],
+            3: ['piernas_gluteos', 'tren_superior', 'tren_inferior'],
+            4: ['piernas_gluteos', 'tren_superior', 'tren_inferior', 'torso_core'],
+            5: ['piernas_gluteos', 'empuje', 'tren_inferior', 'tiron_core', 'piernas_gluteos'],
+            6: ['piernas_gluteos', 'empuje', 'tren_inferior', 'tiron_core', 'piernas_gluteos', 'torso_core'],
+        }[len(dias_semana)]
     prioridad = PRIORIDAD_POR_OBJETIVO.get(objetivo, [])
 
     for indice, enfoque in enumerate(enfoques, start=1):
@@ -489,6 +499,11 @@ def iniciar_sesion_entrenamiento(
         )
 
     hoy = timezone.localdate()
+    from .models import PerfilUsuario
+    PerfilUsuario.objects.select_for_update().get(user=asignacion.usuario)
+    existente_hoy = SesionEntrenamiento.objects.filter(asignacion__usuario=asignacion.usuario, fecha=hoy).first()
+    if existente_hoy:
+        return existente_hoy, False
     semana_actual = asignacion.semana_actual
     fase_actual = asignacion.fase_actual
 
@@ -789,7 +804,13 @@ def completar_ejercicio_sesion(
     registro.observaciones = (
         str(observaciones or "").strip()[:250]
     )
-    registro.puntos_obtenidos = ejercicio.puntos_base
+    from .models import PerfilUsuario, RecompensaEjercicio
+    PerfilUsuario.objects.select_for_update().get(user=usuario)
+    recompensa, nueva = RecompensaEjercicio.objects.get_or_create(
+        usuario=usuario, ejercicio=ejercicio, fecha=sesion.fecha,
+        defaults={'registro': registro, 'puntos': ejercicio.puntos_base},
+    )
+    registro.puntos_obtenidos = recompensa.puntos if nueva or recompensa.registro_id == registro.pk else 0
     registro.completado = True
     registro.fecha_completado = timezone.now()
 
@@ -833,6 +854,9 @@ def completar_ejercicio_sesion(
         ]
     )
 
+    if sesion.estado == EstadoSesionChoice.COMPLETADA:
+        from .social_services import registrar_meta
+        registrar_meta(usuario)
     return registro, True, sesion
 
 @transaction.atomic

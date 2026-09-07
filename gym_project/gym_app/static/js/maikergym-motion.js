@@ -65,7 +65,7 @@
             });
 
             window.addEventListener("resize", () => {
-                if (window.innerWidth > 1280) {
+                if (window.innerWidth > 1600) {
                     closeMenu();
                 }
             });
