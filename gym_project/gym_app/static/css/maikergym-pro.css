@@ -261,7 +261,7 @@ a:hover{
 .pro-stats strong{display:block;font-size:38px;line-height:1}
 .pro-stats span{display:block;margin-top:.45rem;font-weight:800}
 
-@media (max-width:1600px){
+@media (max-width:767px){
     .mg-nav{
         position:sticky;
         min-height:68px;
@@ -445,7 +445,7 @@ body::before{
     box-shadow:0 10px 20px rgba(0,0,0,.24);
 }
 
-@media (max-width:1600px){
+@media (max-width:767px){
     .mg-nav-links button{
         justify-content:flex-start;
     }
@@ -453,4 +453,15 @@ body::before{
 
 @media (max-width:860px){
     .pro-stats{grid-template-columns:1fr}
+}
+
+/* Desktop and tablet: visible navigation, never a mobile overlay. */
+@media (min-width:768px){
+    .mg-nav{gap:12px;padding:12px 18px;flex-wrap:wrap}
+    .mg-nav .mg-brand{font-size:clamp(25px,2.2vw,36px);white-space:nowrap;flex-shrink:0}
+    .mg-nav .mg-nav-links{flex:1;gap:6px;min-width:0}
+    .mg-nav .mg-nav-links button{font-size:clamp(12px,.85vw,16px);padding:10px 9px;min-height:44px;white-space:nowrap}
+}
+@media (min-width:768px) and (max-width:1199px){
+    .mg-nav .mg-nav-links{flex-basis:100%;justify-content:center}
 }

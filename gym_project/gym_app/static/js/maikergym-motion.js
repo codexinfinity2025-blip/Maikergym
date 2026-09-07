@@ -65,7 +65,7 @@
             });
 
             window.addEventListener("resize", () => {
-                if (window.innerWidth > 1600) {
+                if (window.matchMedia("(min-width: 768px)").matches) {
                     closeMenu();
                 }
             });

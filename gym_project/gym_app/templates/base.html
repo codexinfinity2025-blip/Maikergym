@@ -6,7 +6,7 @@
     <title>{% block title %}MaikerGym{% endblock %}</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/maikergym-pro.css' %}?v=amigos-v1">
+    <link rel="stylesheet" href="{% static 'css/maikergym-pro.css' %}?v=nav-desktop-v2">
     {% block extra_css %}{% endblock %}
     <link rel="stylesheet" href="{% static 'css/experiencia-v3.css' %}?v=fondos-recetas-4">
 </head>
@@ -27,7 +27,7 @@
     </footer>
 
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'js/maikergym-motion.js' %}?v=amigos-v1" defer></script>
+    <script src="{% static 'js/maikergym-motion.js' %}?v=nav-desktop-v2" defer></script>
     {% block extra_js %}{% endblock %}
     {% if user.is_authenticated %}
     <div id="daily-message" hidden role="status" aria-live="polite"><strong>Un impulso para ti</strong><p></p><button type="button" aria-label="Cerrar mensaje">×</button></div>
