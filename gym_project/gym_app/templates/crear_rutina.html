@@ -1,97 +1,28 @@
 {% extends "base.html" %}
 {% load static %}
-
-{% block title %}MaikerGym - Crear mi rutina{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v1">{% endblock %}
-
+{% block title %}Mi rutina · MaikerGym{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=dias-v3">{% endblock %}
 {% block content %}
 {% include "partials/app_nav.html" %}
 <main class="flow-page">
-    <header class="flow-heading" data-motion="rise">
-        <span class="eyebrow">Constructor manual</span>
-        <h1>Diseña cada sesión a tu manera</h1>
-        <p>Agrega ejercicios y define sus series, repeticiones, segundos o metros. Cada día seleccionado debe contener al menos un ejercicio.</p>
-    </header>
-    {% if error %}<div class="flow-alert" role="alert">{{ error }}</div>{% endif %}
-    <div class="safety-note">
-        <strong>Importante:</strong> MaikerGym facilita las herramientas de organización y demostración, pero una rutina creada directamente por el usuario no ha sido prescrita ni supervisada por el gimnasio. Consulta a un profesional si tienes lesiones, dolor, limitaciones o condiciones de salud.
-    </div>
-    <form method="post" id="routineBuilder">
-        {% csrf_token %}
-        <div class="builder-toolbar" style="margin-top:1rem">
-            <div><strong>{{ dias_elegidos|length }} días elegidos</strong><br><small>Descanso sugerido actual: {{ perfil.descanso_preferido_segundos }} segundos</small></div>
-            <button type="button" class="flow-btn secondary" id="addRoutineRow">+ Agregar ejercicio</button>
-        </div>
-        <section class="routine-rows" id="routineRows">
-            {% for dia in dias_elegidos %}
-                <div class="routine-row">
-                    <label>Día
-                        <select name="dia" required>
-                            {% for opcion in dias_elegidos %}<option value="{{ opcion.numero }}" {% if opcion.numero == dia.numero %}selected{% endif %}>{{ opcion.nombre }}</option>{% endfor %}
-                        </select>
-                    </label>
-                    <label>Ejercicio
-                        <select name="ejercicio_id" class="exercise-picker" required>
-                            {% regroup ejercicios by get_grupo_muscular_display as grupos %}
-                            {% for grupo in grupos %}<optgroup label="{{ grupo.grouper }}">{% for ejercicio in grupo.list %}<option value="{{ ejercicio.id }}" data-medicion="{{ ejercicio.tipo_medicion }}">{{ ejercicio.nombre }}</option>{% endfor %}</optgroup>{% endfor %}
-                        </select>
-                    </label>
-                    <label>Series<input type="number" name="series" min="1" max="20" value="3" required></label>
-                    <label><span class="quantity-label">Cantidad</span><input type="number" name="cantidad" min="1" value="10" required></label>
-                    <label>Descanso (s)<input type="number" name="descanso" min="15" max="1800" value="{{ perfil.descanso_preferido_segundos }}" required></label>
-                    <button type="button" class="remove-row" aria-label="Eliminar ejercicio">×</button>
-                </div>
-            {% endfor %}
-        </section>
-        <label class="consent-box">
-            <input type="checkbox" name="acepta_aviso" required>
-            <span>Comprendo que esta selección es responsabilidad mía, que debo respetar una técnica segura y que MaikerGym no se hace responsable por lesiones derivadas de una rutina creada sin valoración o supervisión profesional.</span>
-        </label>
-        <div class="flow-actions">
-            <button type="button" class="flow-btn secondary" onclick="location.href='{% url 'configurar_rutina' %}'">Cambiar configuración</button>
-            <button class="flow-btn" type="submit">Guardar mi rutina</button>
-        </div>
-    </form>
+<header class="flow-heading"><span class="eyebrow">Tu semana, a tu manera</span><h1>{% if editando %}Edita tu rutina{% else %}Construye tu rutina{% endif %}</h1><p>Organiza los ejercicios de cada día. Puedes volver y cambiarlos cuando lo necesites; tus entrenamientos anteriores se conservarán.</p></header>
+{% if error %}<div class="flow-alert" role="alert">{{ error }}</div>{% endif %}
+<form method="post" id="routineBuilder">{% csrf_token %}
+{% for dia in dias_elegidos %}
+<section class="builder-day config-card" data-dia="{{ dia.numero }}" data-rest="{{ perfil.descanso_preferido_segundos }}">
+<header><h2>Ejercicios para el día {{ dia.nombre|lower }}</h2><p>Selecciona un grupo muscular y añade los ejercicios a esta sesión.</p></header>
+<div class="exercise-search"><label class="field-block">Buscar ejercicio<input type="search" placeholder="Nombre del ejercicio" class="search-exercise"></label>
+<label class="field-block">Grupo muscular<select class="group-filter"><option value="">Todos los grupos</option>{% regroup ejercicios by get_grupo_muscular_display as grupos %}{% for grupo in grupos %}<option>{{ grupo.grouper }}</option>{% endfor %}</select></label></div>
+<div class="exercise-catalog" aria-label="Ejercicios disponibles">
+{% for ejercicio in ejercicios %}<button type="button" class="catalog-item" data-id="{{ ejercicio.id }}" data-group="{{ ejercicio.get_grupo_muscular_display }}" data-type="{{ ejercicio.tipo_medicion }}"><span>{{ ejercicio.nombre }}</span><small>{{ ejercicio.get_grupo_muscular_display }}</small><b aria-hidden="true">＋</b></button>{% endfor %}
+</div>
+<h3 class="selected-title">Tu selección</h3><div class="routine-rows"></div><p class="empty-day">Aún no has añadido ejercicios para este día.</p>
+</section>
+{% endfor %}
+<label class="consent-box"><input type="checkbox" name="acepta_aviso" required><span>Comprendo que esta selección es responsabilidad mía, que debo respetar una técnica segura y que MaikerGym y el aplicativo no se hacen responsables por lesiones derivadas de una rutina creada sin valoración o supervisión profesional.</span></label>
+<div class="flow-actions"><a class="flow-btn secondary" href="{% url 'configurar_rutina' %}">Cambiar días y tiempos</a><button class="flow-btn">Guardar cambios</button></div>
+</form>
+{{ filas_iniciales|json_script:"rutina-inicial" }}
 </main>
-
-<template id="routineRowTemplate">
-    <div class="routine-row">
-        <label>Día<select name="dia" required>{% for opcion in dias_elegidos %}<option value="{{ opcion.numero }}">{{ opcion.nombre }}</option>{% endfor %}</select></label>
-        <label>Ejercicio<select name="ejercicio_id" class="exercise-picker" required>{% regroup ejercicios by get_grupo_muscular_display as grupos_nuevos %}{% for grupo in grupos_nuevos %}<optgroup label="{{ grupo.grouper }}">{% for ejercicio in grupo.list %}<option value="{{ ejercicio.id }}" data-medicion="{{ ejercicio.tipo_medicion }}">{{ ejercicio.nombre }}</option>{% endfor %}</optgroup>{% endfor %}</select></label>
-        <label>Series<input type="number" name="series" min="1" max="20" value="3" required></label>
-        <label><span class="quantity-label">Cantidad</span><input type="number" name="cantidad" min="1" value="10" required></label>
-        <label>Descanso (s)<input type="number" name="descanso" min="15" max="1800" value="{{ perfil.descanso_preferido_segundos }}" required></label>
-        <button type="button" class="remove-row" aria-label="Eliminar ejercicio">×</button>
-    </div>
-</template>
 {% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-    const rows = document.querySelector("#routineRows");
-    const template = document.querySelector("#routineRowTemplate");
-    const updateLabel = (row) => {
-        const picker = row.querySelector(".exercise-picker");
-        const type = picker.options[picker.selectedIndex]?.dataset.medicion;
-        row.querySelector(".quantity-label").textContent = type === "tiempo" ? "Segundos" : type === "distancia" ? "Metros" : "Repeticiones";
-    };
-    const wire = (row) => {
-        const picker = row.querySelector(".exercise-picker");
-        picker.addEventListener("change", () => updateLabel(row));
-        row.querySelector(".remove-row").addEventListener("click", () => {
-            if (rows.children.length > 1) row.remove();
-        });
-        updateLabel(row);
-    };
-    [...rows.children].forEach(wire);
-    document.querySelector("#addRoutineRow").addEventListener("click", () => {
-        const fragment = template.content.cloneNode(true);
-        const row = fragment.querySelector(".routine-row");
-        rows.appendChild(fragment);
-        wire(row);
-        row.scrollIntoView({behavior: "smooth", block: "center"});
-    });
-});
-</script>
-{% endblock %}
+{% block extra_js %}<script src="{% static 'js/rutina-editor.js' %}?v=3" defer></script>{% endblock %}

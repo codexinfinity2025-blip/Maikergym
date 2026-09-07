@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/maikergym-pro.css' %}?v=personalizacion-v2">
     {% block extra_css %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/experiencia-v3.css' %}">
 </head>
 <body>
     {% block content %}{% endblock %}
@@ -28,5 +29,10 @@
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'js/maikergym-motion.js' %}?v=personalizacion-v2" defer></script>
     {% block extra_js %}{% endblock %}
+    {% if user.is_authenticated %}
+    <div id="daily-message" hidden role="status" aria-live="polite"><strong>Un impulso para ti</strong><p></p><button type="button" aria-label="Cerrar mensaje">×</button></div>
+    <form id="message-token" hidden>{% csrf_token %}</form>
+    <script src="{% static 'js/mensajes-diarios.js' %}" defer></script>
+    {% endif %}
 </body>
 </html>

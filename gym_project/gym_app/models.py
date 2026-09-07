@@ -97,6 +97,23 @@ class EstadoSerieChoice(models.TextChoices):
     COMPLETADA = "completada", "Completada"
 
 class PerfilUsuario(models.Model):
+    altura_cm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(50), MaxValueValidator(250)])
+    mensajes_entregados = models.JSONField(default=list, blank=True)
+
+    def evaluacion_corporal_interna(self):
+        # Indicador de cribado, no diagnóstico ni estimación de masa muscular.
+        # https://www.cdc.gov/bmi/about/index.html
+        if not self.peso or not self.altura_cm or not self.fecha_nacimiento:
+            return {"estado": "datos_insuficientes"}
+        hoy = timezone.localdate()
+        edad = hoy.year - self.fecha_nacimiento.year - ((hoy.month, hoy.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day))
+        if edad < 20:
+            return {"estado": "requiere_valoracion_por_edad"}
+        imc = float(self.peso) / (float(self.altura_cm) / 100) ** 2
+        categoria = "bajo" if imc < 18.5 else "referencia" if imc < 25 else "elevado" if imc < 30 else "muy_elevado"
+        return {"estado": "orientativo", "imc": round(imc, 2), "categoria": categoria,
+                "objetivo": self.objetivo, "brecha_objetivo": None,
+                "pendiente": "Valorar composición corporal, capacidad física y evolución; peso y altura no determinan cuánto falta para el objetivo."}
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol = models.CharField(
         max_length=20,

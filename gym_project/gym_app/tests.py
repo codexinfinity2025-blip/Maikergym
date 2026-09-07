@@ -1,4 +1,7 @@
 from datetime import date, timedelta
+from datetime import datetime
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
@@ -24,6 +27,28 @@ from .services import crear_rutina_automatica, _segundos_estimados
 
 
 class FlujoRegistroTest(TestCase):
+    def test_mensajes_se_entregan_separados_y_se_conservan(self):
+        usuario = User.objects.create_user(username='avisos')
+        self.client.force_login(usuario)
+        for hora, esperado in [(8, True), (8, False), (14, True), (14, False), (20, True), (21, False)]:
+            ahora = datetime(2026, 9, 7, hora, tzinfo=ZoneInfo('America/Bogota'))
+            with patch('gym_project.gym_app.views.timezone.localtime', return_value=ahora):
+                resultado = self.client.post(reverse('siguiente_mensaje')).json()
+                self.assertEqual(bool(resultado['mensaje']), esperado)
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        self.assertEqual(len(perfil.mensajes_entregados), 3)
+        self.assertNotContains(self.client.get(reverse('notificaciones')), '70 mensajes')
+
+    def test_evaluacion_corporal_no_inventa_meta(self):
+        usuario = User.objects.create_user(username='altura')
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.peso = 75
+        perfil.altura_cm = 175
+        perfil.fecha_nacimiento = date(1990, 1, 1)
+        resultado = perfil.evaluacion_corporal_interna()
+        self.assertEqual(resultado['imc'], 24.49)
+        self.assertIsNone(resultado['brecha_objetivo'])
+
     def test_generador_respeta_nivel_presupuesto_y_dias(self):
         usuario = User.objects.create_user(username="presupuesto")
         for objetivo in ObjetivoChoice.values:
@@ -327,6 +352,7 @@ class FlujoRegistroTest(TestCase):
             {
                 "genero": "masculino",
                 "peso": "72.50",
+                "altura_cm": "175",
             },
         )
         self.assertRedirects(
@@ -380,6 +406,10 @@ class FlujoRegistroTest(TestCase):
         self.assertRedirects(respuesta, reverse("dieta"), fetch_redirect_response=False)
         perfil.refresh_from_db()
         self.assertTrue(perfil.aviso_rutina_personalizada_aceptado)
+        pagina = self.client.get(reverse('crear_rutina'))
+        self.assertEqual(len(pagina.context['filas_iniciales']), 2)
+        self.assertContains(pagina, 'Ejercicios para el día lunes')
+        self.assertTrue(pagina.context['editando'])
         asignacion = AsignacionPlanUsuario.objects.get(usuario=usuario, estado="activo")
         self.assertEqual(
             asignacion.plan.fases.get().dias.filter(

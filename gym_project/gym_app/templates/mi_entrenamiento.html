@@ -11,6 +11,7 @@
 {% include "partials/app_nav.html" %}
 
 <main class="training-page">
+    {% if perfil.modalidad_rutina == 'personalizada' %}<a class="flow-btn" style="display:inline-block;background:#ffb000;color:#111;padding:12px 20px;border-radius:12px;margin-bottom:20px" href="{% url 'crear_rutina' %}">Editar mi rutina</a>{% endif %}
         {% if messages %}
         <div class="training-messages">
             {% for message in messages %}

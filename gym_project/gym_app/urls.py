@@ -18,6 +18,7 @@ urlpatterns = [
     path('crear-rutina/', views.crear_rutina_view, name='crear_rutina'),
     path('dieta/', views.dieta_view, name='dieta'),
     path('notificaciones/', views.notificaciones_view, name='notificaciones'),
+    path('notificaciones/siguiente/', views.siguiente_mensaje_view, name='siguiente_mensaje'),
     path('datos-personales/', views.datos_personales_view, name='datos_personales'),
     path('contacto/', views.contacto, name='contacto'),
     path('login/', views.login_view, name='login'),

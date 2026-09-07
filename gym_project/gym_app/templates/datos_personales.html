@@ -16,7 +16,7 @@
         <div class="profile-visual-copy">
             <span class="profile-visual-note">Último paso</span>
             <h1>Tu plan ya casi está listo</h1>
-            <p>Solo necesitamos género y peso para adaptar la experiencia y el avatar 3D.</p>
+            <p>Completa género, peso y altura para personalizar tu perfil.</p>
         </div>
     </section>
 
@@ -47,6 +47,10 @@
             <div class="form-group">
                 <label class="form-label">Peso (kg)</label>
                 <input class="form-control" type="number" name="peso" value="{{ perfil.peso|default:'' }}" min="1" max="500" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="altura_cm">Altura (cm)</label>
+                <input id="altura_cm" class="form-control" type="number" name="altura_cm" value="{{ perfil.altura_cm|default:'' }}" min="50" max="250" step="0.01" required>
             </div>
             {% if not perfil.fecha_nacimiento %}
             <div class="form-group">

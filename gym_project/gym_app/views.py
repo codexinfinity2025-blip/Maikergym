@@ -1,4 +1,6 @@
 from datetime import date
+from decimal import Decimal, InvalidOperation
+from django.db import transaction
 from django.core.exceptions import ValidationError
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
@@ -487,7 +489,25 @@ def crear_rutina_view(request):
             for numero, dia in enumerate(perfil.dias_entrenamiento, start=1)
         ],
     }
+    from .models import AsignacionPlanUsuario
+    asignacion_actual = AsignacionPlanUsuario.objects.filter(usuario=request.user, estado='activo').first()
+    filas_iniciales = []
+    if asignacion_actual and asignacion_actual.plan.propietario_id == request.user.pk:
+        for horario in asignacion_actual.horarios.filter(activo=True):
+            if horario.dia_semana not in perfil.dias_entrenamiento:
+                continue
+            numero = perfil.dias_entrenamiento.index(horario.dia_semana) + 1
+            fase = asignacion_actual.plan.fases.order_by('orden').first()
+            if fase:
+                dia_plan = fase.dias.filter(numero=horario.numero_dia_plan).first()
+                if dia_plan:
+                    for p in dia_plan.ejercicios_programados.filter(activo=True).order_by('orden'):
+                        filas_iniciales.append({'dia': numero, 'ejercicio_id': p.ejercicio_id, 'series': p.series,
+                            'cantidad': str(p.duracion_segundos or p.distancia_metros or p.repeticiones_max or 10), 'descanso': p.descanso_segundos})
+    contexto['filas_iniciales'] = filas_iniciales
+    contexto['editando'] = bool(filas_iniciales)
     if request.method == 'POST':
+        contexto['filas_iniciales'] = [dict(zip(('dia', 'ejercicio_id', 'series', 'cantidad', 'descanso'), valores)) for valores in zip(*(request.POST.getlist(c) for c in ('dia', 'ejercicio_id', 'series', 'cantidad', 'descanso')))]
         if request.POST.get('acepta_aviso') != 'on':
             contexto['error'] = 'Debes confirmar que comprendes la advertencia de seguridad.'
             return render(request, 'crear_rutina.html', contexto)
@@ -556,9 +576,31 @@ def notificaciones_view(request):
     return render(request, 'notificaciones.html', {
         'perfil': perfil,
         'fecha_hoy': hoy,
-        'notificaciones': obtener_mensajes_del_dia(request.user, perfil, hoy),
-        'total_mensajes': len(MENSAJES_MOTIVACIONALES),
+        'notificaciones': list(reversed(perfil.mensajes_entregados)),
     })
+
+
+@login_required(login_url='login')
+@require_http_methods(['POST'])
+@transaction.atomic
+def siguiente_mensaje_view(request):
+    perfil = PerfilUsuario.objects.select_for_update().get(user=request.user)
+    ahora = timezone.localtime()
+    fecha = ahora.date().isoformat()
+    historial = [m for m in perfil.mensajes_entregados if (ahora.date() - date.fromisoformat(m['fecha'])).days < 7]
+    hoy = [m for m in historial if m['fecha'] == fecha]
+    permitido = sum(ahora.hour >= hora for hora in (8, 14, 20))
+    if request.POST.get('entrenando') == '1':
+        permitido = max(1, permitido)
+    mensaje = None
+    # No acumular avisos al volver tarde ni lanzar tres al abrir una página.
+    if len(hoy) < permitido and (not hoy or ahora.timestamp() - hoy[-1]['timestamp'] >= 3 * 3600):
+        mensaje = {**obtener_mensajes_del_dia(request.user, perfil, ahora.date())[len(hoy)],
+                   'fecha': fecha, 'timestamp': ahora.timestamp()}
+        historial.append(mensaje)
+        perfil.mensajes_entregados = historial
+        perfil.save(update_fields=['mensajes_entregados'])
+    return JsonResponse({'mensaje': mensaje})
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
@@ -584,6 +626,14 @@ def datos_personales_view(request):
             or None
         )
         peso_registro = request.POST.get('peso') or None
+        try:
+            altura = Decimal(request.POST.get('altura_cm') or str(perfil.altura_cm or '0'))
+            peso_validado = Decimal(peso_registro or str(perfil.peso or '0'))
+            if not altura.is_finite() or not peso_validado.is_finite() or not 50 <= altura <= 250 or not 1 <= peso_validado <= 500:
+                raise ValueError()
+            perfil.altura_cm = altura
+        except (InvalidOperation, ValueError):
+            return render(request, 'datos_personales.html', {'perfil': perfil, 'error': 'Revisa el peso y la altura en centímetros (50–250 cm).'})
         perfil.peso = peso_registro or perfil.peso
         if peso_registro and perfil.peso_inicial is None:
             perfil.peso_inicial = peso_registro
@@ -673,6 +723,14 @@ def cuenta_view(request):
                 perfil.foto = request.FILES['foto']
 
             if accion == 'actualizar_cuenta':
+                if request.POST.get('altura_cm'):
+                    try:
+                        altura = Decimal(request.POST['altura_cm'])
+                        if not altura.is_finite() or not 50 <= altura <= 250:
+                            raise ValueError()
+                        perfil.altura_cm = altura
+                    except (InvalidOperation, ValueError):
+                        return JsonResponse({'ok': False, 'error': 'Altura inválida: utiliza centímetros entre 50 y 250.'}, status=400)
                 nombre_completo = request.POST.get('nombre', '').strip()
                 if nombre_completo:
                     partes = nombre_completo.split()
