@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Configurar rutina{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v1">{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="flow-page">
+    <header class="flow-heading" data-motion="rise">
+        <span class="eyebrow">Personalización · Paso 3 de 5</span>
+        <h1>Haz que la rutina encaje en tu semana</h1>
+        <p>Tu objetivo es <strong>{{ perfil.get_objetivo_display }}</strong> y tu nivel recomendado es <strong>{{ perfil.get_nivel_entrenamiento_display }}</strong>. Ahora dinos cuánto espacio real tienes.</p>
+        <div class="flow-progress"><span class="active"></span><span class="active"></span><span class="active"></span><span></span><span></span></div>
+    </header>
+    {% for message in messages %}<div class="flow-alert" style="background:#efffed;border-color:#80bf75;color:#24591d">{{ message }}</div>{% endfor %}
+    {% if error %}<div class="flow-alert" role="alert">{{ error }}</div>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <section class="config-grid">
+            <div class="config-card">
+                <h2>Días disponibles</h2>
+                <p>Escoge de 1 a 6 días. Respetaremos exactamente esos días en tu calendario.</p>
+                <div class="days-grid">
+                    {% for valor, nombre in dias_semana %}
+                        <label class="day-chip"><input type="checkbox" name="dias" value="{{ valor }}" {% if valor in perfil.dias_entrenamiento %}checked{% endif %}><span>{{ nombre }}</span></label>
+                    {% endfor %}
+                </div>
+                <details style="margin-top:1rem">
+                    <summary>Personalizar minutos de cada día (opcional)</summary>
+                    <p>Si dejas un día vacío, usaremos los minutos por sesión indicados abajo.</p>
+                    <div class="number-grid">
+                    {% for valor, nombre in dias_semana %}
+                        <label class="field-block">{{ nombre }}
+                            <input type="number" name="minutos_dia_{{ valor }}" min="45" step="1" placeholder="Usar tiempo general">
+                        </label>
+                    {% endfor %}
+                    </div>
+                </details>
+                {{ perfil.minutos_por_dia|json_script:"tiempos-guardados" }}
+                <div class="number-grid" style="margin-top:1rem">
+                    <label class="field-block">Minutos por sesión
+                        <input type="number" name="minutos" min="45" step="1" value="{{ perfil.duracion_sesion_minutos|default:60 }}" required>
+                        <small class="helper">Mínimo 45 minutos; puedes dedicar el tiempo que necesites.</small>
+                    </label>
+                    <label class="field-block">Descanso entre series
+                        <div style="display:grid;grid-template-columns:1fr auto;gap:.45rem;align-items:center">
+                            <input type="number" name="descanso" min="15" max="1800" step="5" value="{{ perfil.descanso_preferido_segundos|default:60 }}" required>
+                            <span>seg</span>
+                        </div>
+                        <small class="helper">Se tendrá en cuenta al calcular la duración orientativa de la sesión.</small>
+                    </label>
+                </div>
+            </div>
+            <div class="config-card">
+                <h2>¿Quién construye la rutina?</h2>
+                <p>Puedes recibir una propuesta coherente o elegir cada ejercicio manualmente.</p>
+                <div class="mode-stack">
+                    <label class="choice-card mode-card">
+                        <input type="radio" name="modalidad" value="automatica" {% if perfil.modalidad_rutina != 'personalizada' %}checked{% endif %} required>
+                        <span class="choice-icon">✨</span><strong>Recomendada por MaikerGym</strong>
+                        <p>Combinamos objetivo, nivel, días, tiempo y descanso.</p>
+                    </label>
+                    <label class="choice-card mode-card">
+                        <input type="radio" name="modalidad" value="personalizada" {% if perfil.modalidad_rutina == 'personalizada' %}checked{% endif %} required>
+                        <span class="choice-icon">🧩</span><strong>Crear mi propia rutina</strong>
+                        <p>Tú eliges ejercicios, series, cantidades y descansos.</p>
+                    </label>
+                </div>
+            </div>
+        </section>
+        <div class="flow-actions">
+            <button type="button" class="flow-btn secondary" onclick="location.href='{% url 'nivel_entrenamiento' %}'">Volver</button>
+            <button class="flow-btn" type="submit">Construir mi rutina</button>
+        </div>
+    </form>
+</main>
+<script>
+const tiemposGuardados = JSON.parse(document.getElementById('tiempos-guardados').textContent);
+Object.entries(tiemposGuardados).forEach(([dia, minutos]) => {
+    const campo = document.querySelector(`[name="minutos_dia_${dia}"]`);
+    if (campo) campo.value = minutos;
+});
+</script>
+{% endblock %}

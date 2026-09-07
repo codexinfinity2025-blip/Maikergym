@@ -32,7 +32,6 @@
                     <span>{{ user.first_name|first|default:"M" }}</span>
                 {% endif %}
 </label>
-</label>
              
             <input id="foto-perfil" type="file" name="foto" accept="image/*">
             <button type="submit">Cambiar foto</button>
@@ -78,8 +77,12 @@
 
         <aside class="account-summary" data-motion="rise">
             <strong>{{ perfil.get_objetivo_display|default:"Objetivo pendiente" }}</strong>
-            <span>{% if perfil.dieta_aceptada %}Dieta aceptada{% else %}Dieta pendiente{% endif %}</span>
-            <small>{% if perfil.activo %}Cuenta activa{% else %}Cuenta inactiva{% endif %}</small>
+            <span>{{ perfil.get_nivel_entrenamiento_display|default:"Nivel pendiente" }}</span>
+            <small>{{ perfil.dias_entrenamiento|length }} días · {{ perfil.duracion_sesion_minutos }} min · {{ perfil.descanso_preferido_segundos }} s de descanso</small>
+            <div class="summary-links">
+                <a href="{% url 'configurar_rutina' %}">Ajustar rutina</a>
+                <a href="{% url 'dieta' %}">🥗 Nutrición</a>
+            </div>
         </aside>
     </section>
     <div class="account-toast" role="status" aria-live="polite">Cambios guardados</div>

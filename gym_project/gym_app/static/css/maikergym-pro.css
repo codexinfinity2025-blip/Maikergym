@@ -124,6 +124,19 @@ body{
     flex:0 0 18px;
     filter:brightness(0) invert(1);
 }
+.food-nav-icon{font-size:20px;line-height:1}
+.nav-count{
+    display:grid;
+    place-items:center;
+    min-width:21px;
+    height:21px;
+    padding:0 5px;
+    border-radius:999px;
+    background:#c92020;
+    color:#fff;
+    font-size:11px;
+    font-weight:950;
+}
 .mg-nav-primary .nav-mini-icon{filter:none}
 .mg-nav-links button{box-shadow:0 8px 16px rgba(0,0,0,.16)}
 .mg-nav-links button:hover{box-shadow:0 10px 18px rgba(0,0,0,.2)}
@@ -248,7 +261,7 @@ a:hover{
 .pro-stats strong{display:block;font-size:38px;line-height:1}
 .pro-stats span{display:block;margin-top:.45rem;font-weight:800}
 
-@media (max-width:860px){
+@media (max-width:1280px){
     .mg-nav{
         position:sticky;
         min-height:68px;
@@ -273,6 +286,8 @@ a:hover{
 
     .mg-nav-links{
         position:absolute;
+        max-height:calc(100dvh - 105px);
+        overflow-y:auto;
         top:calc(100% + 8px);
         right:12px;
         left:12px;
@@ -321,9 +336,6 @@ a:hover{
 
     .mg-nav.is-menu-open .mg-nav-toggle-lines i:nth-child(3){
         transform:translateY(-6px) rotate(-45deg);
-    }
-    .pro-stats{
-        grid-template-columns:1fr;
     }
 }
 body::before{
@@ -433,8 +445,12 @@ body::before{
     box-shadow:0 10px 20px rgba(0,0,0,.24);
 }
 
-@media (max-width:860px){
+@media (max-width:1280px){
     .mg-nav-links button{
         justify-content:flex-start;
     }
+}
+
+@media (max-width:860px){
+    .pro-stats{grid-template-columns:1fr}
 }

@@ -1,0 +1,14 @@
+body{background:#f3f4f1;color:#11151a}
+.notifications-page{width:min(980px,92%);margin:0 auto;padding:2.7rem 0 4rem}
+.notifications-hero{display:flex;align-items:center;justify-content:space-between;gap:2rem;padding:clamp(1.5rem,4vw,3rem);border-radius:24px;background:linear-gradient(125deg,#111318,#242a33);color:#fff;box-shadow:0 24px 50px rgba(0,0,0,.2)}
+.notifications-hero h1{max-width:650px;margin:.7rem 0;font-size:clamp(34px,5vw,58px);line-height:1.03}
+.notifications-hero p{margin:0;color:#c8cdd4;font-size:18px}
+.notification-orbit{position:relative;display:grid;place-items:center;flex:0 0 115px;width:115px;height:115px;border-radius:50%;background:#f5a000;box-shadow:0 0 0 14px rgba(245,160,0,.12)}
+.notification-orbit span{font-size:46px}.notification-orbit b{position:absolute;top:-4px;right:2px;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#c92020;color:#fff}
+.notification-list{display:grid;gap:1rem;margin-top:1rem}
+.notification-card{display:grid;grid-template-columns:auto 1fr;gap:1rem;align-items:center;padding:1.35rem;border:1px solid #e0e2e6;border-radius:18px;background:#fff;box-shadow:0 12px 30px rgba(17,19,24,.07)}
+.notification-number{display:grid;place-items:center;width:58px;height:58px;border-radius:15px;background:#fff1ce;color:#9b6100;font-weight:950;font-size:22px}
+.notification-card small{color:#9b6100;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.notification-card p{margin:.35rem 0 0;font-size:20px;line-height:1.45}
+.message-library{display:flex;align-items:center;gap:1rem;margin-top:1rem;padding:1.2rem;border-radius:16px;background:#fff}
+.message-library strong{white-space:nowrap}.message-library p{margin:0;color:#626975;line-height:1.45}.message-library a{flex:0 0 auto;padding:.8rem 1rem;border-radius:10px;background:#111;color:#fff;text-decoration:none;font-weight:900}
+@media(max-width:700px){.notifications-hero,.message-library{align-items:flex-start;flex-direction:column}.notification-orbit{width:88px;height:88px;flex-basis:88px}.notification-card{grid-template-columns:1fr}.message-library strong{white-space:normal}.message-library a{width:100%;text-align:center}}

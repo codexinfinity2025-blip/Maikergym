@@ -307,6 +307,8 @@ body{
 .account-summary small{
     display:block;
 }
+.summary-links{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.8rem}
+.summary-links a{padding:.5rem .65rem;border-radius:8px;background:rgba(255,255,255,.12);color:#fff;text-decoration:none;font-size:12px;font-weight:850}
 
 .account-summary strong{
     font-size:26px;

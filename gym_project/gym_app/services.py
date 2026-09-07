@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max, Sum
@@ -7,11 +8,16 @@ from django.utils import timezone
 
 from .models import (
     AsignacionPlanUsuario,
+    DiaPlan,
+    Ejercicio,
+    EjercicioProgramado,
     EjercicioSesion,
     EstadoAsignacionChoice,
     EstadoSesionChoice,
+    FasePlan,
     HorarioPlanUsuario,
     NivelEjercicioChoice,
+    ObjetivoChoice,
     PlanEntrenamiento,
     SesionEntrenamiento,
     TipoMedicionChoice,
@@ -29,6 +35,362 @@ DIAS_SEMANA_POR_CANTIDAD = {
     6: [0, 1, 2, 3, 4, 5],
     7: [0, 1, 2, 3, 4, 5, 6],
 }
+
+
+ENFOQUES_POR_CANTIDAD = {
+    1: ["cuerpo_completo"],
+    2: ["cuerpo_completo", "cuerpo_completo"],
+    3: ["tren_inferior", "empuje", "tiron_core"],
+    4: ["tren_inferior", "tren_superior", "piernas_gluteos", "torso_core"],
+    5: ["piernas_gluteos", "empuje", "tiron", "tren_inferior", "acondicionamiento"],
+    6: ["piernas_gluteos", "empuje", "tiron", "tren_inferior", "torso_core", "acondicionamiento"],
+}
+
+
+NOMBRES_ENFOQUE = {
+    "cuerpo_completo": "Cuerpo completo",
+    "tren_inferior": "Tren inferior",
+    "tren_superior": "Tren superior",
+    "piernas_gluteos": "Piernas y glúteos",
+    "empuje": "Pecho, hombros y tríceps",
+    "tiron": "Espalda y bíceps",
+    "tiron_core": "Espalda, bíceps y abdomen",
+    "torso_core": "Torso y estabilidad",
+    "acondicionamiento": "Acondicionamiento y cuerpo completo",
+}
+
+
+EJERCICIOS_POR_ENFOQUE = {
+    "cuerpo_completo": [
+        "Sentadilla goblet con mancuerna", "Press de pecho sentado en máquina",
+        "Jalón al pecho en polea", "Peso muerto rumano con barra",
+        "Press Pallof en polea", "Caminata inclinada en caminadora",
+        "Remo en máquina ergométrica", "Bird dog",
+    ],
+    "tren_inferior": [
+        "Sentadilla con barra", "Prensa de piernas en máquina",
+        "Peso muerto rumano con barra", "Zancada estática con mancuernas",
+        "Extensión de cuádriceps en máquina", "Curl femoral tumbado en máquina",
+        "Elevación de talones de pie en máquina", "Puente de glúteos en suelo",
+    ],
+    "piernas_gluteos": [
+        "Sentadilla con barra", "Hip thrust con barra", "Sentadilla goblet con mancuerna",
+        "Step-up al banco", "Abducción de cadera en máquina",
+        "Curl femoral tumbado en máquina", "Elevación de talones de pie en máquina",
+        "Puente de glúteos en suelo",
+    ],
+    "tren_superior": [
+        "Press de banca con barra", "Jalón al pecho en polea",
+        "Press militar sentado con mancuernas", "Remo sentado en polea",
+        "Face pull en polea", "Curl de bíceps en polea baja",
+        "Extensión de tríceps en polea", "Press Pallof en polea",
+    ],
+    "empuje": [
+        "Press de banca con barra", "Press inclinado con mancuernas",
+        "Press de pecho sentado en máquina", "Aperturas de pecho en máquina",
+        "Press militar sentado con mancuernas", "Elevaciones laterales con mancuernas",
+        "Extensión de tríceps en polea", "Extensión de tríceps sobre la cabeza en polea",
+    ],
+    "tiron": [
+        "Jalón al pecho en polea", "Remo sentado en polea", "Remo inclinado con barra",
+        "Dominadas asistidas en máquina", "Face pull en polea",
+        "Curl de bíceps con barra Z", "Curl martillo con mancuernas",
+        "Curl de bíceps en polea baja",
+    ],
+    "tiron_core": [
+        "Jalón al pecho en polea", "Remo sentado en polea", "Face pull en polea",
+        "Curl de bíceps con barra Z", "Plancha frontal sobre antebrazos",
+        "Crunch abdominal en máquina", "Elevación de rodillas en silla romana", "Bird dog",
+    ],
+    "torso_core": [
+        "Press de pecho sentado en máquina", "Remo sentado en polea",
+        "Press militar sentado con mancuernas", "Face pull en polea",
+        "Press Pallof en polea", "Plancha frontal sobre antebrazos",
+        "Crunch abdominal en máquina", "Bird dog",
+    ],
+    "acondicionamiento": [
+        "Caminata inclinada en caminadora", "Remo en máquina ergométrica",
+        "Caminata del granjero con mancuernas", "Step-up al banco",
+        "Sentadilla goblet con mancuerna", "Press Pallof en polea",
+        "Bird dog", "Puente de glúteos en suelo",
+    ],
+}
+
+
+PRIORIDAD_POR_OBJETIVO = {
+    ObjetivoChoice.HIPERTROFIA: [
+        "Sentadilla con barra", "Press de banca con barra", "Peso muerto rumano con barra",
+        "Hip thrust con barra", "Jalón al pecho en polea", "Remo sentado en polea",
+    ],
+    ObjetivoChoice.ESTETICO: [
+        "Sentadilla goblet con mancuerna", "Hip thrust con barra",
+        "Press inclinado con mancuernas", "Jalón al pecho en polea",
+        "Elevaciones laterales con mancuernas", "Press Pallof en polea",
+    ],
+    ObjetivoChoice.SALUD: [
+        "Sentadilla goblet con mancuerna", "Step-up al banco", "Remo sentado en polea",
+        "Press de pecho sentado en máquina", "Bird dog", "Caminata inclinada en caminadora",
+    ],
+    ObjetivoChoice.PERDER_PESO: [
+        "Caminata inclinada en caminadora", "Remo en máquina ergométrica",
+        "Caminata del granjero con mancuernas", "Step-up al banco",
+        "Sentadilla goblet con mancuerna", "Press de pecho sentado en máquina",
+    ],
+}
+
+
+PARAMETROS_POR_NIVEL = {
+    NivelEjercicioChoice.PRINCIPIANTE: {"series": 2, "rep_min": 10, "rep_max": 12, "rpe": 6, "tiempo": 30, "distancia": 20},
+    NivelEjercicioChoice.INTERMEDIO: {"series": 3, "rep_min": 8, "rep_max": 12, "rpe": 7, "tiempo": 40, "distancia": 30},
+    NivelEjercicioChoice.ENCIMA_PROMEDIO: {"series": 3, "rep_min": 8, "rep_max": 12, "rpe": 8, "tiempo": 50, "distancia": 40},
+    NivelEjercicioChoice.AVANZADO: {"series": 4, "rep_min": 6, "rep_max": 10, "rpe": 8, "tiempo": 60, "distancia": 50},
+}
+
+
+def _cerrar_asignacion_actual(usuario):
+    hoy = timezone.localdate()
+    asignaciones = (
+        AsignacionPlanUsuario.objects
+        .select_for_update()
+        .filter(usuario=usuario, estado=EstadoAsignacionChoice.ACTIVO)
+    )
+    for asignacion in asignaciones:
+        asignacion.estado = EstadoAsignacionChoice.ABANDONADO
+        asignacion.fecha_fin = max(hoy, asignacion.fecha_inicio)
+        asignacion.save(update_fields=["estado", "fecha_fin", "fecha_actualizacion"])
+
+
+def _crear_plan_vacio(usuario, objetivo, nivel, dias_por_semana, etiqueta):
+    marca = uuid4().hex
+    plan = PlanEntrenamiento.objects.create(
+        nombre=f"{etiqueta} · usuario {usuario.pk} · {marca}",
+        objetivo=objetivo,
+        nivel=nivel,
+        descripcion=(
+            "Programa individual generado con el objetivo, nivel, disponibilidad "
+            "y preferencias de recuperación del usuario."
+        ),
+        duracion_semanas=12,
+        dias_por_semana=dias_por_semana,
+        propietario=usuario,
+        es_personalizado=True,
+        activo=True,
+    )
+    fase = FasePlan.objects.create(
+        plan=plan,
+        nombre="Programa personalizado",
+        orden=1,
+        semana_inicio=1,
+        semana_fin=12,
+        descripcion="Progresión individual con técnica controlada y ajustes sostenibles.",
+        activo=True,
+    )
+    return plan, fase
+
+
+def _crear_asignacion_y_horario(usuario, plan, dias_semana):
+    _cerrar_asignacion_actual(usuario)
+    asignacion = AsignacionPlanUsuario.objects.create(
+        usuario=usuario,
+        plan=plan,
+        fecha_inicio=timezone.localdate(),
+    )
+    HorarioPlanUsuario.objects.bulk_create([
+        HorarioPlanUsuario(
+            asignacion=asignacion,
+            numero_dia_plan=numero,
+            dia_semana=dia_semana,
+            recordatorio_activo=True,
+            activo=True,
+        )
+        for numero, dia_semana in enumerate(dias_semana, start=1)
+    ])
+    return asignacion
+
+
+def _valores_programacion(ejercicio, nivel, descanso):
+    parametros = PARAMETROS_POR_NIVEL[nivel]
+    valores = {
+        "series": parametros["series"],
+        "descanso_segundos": descanso,
+        "esfuerzo_objetivo": parametros["rpe"],
+    }
+    if ejercicio.tipo_medicion == TipoMedicionChoice.TIEMPO:
+        valores["duracion_segundos"] = parametros["tiempo"]
+    elif ejercicio.tipo_medicion == TipoMedicionChoice.DISTANCIA:
+        valores["distancia_metros"] = parametros["distancia"]
+    else:
+        valores["repeticiones_min"] = parametros["rep_min"]
+        valores["repeticiones_max"] = parametros["rep_max"]
+    if ejercicio.nombre == "Caminata inclinada en caminadora":
+        valores.update(series=1, duracion_segundos=600)
+    elif ejercicio.nombre == "Remo en máquina ergométrica":
+        valores.update(series=1, distancia_metros=1000)
+    return valores
+
+
+def _validar_preferencias(objetivo, nivel, dias):
+    if objetivo not in ObjetivoChoice.values or nivel not in PARAMETROS_POR_NIVEL:
+        raise ValidationError("Completa tu objetivo y evaluación de nivel.")
+    if not 1 <= len(dias) <= 6 or len(set(dias)) != len(dias) or any(
+        type(dia) is not int or dia not in range(7) for dia in dias
+    ):
+        raise ValidationError("Escoge entre uno y seis días distintos de la semana.")
+
+
+def _segundos_estimados(valores):
+    # Estimación de planificación, no un cronómetro para ejercicios por repeticiones.
+    trabajo = valores.get("duracion_segundos")
+    if trabajo is None:
+        trabajo = float(valores.get("distancia_metros", 0)) * 0.5
+    if not trabajo:
+        trabajo = valores.get("repeticiones_max", 12) * 4
+    return valores["series"] * trabajo + max(0, valores["series"] - 1) * valores["descanso_segundos"] + 90
+
+
+@transaction.atomic
+def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, descanso, minutos_por_dia=None):
+    _validar_preferencias(objetivo, nivel, dias_semana)
+    minutos_por_dia = minutos_por_dia or {}
+    presupuestos = [minutos_por_dia.get(str(dia), minutos) for dia in dias_semana]
+    if any(type(valor) is not int or valor < 45 for valor in presupuestos):
+        raise ValidationError("Cada entrenamiento debe durar al menos 45 minutos.")
+    if not 15 <= descanso <= 1800:
+        raise ValidationError("El descanso debe estar entre 15 y 1800 segundos.")
+
+    plan, fase = _crear_plan_vacio(
+        usuario, objetivo, nivel, len(dias_semana), "Rutina MaikerGym",
+    )
+    niveles = list(PARAMETROS_POR_NIVEL)
+    ejercicios = {
+        ejercicio.nombre: ejercicio
+        for ejercicio in Ejercicio.objects.filter(activo=True, nivel__in=niveles[:niveles.index(nivel) + 1])
+    }
+    enfoques = ENFOQUES_POR_CANTIDAD[len(dias_semana)]
+    prioridad = PRIORIDAD_POR_OBJETIVO.get(objetivo, [])
+
+    for indice, enfoque in enumerate(enfoques, start=1):
+        minutos_dia = presupuestos[indice - 1]
+        dia = DiaPlan.objects.create(
+            fase=fase,
+            numero=indice,
+            nombre=NOMBRES_ENFOQUE[enfoque],
+            enfoque=NOMBRES_ENFOQUE[enfoque],
+            descripcion=f"Disponibilidad: {minutos_dia} minutos.",
+            activo=True,
+        )
+        nombres_base = list(EJERCICIOS_POR_ENFOQUE[enfoque])
+        sustitutos = {
+            "Sentadilla con barra": "Sentadilla goblet con mancuerna",
+            "Peso muerto rumano con barra": "Puente de glúteos en suelo",
+            "Hip thrust con barra": "Puente de glúteos en suelo",
+            "Press de banca con barra": "Press de pecho sentado en máquina",
+            "Press militar sentado con mancuernas": "Elevaciones laterales con mancuernas",
+        }
+        nombres_base = list(dict.fromkeys(
+            nombre if nombre in ejercicios else sustitutos.get(nombre, nombre)
+            for nombre in nombres_base
+        ))
+        candidatos = [nombre for nombre in prioridad if nombre in nombres_base]
+        candidatos.extend(nombre for nombre in nombres_base if nombre not in candidatos)
+        disponibles = [ejercicios[nombre] for nombre in candidatos if nombre in ejercicios]
+        if not disponibles:
+            raise ValidationError(
+                "El catálogo de ejercicios todavía no está listo para generar esta sesión."
+            )
+        # Reservar calentamiento/transiciones; no añadir volumen ilimitado por disponer de más tiempo.
+        segundos = 10 * 60
+        seleccion = []
+        limite = 6 if nivel == NivelEjercicioChoice.PRINCIPIANTE else 8
+        for ejercicio in disponibles:
+            valores = _valores_programacion(ejercicio, nivel, descanso)
+            coste = _segundos_estimados(valores)
+            if segundos + coste <= minutos_dia * 60 and len(seleccion) < limite:
+                seleccion.append((ejercicio, valores))
+                segundos += coste
+        if len(seleccion) < min(3, len(disponibles)):
+            raise ValidationError("El descanso elegido no cabe con una sesión equilibrada. Aumenta el tiempo disponible o reduce el descanso.")
+        dia.descripcion += f" Duración orientativa: {int((segundos + 59) // 60)} min, con descansos y 10 min de preparación. No es obligatorio agotar el tiempo disponible."
+        dia.save(update_fields=["descripcion"])
+        for orden, (ejercicio, valores) in enumerate(seleccion, start=1):
+            EjercicioProgramado.objects.create(
+                dia=dia,
+                ejercicio=ejercicio,
+                orden=orden,
+                notas="Prioriza una ejecución estable y detén la serie si aparece dolor.",
+                activo=True,
+                **valores,
+            )
+
+    return _crear_asignacion_y_horario(usuario, plan, dias_semana)
+
+
+@transaction.atomic
+def crear_rutina_personalizada(usuario, objetivo, nivel, dias_semana, filas):
+    _validar_preferencias(objetivo, nivel, dias_semana)
+    if not 1 <= len(dias_semana) <= 6:
+        raise ValidationError("Escoge entre uno y seis días para entrenar.")
+    if not filas:
+        raise ValidationError("Agrega al menos un ejercicio a tu rutina.")
+
+    plan, fase = _crear_plan_vacio(
+        usuario, objetivo, nivel, len(dias_semana), "Rutina creada por el usuario",
+    )
+    dias = {}
+    for numero, dia_semana in enumerate(dias_semana, start=1):
+        dias[numero] = DiaPlan.objects.create(
+            fase=fase,
+            numero=numero,
+            nombre=f"Sesión {numero}",
+            enfoque="Selección personal",
+            descripcion="Rutina configurada directamente por el usuario.",
+            activo=True,
+        )
+
+    usados = set()
+    ordenes = {numero: 0 for numero in dias}
+    for fila in filas:
+        numero_dia = int(fila["dia"])
+        ejercicio = Ejercicio.objects.get(pk=int(fila["ejercicio_id"]), activo=True)
+        clave = (numero_dia, ejercicio.pk)
+        if numero_dia not in dias or clave in usados:
+            raise ValidationError("Revisa los días y elimina los ejercicios repetidos dentro de una misma sesión.")
+        usados.add(clave)
+        ordenes[numero_dia] += 1
+        cantidad = max(1, int(fila["cantidad"]))
+        series = min(20, max(1, int(fila["series"])))
+        descanso = min(1800, max(15, int(fila["descanso"])))
+        valores = {
+            "series": series,
+            "descanso_segundos": descanso,
+            "esfuerzo_objetivo": 7,
+        }
+        if ejercicio.tipo_medicion == TipoMedicionChoice.TIEMPO:
+            valores["duracion_segundos"] = cantidad
+        elif ejercicio.tipo_medicion == TipoMedicionChoice.DISTANCIA:
+            valores["distancia_metros"] = cantidad
+        else:
+            valores["repeticiones_min"] = cantidad
+            valores["repeticiones_max"] = cantidad
+        programado = EjercicioProgramado(
+            dia=dias[numero_dia],
+            ejercicio=ejercicio,
+            orden=ordenes[numero_dia],
+            notas=(
+                "Rutina diseñada por el usuario. Ajusta o detén el ejercicio ante dolor, "
+                "mareo o pérdida de técnica."
+            ),
+            activo=True,
+            **valores,
+        )
+        programado.full_clean()
+        programado.save()
+
+    dias_vacios = [numero for numero, total in ordenes.items() if total == 0]
+    if dias_vacios:
+        raise ValidationError("Cada día seleccionado necesita al menos un ejercicio.")
+
+    return _crear_asignacion_y_horario(usuario, plan, dias_semana)
 
 
 @transaction.atomic

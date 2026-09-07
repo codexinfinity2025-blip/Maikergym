@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Notificaciones{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/notificaciones.css' %}?v=motivacion-v1">{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="notifications-page">
+    <header class="notifications-hero" data-motion="rise">
+        <div><span class="eyebrow">Tu impulso diario</span><h1>{{ user.first_name|default:"Atleta" }}, hoy tienes tres mensajes para ti</h1><p>{{ fecha_hoy|date:"l, j \d\e F" }} · Objetivo: {{ perfil.get_objetivo_display|default:"Bienestar" }}</p></div>
+        <div class="notification-orbit" aria-hidden="true"><span>🔔</span><b>3</b></div>
+    </header>
+    <section class="notification-list">
+        {% for notificacion in notificaciones %}
+            <article class="notification-card" data-motion="rise">
+                <div class="notification-number">0{{ forloop.counter }}</div>
+                <div><small>{{ notificacion.momento }}</small><p>{{ notificacion.mensaje }}</p></div>
+            </article>
+        {% endfor %}
+    </section>
+    <section class="message-library">
+        <strong>{{ total_mensajes }} mensajes diferentes</strong>
+        <p>MaikerGym selecciona una combinación nueva cada día para acompañarte sin repetir siempre las mismas frases. Regresa mañana para recibir otro impulso.</p>
+        <a href="{% url 'mi_entrenamiento' %}">Ir a mi entrenamiento</a>
+    </section>
+</main>
+{% endblock %}

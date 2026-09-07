@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Prueba de nivel{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v1">{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="flow-page">
+    <header class="flow-heading" data-motion="rise">
+        <span class="eyebrow">Validación breve de experiencia</span>
+        <h1>Ajustemos tu nivel con mayor precisión</h1>
+        <p>No es una prueba de fuerza ni un diagnóstico médico. Son ocho preguntas para evitar asignarte una carga mayor a la que puedes controlar actualmente.</p>
+    </header>
+    {% if error %}<div class="flow-alert" role="alert">{{ error }}</div>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <section class="quiz-list">
+            {% for clave, pregunta, opciones in preguntas %}
+                <article class="quiz-card">
+                    <h2>{{ forloop.counter }}. {{ pregunta }}</h2>
+                    <div class="quiz-options">
+                        {% for valor, texto in opciones %}
+                            <label class="quiz-option">
+                                <input type="radio" name="{{ clave }}" value="{{ valor }}" required>
+                                <span>{{ texto }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+        <div class="flow-actions">
+            <button type="button" class="flow-btn secondary" onclick="location.href='{% url 'nivel_entrenamiento' %}'">Cambiar nivel</button>
+            <button class="flow-btn" type="submit">Calcular mi nivel</button>
+        </div>
+    </form>
+</main>
+{% endblock %}

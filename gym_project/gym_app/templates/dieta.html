@@ -1,55 +1,48 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}MaikerGym - Dieta{% endblock %}
-
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/Estilo_dieta.css' %}">
-{% endblock %}
+{% block title %}MaikerGym - Nutrición semanal{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/Estilo_dieta.css' %}?v=nutricion-semanal-v1">{% endblock %}
 
 {% block content %}
 {% include "partials/app_nav.html" %}
-
 <main class="dieta-page">
     <section class="dieta-hero" data-motion="rise">
         <div class="hero-copy">
-            <span class="step-pill">Paso 2 de 3</span>
+            <span class="step-pill">🥗 Nutrición para {{ perfil.get_objetivo_display }}</span>
             <h1>{{ dieta.titulo }}</h1>
             <p>{{ dieta.descripcion }}</p>
+            <p class="nutrition-purpose"><strong>¿Por qué es primordial?</strong> El entrenamiento produce el estímulo; la alimentación y el descanso ayudan a sostener la energía, la recuperación y la constancia.</p>
         </div>
-        <div class="plate-card">
-            <img src="{% static 'img/generated/diet-pro.png' %}" alt="Plan nutricional MaikerGym">
-        </div>
+        <div class="plate-card"><img src="{% static 'img/generated/diet-pro.png' %}" alt="Comida variada y saludable"></div>
     </section>
 
-    <section class="dieta-board">
-        <article class="nutrition-card">
-            <h2>Tu enfoque</h2>
-            <ul>
-                <li>Horarios más ordenados.</li>
-                <li>Proteína, hidratación y alimentos reales.</li>
-                <li>Porciones ajustadas al progreso.</li>
-            </ul>
-        </article>
+    <section class="nutrition-principles" aria-label="Principios nutricionales">
+        {% for principio in dieta.principios %}<article><span>✓</span><p>{{ principio }}</p></article>{% endfor %}
+    </section>
 
-        <article class="nutrition-card center-card">
-            <h2>Lo importante</h2>
-            <p>Esta recomendación es el punto de partida. Luego tus datos personales ayudan a completar tu perfil.</p>
-        </article>
+    <section class="weekly-heading">
+        <div><span class="eyebrow">Siete días, ideas diferentes</span><h2>Sugerencias fáciles para toda la semana</h2></div>
+        <p>Son ideas flexibles, no una dieta médica ni un menú obligatorio. Cambia ingredientes según disponibilidad, preferencias, alergias o indicación profesional.</p>
+    </section>
 
-        <article class="accept-card">
-            {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
-            <h2>Confirma para continuar</h2>
-            <p>Al aceptar, pasas a completar foto, género, peso y edad.</p>
-            <form method="POST">
-                {% csrf_token %}
-                <label class="accept-check">
-                    <input type="checkbox" name="acepta_dieta" required>
-                    Acepto la dieta recomendada para mi objetivo.
-                </label>
-                <button class="continue-btn" type="submit">Continuar</button>
-            </form>
-        </article>
+    <section class="weekly-menu">
+        {% for dia in dieta.dias %}
+            <article class="day-menu" data-motion="rise">
+                <header><span>{{ forloop.counter }}</span><h3>{{ dia.nombre }}</h3></header>
+                <dl>
+                    <div><dt>Desayuno</dt><dd>{{ dia.desayuno }}</dd></div>
+                    <div><dt>Almuerzo</dt><dd>{{ dia.almuerzo }}</dd></div>
+                    <div><dt>Merienda</dt><dd>{{ dia.merienda }}</dd></div>
+                    <div><dt>Cena</dt><dd>{{ dia.cena }}</dd></div>
+                </dl>
+            </article>
+        {% endfor %}
+    </section>
+
+    <section class="nutrition-disclaimer">
+        <div><strong>Una guía, no una restricción</strong><p>No necesitas repetir platos ni preparar recetas complicadas. Si tienes una condición médica, alergia, embarazo o requerimientos especiales, solicita orientación de un profesional en nutrición.</p><p>Principios generales: <a href="https://www.who.int/news-room/fact-sheets/detail/healthy-diet" target="_blank" rel="noopener noreferrer">alimentación saludable — OMS</a>. Las ideas de platos son propuestas de MaikerGym, no menús prescritos por la OMS.</p></div>
+        <form method="post">{% csrf_token %}<button class="continue-btn" type="submit">{% if es_primera_configuracion %}Guardar y continuar{% else %}Volver a mi entrenamiento{% endif %}</button></form>
     </section>
 </main>
 {% endblock %}

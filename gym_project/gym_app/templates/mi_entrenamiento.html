@@ -36,7 +36,7 @@
         {% if asignacion %}
             <div class="active-plan">
                 <span>Plan activo</span>
-                <strong>{{ asignacion.plan.nombre }}</strong>
+                <strong>{% if asignacion.plan.es_personalizado %}Tu rutina de {{ asignacion.plan.get_objetivo_display }}{% else %}{{ asignacion.plan.nombre }}{% endif %}</strong>
                 <small>
                     {{ asignacion.plan.dias_por_semana }}
                     días por semana
@@ -51,12 +51,12 @@
             <h2>Aún no tienes un plan activo</h2>
 
             <p>
-                Escoge tu objetivo para recibir un programa
-                de entrenamiento personalizado.
+                Completa tus preferencias para construir un programa
+                que encaje con tu nivel y tu semana.
             </p>
 
-            <a href="{% url 'objetivo' %}">
-                Escoger objetivo
+            <a href="{% url 'configurar_rutina' %}">
+                Configurar rutina
             </a>
         </section>
     {% else %}

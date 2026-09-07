@@ -9,21 +9,32 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from gym_project.gym_app.models import (
+    DiaSemanaChoice,
+    Ejercicio,
     EstadoAsignacionChoice,
     EstadoSerieChoice,
     EstadoSesionChoice,
+    ModalidadRutinaChoice,
+    NivelEjercicioChoice,
+    ObjetivoChoice,
     PerfilUsuario,
     RolChoice,
     SesionEntrenamiento,
 )
 from gym_project.gym_app.services import (
-    asignar_plan_por_objetivo,
     asegurar_series_sesion,
     completar_ejercicio_sesion,
     completar_serie_entrenamiento,
+    crear_rutina_automatica,
+    crear_rutina_personalizada,
     iniciar_serie_entrenamiento,
     iniciar_sesion_entrenamiento,
     omitir_descanso_serie,
+)
+from gym_project.gym_app.wellness_content import (
+    MENSAJES_MOTIVACIONALES,
+    obtener_guia_nutricional,
+    obtener_mensajes_del_dia,
 )
 
 DIETAS_POR_OBJETIVO = {
@@ -44,6 +55,46 @@ DIETAS_POR_OBJETIVO = {
         'descripcion': 'Plan equilibrado para crear hábitos sostenibles, controlar porciones y acompañar el entrenamiento sin dietas extremas.',
     },
 }
+
+
+PREGUNTAS_NIVEL = [
+    ("experiencia", "¿Cuánto tiempo llevas entrenando de forma constante?", [
+        (0, "Menos de 3 meses"), (1, "Entre 3 y 12 meses"),
+        (2, "Entre 1 y 3 años"), (3, "Más de 3 años"),
+    ]),
+    ("frecuencia", "¿Cuántas sesiones completas normalmente por semana?", [
+        (0, "Una o ninguna"), (1, "Dos"), (2, "Tres o cuatro"), (3, "Cinco o más"),
+    ]),
+    ("tecnica", "¿Puedes mantener una técnica estable sin supervisión?", [
+        (0, "Todavía estoy aprendiendo"), (1, "En ejercicios básicos"),
+        (2, "En la mayoría"), (3, "Sí, y sé corregirme"),
+    ]),
+    ("cargas", "¿Cómo eliges el peso de trabajo?", [
+        (0, "No sé calcularlo"), (1, "Uso un peso muy cómodo"),
+        (2, "Dejo 2 o 3 repeticiones posibles"), (3, "Gestiono esfuerzo y progresión"),
+    ]),
+    ("progresion", "¿Registras pesos, repeticiones o tiempos?", [
+        (0, "Nunca"), (1, "A veces"), (2, "Casi siempre"), (3, "Siempre y ajusto el plan"),
+    ]),
+    ("recuperacion", "¿Reconoces cuándo necesitas bajar la intensidad?", [
+        (0, "No"), (1, "Con ayuda"), (2, "Generalmente"), (3, "Sí, con claridad"),
+    ]),
+    ("compuestos", "¿Qué tan familiar te resulta sentadilla, bisagra, empuje y tracción?", [
+        (0, "Son nuevos para mí"), (1, "Conozco algunos"),
+        (2, "Los ejecuto con control"), (3, "Los domino y sé adaptar variantes"),
+    ]),
+    ("consistencia", "En los últimos tres meses, ¿qué tan constante has sido?", [
+        (0, "No he entrenado"), (1, "Intermitente"), (2, "Bastante constante"), (3, "Muy constante"),
+    ]),
+]
+
+
+ORDEN_NIVELES = [
+    NivelEjercicioChoice.PRINCIPIANTE,
+    NivelEjercicioChoice.INTERMEDIO,
+    NivelEjercicioChoice.ENCIMA_PROMEDIO,
+    NivelEjercicioChoice.AVANZADO,
+]
 
 # Este listado corresponde a las demostraciones validadas e integradas en
 # static/entrenador3d/entrenador.html. Un ejercicio nuevo queda en estado
@@ -105,7 +156,15 @@ def calcular_edad(fecha_nacimiento):
 def siguiente_paso_personalizacion(perfil):
     if not perfil.objetivo:
         return 'objetivo'
-    if not perfil.dieta_aceptada:
+    if not perfil.nivel_declarado:
+        return 'nivel_entrenamiento'
+    if not perfil.prueba_nivel_completada or not perfil.nivel_entrenamiento:
+        return 'prueba_nivel'
+    if not perfil.configuracion_entrenamiento_completa:
+        if perfil.modalidad_rutina == ModalidadRutinaChoice.PERSONALIZADA:
+            return 'crear_rutina'
+        return 'configurar_rutina'
+    if not perfil.orientacion_nutricional_vista:
         return 'dieta'
     if not perfil.datos_completos:
         return 'datos_personales'
@@ -217,24 +276,256 @@ def objetivo(request):
             )
             perfil.objetivo = objetivo_elegido
             if objetivo_cambio:
-                perfil.dieta_aceptada = False
+                perfil.configuracion_entrenamiento_completa = False
+                perfil.orientacion_nutricional_vista = False
             perfil.save(
                 update_fields=[
                     'objetivo',
-                    'dieta_aceptada',
+                    'configuracion_entrenamiento_completa',
+                    'orientacion_nutricional_vista',
                 ]
             )
-            asignar_plan_por_objetivo(
-                request.user,
-                objetivo_elegido,
-            )
-            if perfil.dieta_aceptada:
-                if perfil.datos_completos:
-                    return redirect('mi_entrenamiento')
-                return redirect('datos_personales')
-            return redirect('dieta')
+            return redirect('nivel_entrenamiento')
         return render(request, 'objetivo.html', {'error': 'Escoge un objetivo válido.'})
     return render(request, 'objetivo.html', {'perfil': perfil})
+
+
+@login_required(login_url='login')
+@require_http_methods(["GET", "POST"])
+def nivel_entrenamiento_view(request):
+    perfil = get_perfil(request.user)
+    if not perfil.objetivo:
+        return redirect('objetivo')
+
+    if request.method == 'POST':
+        nivel = request.POST.get('nivel')
+        if nivel not in NivelEjercicioChoice.values:
+            return render(request, 'nivel_entrenamiento.html', {
+                'perfil': perfil,
+                'niveles': NivelEjercicioChoice.choices,
+                'error': 'Selecciona el nivel que mejor describa tu experiencia actual.',
+            })
+        perfil.nivel_declarado = nivel
+        perfil.configuracion_entrenamiento_completa = False
+        if nivel == NivelEjercicioChoice.PRINCIPIANTE:
+            perfil.nivel_entrenamiento = nivel
+            perfil.puntuacion_prueba_nivel = 0
+            perfil.prueba_nivel_completada = True
+        else:
+            perfil.nivel_entrenamiento = None
+            perfil.puntuacion_prueba_nivel = None
+            perfil.prueba_nivel_completada = False
+        perfil.save(update_fields=[
+            'nivel_declarado', 'nivel_entrenamiento', 'puntuacion_prueba_nivel',
+            'prueba_nivel_completada', 'configuracion_entrenamiento_completa',
+        ])
+        if perfil.prueba_nivel_completada:
+            return redirect('configurar_rutina')
+        return redirect('prueba_nivel')
+
+    return render(request, 'nivel_entrenamiento.html', {
+        'perfil': perfil,
+        'niveles': NivelEjercicioChoice.choices,
+    })
+
+
+@login_required(login_url='login')
+@require_http_methods(["GET", "POST"])
+def prueba_nivel_view(request):
+    perfil = get_perfil(request.user)
+    if not perfil.objetivo:
+        return redirect('objetivo')
+    if not perfil.nivel_declarado:
+        return redirect('nivel_entrenamiento')
+    if perfil.nivel_declarado == NivelEjercicioChoice.PRINCIPIANTE:
+        perfil.nivel_entrenamiento = NivelEjercicioChoice.PRINCIPIANTE
+        perfil.prueba_nivel_completada = True
+        perfil.save(update_fields=['nivel_entrenamiento', 'prueba_nivel_completada'])
+        return redirect('configurar_rutina')
+
+    contexto = {'perfil': perfil, 'preguntas': PREGUNTAS_NIVEL}
+    if request.method == 'POST':
+        respuestas = []
+        for clave, _texto, _opciones in PREGUNTAS_NIVEL:
+            try:
+                valor = int(request.POST.get(clave, ''))
+            except (TypeError, ValueError):
+                valor = -1
+            if valor not in (0, 1, 2, 3):
+                contexto['error'] = 'Responde todas las preguntas para calcular tu nivel.'
+                contexto['form_data'] = request.POST
+                return render(request, 'prueba_nivel.html', contexto)
+            respuestas.append(valor)
+
+        puntuacion = sum(respuestas)
+        if puntuacion <= 7:
+            nivel_calculado = NivelEjercicioChoice.PRINCIPIANTE
+        elif puntuacion <= 14:
+            nivel_calculado = NivelEjercicioChoice.INTERMEDIO
+        elif puntuacion <= 20:
+            nivel_calculado = NivelEjercicioChoice.ENCIMA_PROMEDIO
+        else:
+            nivel_calculado = NivelEjercicioChoice.AVANZADO
+
+        indice_declarado = ORDEN_NIVELES.index(perfil.nivel_declarado)
+        indice_calculado = ORDEN_NIVELES.index(nivel_calculado)
+        perfil.nivel_entrenamiento = ORDEN_NIVELES[min(indice_declarado, indice_calculado)]
+        perfil.puntuacion_prueba_nivel = puntuacion
+        perfil.prueba_nivel_completada = True
+        perfil.configuracion_entrenamiento_completa = False
+        perfil.save(update_fields=[
+            'nivel_entrenamiento', 'puntuacion_prueba_nivel',
+            'prueba_nivel_completada', 'configuracion_entrenamiento_completa',
+        ])
+        messages.success(
+            request,
+            f'Tu nivel recomendado es {perfil.get_nivel_entrenamiento_display()}.',
+        )
+        return redirect('configurar_rutina')
+
+    return render(request, 'prueba_nivel.html', contexto)
+
+
+def _normalizar_dias(valores):
+    try:
+        dias = sorted({int(valor) for valor in valores})
+    except (TypeError, ValueError):
+        return []
+    if any(dia not in DiaSemanaChoice.values for dia in dias):
+        return []
+    return dias
+
+
+@login_required(login_url='login')
+@require_http_methods(["GET", "POST"])
+def configurar_rutina_view(request):
+    perfil = get_perfil(request.user)
+    paso = siguiente_paso_personalizacion(perfil)
+    if paso in ('objetivo', 'nivel_entrenamiento', 'prueba_nivel'):
+        return redirect(paso)
+
+    contexto = {
+        'perfil': perfil,
+        'dias_semana': DiaSemanaChoice.choices,
+        'modalidades': ModalidadRutinaChoice.choices,
+    }
+    if request.method == 'POST':
+        dias = _normalizar_dias(request.POST.getlist('dias'))
+        modalidad = request.POST.get('modalidad')
+        try:
+            minutos = int(request.POST.get('minutos', ''))
+            descanso = int(request.POST.get('descanso', ''))
+        except (TypeError, ValueError):
+            minutos = descanso = 0
+
+        tiempos = {}
+        for dia in dias:
+            try:
+                tiempos[str(dia)] = int(request.POST.get(f'minutos_dia_{dia}') or minutos)
+            except (TypeError, ValueError):
+                tiempos[str(dia)] = 0
+
+        if not 1 <= len(dias) <= 6:
+            contexto['error'] = 'Selecciona entre uno y seis días diferentes.'
+        elif minutos < 45:
+            contexto['error'] = 'El tiempo mínimo por entrenamiento es de 45 minutos.'
+        elif any(valor < 45 for valor in tiempos.values()):
+            contexto['error'] = 'Cada día elegido necesita al menos 45 minutos disponibles.'
+        elif not 15 <= descanso <= 1800:
+            contexto['error'] = 'El descanso debe estar entre 15 y 1800 segundos.'
+        elif modalidad not in ModalidadRutinaChoice.values:
+            contexto['error'] = 'Selecciona cómo deseas construir tu rutina.'
+        else:
+            perfil.dias_entrenamiento = dias
+            perfil.minutos_por_dia = tiempos
+            perfil.duracion_sesion_minutos = minutos
+            perfil.descanso_preferido_segundos = descanso
+            perfil.modalidad_rutina = modalidad
+            perfil.configuracion_entrenamiento_completa = False
+            perfil.aviso_rutina_personalizada_aceptado = False
+            perfil.save(update_fields=[
+                'dias_entrenamiento', 'duracion_sesion_minutos', 'minutos_por_dia',
+                'descanso_preferido_segundos', 'modalidad_rutina',
+                'configuracion_entrenamiento_completa',
+                'aviso_rutina_personalizada_aceptado',
+            ])
+            if modalidad == ModalidadRutinaChoice.PERSONALIZADA:
+                return redirect('crear_rutina')
+            try:
+                crear_rutina_automatica(
+                    request.user, perfil.objetivo, perfil.nivel_entrenamiento,
+                    dias, minutos, descanso, minutos_por_dia=tiempos,
+                )
+            except ValidationError as error:
+                contexto['error'] = ' '.join(error.messages)
+            else:
+                perfil.configuracion_entrenamiento_completa = True
+                perfil.save(update_fields=['configuracion_entrenamiento_completa'])
+                return redirect('dieta')
+        contexto['form_data'] = request.POST
+
+    return render(request, 'configurar_rutina.html', contexto)
+
+
+@login_required(login_url='login')
+@require_http_methods(["GET", "POST"])
+def crear_rutina_view(request):
+    perfil = get_perfil(request.user)
+    paso = siguiente_paso_personalizacion(perfil)
+    if paso in ('objetivo', 'nivel_entrenamiento', 'prueba_nivel'):
+        return redirect(paso)
+    if perfil.modalidad_rutina != ModalidadRutinaChoice.PERSONALIZADA:
+        return redirect('configurar_rutina')
+    if not perfil.dias_entrenamiento:
+        return redirect('configurar_rutina')
+
+    contexto = {
+        'perfil': perfil,
+        'ejercicios': Ejercicio.objects.filter(activo=True).order_by('grupo_muscular', 'nombre'),
+        'dias_elegidos': [
+            {'numero': numero, 'valor': dia, 'nombre': DiaSemanaChoice(dia).label}
+            for numero, dia in enumerate(perfil.dias_entrenamiento, start=1)
+        ],
+    }
+    if request.method == 'POST':
+        if request.POST.get('acepta_aviso') != 'on':
+            contexto['error'] = 'Debes confirmar que comprendes la advertencia de seguridad.'
+            return render(request, 'crear_rutina.html', contexto)
+
+        campos = {
+            nombre: request.POST.getlist(nombre)
+            for nombre in ('dia', 'ejercicio_id', 'series', 'cantidad', 'descanso')
+        }
+        total = len(campos['ejercicio_id'])
+        if not total or any(len(valores) != total for valores in campos.values()):
+            contexto['error'] = 'Revisa los ejercicios agregados a la rutina.'
+            return render(request, 'crear_rutina.html', contexto)
+        filas = [
+            {nombre: valores[indice] for nombre, valores in campos.items()}
+            for indice in range(total)
+        ]
+        try:
+            crear_rutina_personalizada(
+                request.user, perfil.objetivo, perfil.nivel_entrenamiento,
+                perfil.dias_entrenamiento, filas,
+            )
+        except (ValidationError, ValueError, Ejercicio.DoesNotExist) as error:
+            if isinstance(error, ValidationError):
+                texto_error = ' '.join(error.messages)
+            else:
+                texto_error = 'Hay un valor inválido en la rutina. Revisa cada fila.'
+            contexto['error'] = texto_error
+            return render(request, 'crear_rutina.html', contexto)
+
+        perfil.aviso_rutina_personalizada_aceptado = True
+        perfil.configuracion_entrenamiento_completa = True
+        perfil.save(update_fields=[
+            'aviso_rutina_personalizada_aceptado',
+            'configuracion_entrenamiento_completa',
+        ])
+        return redirect('dieta')
+
+    return render(request, 'crear_rutina.html', contexto)
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
@@ -243,20 +534,31 @@ def dieta_view(request):
     if not perfil.objetivo:
         return redirect('objetivo')
 
-    dieta = DIETAS_POR_OBJETIVO.get(perfil.objetivo, DIETAS_POR_OBJETIVO['salud'])
-    if request.method == 'GET' and perfil.dieta_aceptada:
-        if perfil.datos_completos:
-            return redirect('mi_entrenamiento')
-        return redirect('datos_personales')
+    dieta = obtener_guia_nutricional(perfil.objetivo)
 
     if request.method == 'POST':
-        if request.POST.get('acepta_dieta') == 'on':
-            perfil.dieta_aceptada = True
-            perfil.save()
-            return redirect('datos_personales')
-        return render(request, 'dieta.html', {'perfil': perfil, 'dieta': dieta, 'error': 'Debes aceptar la dieta para continuar.'})
+        perfil.orientacion_nutricional_vista = True
+        perfil.dieta_aceptada = True
+        perfil.save(update_fields=['orientacion_nutricional_vista', 'dieta_aceptada'])
+        return redirect(siguiente_paso_personalizacion(perfil))
 
-    return render(request, 'dieta.html', {'perfil': perfil, 'dieta': dieta})
+    return render(request, 'dieta.html', {
+        'perfil': perfil,
+        'dieta': dieta,
+        'es_primera_configuracion': not perfil.orientacion_nutricional_vista,
+    })
+
+
+@login_required(login_url='login')
+def notificaciones_view(request):
+    perfil = get_perfil(request.user)
+    hoy = timezone.localdate()
+    return render(request, 'notificaciones.html', {
+        'perfil': perfil,
+        'fecha_hoy': hoy,
+        'notificaciones': obtener_mensajes_del_dia(request.user, perfil, hoy),
+        'total_mensajes': len(MENSAJES_MOTIVACIONALES),
+    })
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
@@ -264,7 +566,13 @@ def datos_personales_view(request):
     perfil = get_perfil(request.user)
     if not perfil.objetivo:
         return redirect('objetivo')
-    if not perfil.dieta_aceptada:
+    if not perfil.nivel_declarado:
+        return redirect('nivel_entrenamiento')
+    if not perfil.prueba_nivel_completada or not perfil.nivel_entrenamiento:
+        return redirect('prueba_nivel')
+    if not perfil.configuracion_entrenamiento_completa:
+        return redirect('configurar_rutina')
+    if not perfil.orientacion_nutricional_vista:
         return redirect('dieta')
     if request.method == 'GET' and perfil.datos_completos:
         return redirect('mi_entrenamiento')
@@ -299,10 +607,6 @@ def datos_personales_view(request):
 
         perfil.datos_completos = True
         perfil.save()
-        asignar_plan_por_objetivo(
-            request.user,
-            perfil.objetivo,
-        )
         return redirect('mi_entrenamiento')
 
     return render(request, 'datos_personales.html', {'perfil': perfil})
@@ -421,21 +725,6 @@ def mi_entrenamiento_view(request):
         .prefetch_related("horarios")
         .first()
     )
-
-    if asignacion is None and perfil.objetivo:
-        asignar_plan_por_objetivo(
-            request.user,
-            perfil.objetivo,
-        )
-        asignacion = (
-            request.user.planes_asignados
-            .filter(
-                estado=EstadoAsignacionChoice.ACTIVO,
-            )
-            .select_related("plan")
-            .prefetch_related("horarios")
-            .first()
-        )
 
     context = {
         "perfil": perfil,

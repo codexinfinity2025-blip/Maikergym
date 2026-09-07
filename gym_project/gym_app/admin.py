@@ -15,8 +15,8 @@ from gym_project.gym_app.models import (
 
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
-    list_display = ('user', 'rol', 'objetivo', 'dieta_aceptada', 'datos_completos', 'fecha_registro', 'activo')
-    list_filter = ('rol', 'objetivo', 'dieta_aceptada', 'datos_completos', 'activo', 'fecha_registro')
+    list_display = ('user', 'rol', 'objetivo', 'nivel_entrenamiento', 'modalidad_rutina', 'configuracion_entrenamiento_completa', 'fecha_registro', 'activo')
+    list_filter = ('rol', 'objetivo', 'nivel_entrenamiento', 'modalidad_rutina', 'configuracion_entrenamiento_completa', 'activo', 'fecha_registro')
     search_fields = ('user__email', 'user__username', 'user__first_name', 'user__last_name')
     readonly_fields = ('fecha_registro',)
 
@@ -25,7 +25,15 @@ class PerfilUsuarioAdmin(admin.ModelAdmin):
             'fields': ('user', 'rol', 'activo')
         }),
         ('PersonalizaciÃ³n', {
-            'fields': ('objetivo', 'dieta_aceptada', 'foto', 'genero', 'peso', 'edad', 'datos_completos')
+            'fields': (
+                'objetivo', 'nivel_declarado', 'nivel_entrenamiento',
+                'prueba_nivel_completada', 'puntuacion_prueba_nivel',
+                'dias_entrenamiento', 'duracion_sesion_minutos',
+                'descanso_preferido_segundos', 'modalidad_rutina',
+                'configuracion_entrenamiento_completa',
+                'orientacion_nutricional_vista', 'foto', 'genero',
+                'peso', 'edad', 'datos_completos',
+            )
         }),
         ('Fechas', {
             'fields': ('fecha_registro',),
@@ -142,11 +150,14 @@ class PlanEntrenamientoAdmin(admin.ModelAdmin):
         "nivel",
         "duracion_semanas",
         "dias_por_semana",
+        "propietario",
+        "es_personalizado",
         "activo",
     )
     list_filter = (
         "objetivo",
         "nivel",
+        "es_personalizado",
         "activo",
     )
     search_fields = (
@@ -170,6 +181,8 @@ class PlanEntrenamientoAdmin(admin.ModelAdmin):
                 "objetivo",
                 "nivel",
                 "descripcion",
+                "propietario",
+                "es_personalizado",
             )
         }),
         ("Programación", {

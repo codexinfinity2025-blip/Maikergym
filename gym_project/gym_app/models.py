@@ -46,7 +46,13 @@ class GrupoMuscularChoice(models.TextChoices):
 class NivelEjercicioChoice(models.TextChoices):
     PRINCIPIANTE = "principiante", "Principiante"
     INTERMEDIO = "intermedio", "Intermedio"
+    ENCIMA_PROMEDIO = "encima_promedio", "Encima del promedio"
     AVANZADO = "avanzado", "Avanzado"
+
+
+class ModalidadRutinaChoice(models.TextChoices):
+    AUTOMATICA = "automatica", "Rutina recomendada por MaikerGym"
+    PERSONALIZADA = "personalizada", "Crear mi propia rutina"
 
 
 class TipoEquipoChoice(models.TextChoices):
@@ -105,6 +111,46 @@ class PerfilUsuario(models.Model):
     )
 
     dieta_aceptada = models.BooleanField(default=False)
+    orientacion_nutricional_vista = models.BooleanField(default=False)
+    nivel_declarado = models.CharField(
+        max_length=20,
+        choices=NivelEjercicioChoice.choices,
+        null=True,
+        blank=True,
+    )
+    nivel_entrenamiento = models.CharField(
+        max_length=20,
+        choices=NivelEjercicioChoice.choices,
+        null=True,
+        blank=True,
+    )
+    prueba_nivel_completada = models.BooleanField(default=False)
+    puntuacion_prueba_nivel = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MaxValueValidator(30)],
+    )
+    dias_entrenamiento = models.JSONField(default=list, blank=True)
+    minutos_por_dia = models.JSONField(default=dict, blank=True)
+    duracion_sesion_minutos = models.PositiveIntegerField(
+        default=60,
+        validators=[MinValueValidator(45)],
+    )
+    descanso_preferido_segundos = models.PositiveSmallIntegerField(
+        default=60,
+        validators=[
+            MinValueValidator(15),
+            MaxValueValidator(1800),
+        ],
+    )
+    modalidad_rutina = models.CharField(
+        max_length=20,
+        choices=ModalidadRutinaChoice.choices,
+        null=True,
+        blank=True,
+    )
+    configuracion_entrenamiento_completa = models.BooleanField(default=False)
+    aviso_rutina_personalizada_aceptado = models.BooleanField(default=False)
     foto = models.ImageField(upload_to='perfiles/', null=True, blank=True)
     telefono = models.CharField(max_length=30, null=True, blank=True)
     direccion = models.CharField(max_length=160, null=True, blank=True)
@@ -127,7 +173,14 @@ class PerfilUsuario(models.Model):
             return False
 
     def personalizacion_completa(self):
-        return bool(self.objetivo and self.dieta_aceptada and self.datos_completos)
+        return bool(
+            self.objetivo
+            and self.nivel_entrenamiento
+            and self.prueba_nivel_completada
+            and self.configuracion_entrenamiento_completa
+            and self.orientacion_nutricional_vista
+            and self.datos_completos
+        )
 
     def __str__(self):
         return f"{self.user.email} - {self.get_rol_display()}"
@@ -257,6 +310,14 @@ class PlanEntrenamiento(models.Model):
             MaxValueValidator(7),
         ],
     )
+    propietario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="rutinas_personalizadas",
+        null=True,
+        blank=True,
+    )
+    es_personalizado = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Tu nivel{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v1">{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="flow-page">
+    <header class="flow-heading" data-motion="rise">
+        <span class="eyebrow">Personalización · Paso 2 de 5</span>
+        <h1>¿En qué nivel te encuentras hoy?</h1>
+        <p>Elige con honestidad. No es una competencia: esta información nos ayuda a ajustar volumen, esfuerzo y progresión.</p>
+        <div class="flow-progress" aria-label="Paso 2 de 5"><span class="active"></span><span class="active"></span><span></span><span></span><span></span></div>
+    </header>
+    {% if error %}<div class="flow-alert" role="alert">{{ error }}</div>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <section class="choice-grid">
+            <label class="choice-card">
+                <input type="radio" name="nivel" value="principiante" {% if perfil.nivel_declarado == 'principiante' %}checked{% endif %} required>
+                <span class="choice-icon">🌱</span><strong>Principiante</strong>
+                <p>Estoy empezando, regreso después de una pausa o todavía necesito aprender la técnica.</p>
+            </label>
+            <label class="choice-card">
+                <input type="radio" name="nivel" value="intermedio" {% if perfil.nivel_declarado == 'intermedio' %}checked{% endif %} required>
+                <span class="choice-icon">🏋️</span><strong>Intermedio</strong>
+                <p>Entreno con cierta regularidad, conozco los movimientos básicos y registro parte de mi progreso.</p>
+            </label>
+            <label class="choice-card">
+                <input type="radio" name="nivel" value="encima_promedio" {% if perfil.nivel_declarado == 'encima_promedio' %}checked{% endif %} required>
+                <span class="choice-icon">📈</span><strong>Encima del promedio</strong>
+                <p>Tengo buena técnica, soy constante y manejo cargas, esfuerzo y recuperación con seguridad.</p>
+            </label>
+            <label class="choice-card">
+                <input type="radio" name="nivel" value="avanzado" {% if perfil.nivel_declarado == 'avanzado' %}checked{% endif %} required>
+                <span class="choice-icon">⚡</span><strong>Avanzado</strong>
+                <p>Tengo varios años de experiencia consistente y sé adaptar volumen, intensidad y progresión.</p>
+            </label>
+        </section>
+        <div class="flow-actions">
+            <button type="button" class="flow-btn secondary" onclick="location.href='{% url 'objetivo' %}'">Volver</button>
+            <button class="flow-btn" type="submit">Continuar</button>
+        </div>
+    </form>
+</main>
+{% endblock %}
