@@ -236,6 +236,10 @@ def registrarse(request):
             )
             return render(request, 'registrarse.html', contexto)
 
+        enfoque = request.POST.get('enfoque_corporal', 'full_body')
+        if enfoque not in ('inferior', 'superior', 'full_body'):
+            contexto['error'] = 'Selecciona un enfoque corporal válido.'
+            return render(request, 'registrarse.html', contexto)
         user = User.objects.create_user(
             username=email,
             email=email,
@@ -244,6 +248,8 @@ def registrarse(request):
             last_name=apellido,
         )
         perfil = get_perfil(user)
+        perfil.enfoque_corporal = enfoque
+        perfil.priorizar_tren_inferior = enfoque == 'inferior'
         perfil.fecha_nacimiento = fecha_nacimiento
         perfil.edad = calcular_edad(fecha_nacimiento)
         perfil.telefono = (
@@ -255,6 +261,7 @@ def registrarse(request):
         perfil.save(
             update_fields=[
                 'fecha_nacimiento',
+                'enfoque_corporal', 'priorizar_tren_inferior',
                 'edad',
                 'telefono',
                 'direccion',
@@ -456,7 +463,12 @@ def configurar_rutina_view(request):
             genero_previo = request.POST.get('genero_previo')
             if genero_previo in ('femenino', 'masculino', 'otro'):
                 perfil.genero = genero_previo
-            perfil.priorizar_tren_inferior = request.POST.get('priorizar_tren_inferior') == 'si'
+            enfoque = request.POST.get('enfoque_corporal', perfil.enfoque_corporal)
+            if enfoque not in ('inferior', 'superior', 'full_body'):
+                contexto['error'] = 'Selecciona un enfoque corporal válido.'
+                return render(request, 'configurar_rutina.html', contexto)
+            perfil.enfoque_corporal = enfoque
+            perfil.priorizar_tren_inferior = enfoque == 'inferior'
             perfil.minutos_por_dia = tiempos
             perfil.duracion_sesion_minutos = minutos
             perfil.descanso_preferido_segundos = descanso
@@ -468,7 +480,7 @@ def configurar_rutina_view(request):
                 'descanso_preferido_segundos', 'modalidad_rutina',
                 'configuracion_entrenamiento_completa',
                 'aviso_rutina_personalizada_aceptado',
-                'genero', 'priorizar_tren_inferior',
+                'genero', 'priorizar_tren_inferior', 'enfoque_corporal',
             ])
             if modalidad == ModalidadRutinaChoice.PERSONALIZADA:
                 return redirect('crear_rutina')
@@ -477,6 +489,7 @@ def configurar_rutina_view(request):
                     request.user, perfil.objetivo, perfil.nivel_entrenamiento,
                     dias, minutos, descanso, minutos_por_dia=tiempos,
                     priorizar_tren_inferior=perfil.priorizar_tren_inferior,
+                    enfoque_corporal=perfil.enfoque_corporal,
                 )
             except ValidationError as error:
                 contexto['error'] = ' '.join(error.messages)

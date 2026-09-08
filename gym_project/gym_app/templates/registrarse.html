@@ -28,6 +28,10 @@
 
         <form method="POST" class="register-form">
             {% csrf_token %}
+            <div class="form-group"><label class="form-label">Tu enfoque de entrenamiento</label>
+                {% include 'partials/enfoque_select.html' %}
+                <p>Puedes cambiarlo después desde Mis datos y preferencias. Disponible para cualquier persona.</p>
+            </div>
             <div class="form-row">
                 <div class="form-group">
                     <label class="form-label">Nombre</label>

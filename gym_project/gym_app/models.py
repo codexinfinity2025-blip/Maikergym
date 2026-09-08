@@ -97,6 +97,7 @@ class EstadoSerieChoice(models.TextChoices):
     COMPLETADA = "completada", "Completada"
 
 class PerfilUsuario(models.Model):
+    enfoque_corporal = models.CharField(max_length=20, choices=[('inferior', 'Tren inferior'), ('superior', 'Tren superior'), ('full_body', 'Full body · cuerpo completo')], default='full_body')
     priorizar_tren_inferior = models.BooleanField(default=False)
     altura_cm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(50), MaxValueValidator(250)])
     mensajes_entregados = models.JSONField(default=list, blank=True)

@@ -1,0 +1,5 @@
+<select class="form-control" name="enfoque_corporal" aria-label="Enfoque corporal">
+    <option value="full_body">Full body · cuerpo completo</option>
+    <option value="inferior" {% if perfil.enfoque_corporal == 'inferior' or form_data.enfoque_corporal == 'inferior' %}selected{% endif %}>Tren inferior · piernas y glúteos</option>
+    <option value="superior" {% if perfil.enfoque_corporal == 'superior' or form_data.enfoque_corporal == 'superior' %}selected{% endif %}>Tren superior · torso y brazos</option>
+</select>

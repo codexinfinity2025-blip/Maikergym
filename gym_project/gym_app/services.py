@@ -251,7 +251,7 @@ def _segundos_estimados(valores):
 
 
 @transaction.atomic
-def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, descanso, minutos_por_dia=None, priorizar_tren_inferior=False):
+def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, descanso, minutos_por_dia=None, priorizar_tren_inferior=False, enfoque_corporal=None):
     _validar_preferencias(objetivo, nivel, dias_semana)
     minutos_por_dia = minutos_por_dia or {}
     presupuestos = [minutos_por_dia.get(str(dia), minutos) for dia in dias_semana]
@@ -269,7 +269,9 @@ def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, desc
         for ejercicio in Ejercicio.objects.filter(activo=True, nivel__in=niveles[:niveles.index(nivel) + 1])
     }
     enfoques = ENFOQUES_POR_CANTIDAD[len(dias_semana)]
-    if priorizar_tren_inferior:
+    if enfoque_corporal not in (None, 'inferior', 'superior', 'full_body'):
+        raise ValidationError('Selecciona un enfoque corporal válido.')
+    if enfoque_corporal == 'inferior' or (enfoque_corporal is None and priorizar_tren_inferior):
         enfoques = {
             1: ['cuerpo_completo'], 2: ['cuerpo_completo', 'piernas_gluteos'],
             3: ['piernas_gluteos', 'tren_superior', 'tren_inferior'],
@@ -277,6 +279,15 @@ def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, desc
             5: ['piernas_gluteos', 'empuje', 'tren_inferior', 'tiron_core', 'piernas_gluteos'],
             6: ['piernas_gluteos', 'empuje', 'tren_inferior', 'tiron_core', 'piernas_gluteos', 'torso_core'],
         }[len(dias_semana)]
+    elif enfoque_corporal == 'superior':
+        enfoques = {
+            1: ['cuerpo_completo'], 2: ['tren_superior', 'cuerpo_completo'],
+            3: ['empuje', 'tren_inferior', 'tiron_core'],
+            4: ['empuje', 'tren_inferior', 'tiron', 'torso_core'],
+            5: ['empuje', 'tren_inferior', 'tiron', 'torso_core', 'cuerpo_completo'],
+            6: ['empuje', 'tren_inferior', 'tiron', 'torso_core', 'tren_inferior', 'tren_superior'],
+        }[len(dias_semana)]
+    # Full body means balanced weekly coverage, not heavy daily full-body sessions.
     prioridad = PRIORIDAD_POR_OBJETIVO.get(objetivo, [])
 
     for indice, enfoque in enumerate(enfoques, start=1):

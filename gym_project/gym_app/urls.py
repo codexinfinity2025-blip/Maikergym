@@ -3,8 +3,10 @@ from gym_project.gym_app import views
 from gym_project.gym_app import social_views
 from django.contrib.auth import views as auth_views
 from .password_reset import RecuperarPassword, ConfirmarPassword
+from .profile_preferences import preferencias
 
 urlpatterns = [
+    path('cuenta/preferencias/', preferencias, name='preferencias'),
     path('recuperar-contrasena/', RecuperarPassword.as_view(), name='password_reset'),
     path('recuperar-contrasena/enviado/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),
     path('restablecer/<uidb64>/<token>/', ConfirmarPassword.as_view(), name='password_reset_confirm'),

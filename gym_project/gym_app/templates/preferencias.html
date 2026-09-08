@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Mis datos y preferencias · MaikerGym{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/preferencias.css' %}">{% endblock %}
+{% block content %}
+{% include 'partials/app_nav.html' %}
+<main class="preferences-page">
+    <a class="preferences-back" href="{% url 'cuenta' %}">← Volver a mi perfil</a>
+    <header><span class="preferences-kicker">TU PERFIL, A TU MEDIDA</span><h1>Mis datos y preferencias</h1><p>Tu cuerpo y tus objetivos cambian. Mantén aquí tu información al día.</p></header>
+    {% for message in messages %}<p class="preferences-notice" role="status">{{ message }}</p>{% endfor %}
+    <div class="preferences-layout">
+    <form method="post" class="preferences-card">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <h2><span>01</span> Tus datos actuales</h2><p>Esta información es privada. No se muestra a tu grupo de amigos.</p>
+        <div class="preferences-fields">
+        {% for field in form %}{% if field.name != 'enfoque_corporal' %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endif %}{% endfor %}
+        </div>
+        <fieldset><legend><span>02</span> Tu enfoque corporal</legend>
+            <p>Elige una prioridad, no una limitación. La rutina automática conserva un trabajo equilibrado.</p>
+            <div class="preferences-options">{% for radio in form.enfoque_corporal %}<label>{{ radio.tag }}<strong>{{ radio.choice_label }}</strong></label>{% endfor %}</div>
+            {{ form.enfoque_corporal.errors }}
+        </fieldset>
+        <p class="preferences-help">Full body distribuye el trabajo de todo el cuerpo durante la semana. Tu selección no depende de tu sexo. Las rutinas manuales no se modifican automáticamente.</p>
+        <button class="preferences-save" type="submit">Guardar mis datos y preferencias</button>
+    </form>
+    <aside class="preferences-card preferences-plan"><span class="preferences-kicker">TU SIGUIENTE PASO</span><h2>Una rutina que encaje contigo</h2>
+        <p>Objetivo actual: <strong>{{ perfil.get_objetivo_display|default:'Por definir' }}</strong></p>
+        {% if iniciada %}<p>Ya iniciaste esta planificación. Tus sesiones y puntos se conservarán; los cambios de enfoque quedan guardados para tu próxima configuración.</p>
+        {% else %}<p>¿Todavía no has empezado? Puedes ajustar el objetivo, nivel, días, tiempo y descanso antes de tu primera sesión.</p>
+        <a href="{% url 'objetivo' %}">Cambiar objetivo o nivel →</a><a href="{% url 'configurar_rutina' %}">Ajustar días y tiempos →</a>{% endif %}
+        {% if perfil.modalidad_rutina == 'personalizada' %}<a href="{% url 'crear_rutina' %}">Editar mis ejercicios →</a>{% endif %}
+    </aside>
+    </div>
+</main>
+{% endblock %}
