@@ -6,6 +6,7 @@
 {% include 'partials/app_nav.html' %}
 <main class="preferences-page">
     <a class="preferences-back" href="{% url 'cuenta' %}">← Volver a mi perfil</a>
+    <a class="preferences-back" style="margin-left:16px" href="{% url 'revisar_registro' %}">Editar mis datos de registro →</a>
     <header><span class="preferences-kicker">TU PERFIL, A TU MEDIDA</span><h1>Mis datos y preferencias</h1><p>Tu cuerpo y tus objetivos cambian. Mantén aquí tu información al día.</p></header>
     {% for message in messages %}<p class="preferences-notice" role="status">{{ message }}</p>{% endfor %}
     <div class="preferences-layout">
@@ -26,7 +27,7 @@
     </form>
     <aside class="preferences-card preferences-plan"><span class="preferences-kicker">TU SIGUIENTE PASO</span><h2>Una rutina que encaje contigo</h2>
         <p>Objetivo actual: <strong>{{ perfil.get_objetivo_display|default:'Por definir' }}</strong></p>
-        {% if iniciada %}<p>Ya iniciaste esta planificación. Tus sesiones y puntos se conservarán; los cambios de enfoque quedan guardados para tu próxima configuración.</p>
+        {% if iniciada %}<p>Ya iniciaste esta planificación. Tus sesiones y puntos se conservarán; los cambios de enfoque quedan guardados para tu próxima configuración.</p><a href="{% url 'modificar_rutina' %}">Modificar mi rutina →</a>
         {% else %}<p>¿Todavía no has empezado? Puedes ajustar el objetivo, nivel, días, tiempo y descanso antes de tu primera sesión.</p>
         <a href="{% url 'objetivo' %}">Cambiar objetivo o nivel →</a><a href="{% url 'configurar_rutina' %}">Ajustar días y tiempos →</a>{% endif %}
         {% if perfil.modalidad_rutina == 'personalizada' %}<a href="{% url 'crear_rutina' %}">Editar mis ejercicios →</a>{% endif %}

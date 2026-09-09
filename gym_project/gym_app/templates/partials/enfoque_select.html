@@ -1,5 +1,7 @@
-<select class="form-control" name="enfoque_corporal" aria-label="Enfoque corporal">
-    <option value="full_body">Full body · cuerpo completo</option>
-    <option value="inferior" {% if perfil.enfoque_corporal == 'inferior' or form_data.enfoque_corporal == 'inferior' %}selected{% endif %}>Tren inferior · piernas y glúteos</option>
-    <option value="superior" {% if perfil.enfoque_corporal == 'superior' or form_data.enfoque_corporal == 'superior' %}selected{% endif %}>Tren superior · torso y brazos</option>
+{% with elegido=form_data.enfoque_corporal|default:perfil.enfoque_corporal|default:'full_body' %}
+<select class="form-control" name="enfoque_corporal" aria-label="¿Dónde quieres enfocar tu entrenamiento?" required>
+    <option value="full_body" {% if elegido == 'full_body' %}selected{% endif %}>Cuerpo completo · trabajo equilibrado</option>
+    <option value="inferior" {% if elegido == 'inferior' %}selected{% endif %}>Tren inferior · piernas y glúteos</option>
+    <option value="superior" {% if elegido == 'superior' %}selected{% endif %}>Tren superior · pecho, espalda, hombros y brazos</option>
 </select>
+{% endwith %}

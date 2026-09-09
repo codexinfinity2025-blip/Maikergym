@@ -1,0 +1,14 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Modificar mi rutina · MaikerGym{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/preferencias.css' %}">{% endblock %}
+{% block content %}{% include 'partials/app_nav.html' %}
+<main class="preferences-page">
+<a class="preferences-back" href="{% url 'mi_entrenamiento' %}">← Volver al entrenamiento</a>
+<header><span class="preferences-kicker">PUEDES CAMBIAR DE IDEA</span><h1>Modificar mi rutina</h1><p>Ajusta lo que necesites sin crear otra cuenta. Tus sesiones anteriores y puntos se conservan.</p></header>
+{% for message in messages %}<p class="preferences-notice" role="status">{{ message }}</p>{% endfor %}
+<div class="preferences-layout">
+<section class="preferences-card preferences-plan"><h2>Tu entrenamiento</h2>
+{% if en_curso %}<p>Hay una sesión en curso. Termínala antes de cambiar la planificación para no interrumpir tus avances.</p><a href="{% url 'mi_entrenamiento' %}">Continuar mi entrenamiento →</a>
+{% else %}<a href="{% url 'objetivo' %}">Cambiar objetivo →</a><a href="{% url 'nivel_entrenamiento' %}">Revisar mi nivel →</a><a href="{% url 'configurar_rutina' %}">Cambiar enfoque, días, duración y descansos →</a>{% if perfil.modalidad_rutina == 'personalizada' %}<a href="{% url 'crear_rutina' %}">Editar mis ejercicios, series y repeticiones →</a>{% endif %}<p>Una rutina nueva se aplicará a tus siguientes entrenamientos; no reescribe las sesiones anteriores.</p>{% endif %}
+</section><aside class="preferences-card preferences-plan"><h2>Tus datos</h2><a href="{% url 'preferencias' %}">Editar peso, altura, género y enfoque →</a><a href="{% url 'revisar_registro' %}">Corregir nombre, correo y datos de registro →</a></aside>
+</div></main>{% endblock %}

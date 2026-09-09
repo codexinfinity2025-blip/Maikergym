@@ -4,8 +4,12 @@ from gym_project.gym_app import social_views
 from django.contrib.auth import views as auth_views
 from .password_reset import RecuperarPassword, ConfirmarPassword
 from .profile_preferences import preferencias
+from .registration_review import revisar_registro
+from .routine_edit import modificar_rutina
 
 urlpatterns = [
+    path('mi-entrenamiento/modificar/', modificar_rutina, name='modificar_rutina'),
+    path('registro/revisar/', revisar_registro, name='revisar_registro'),
     path('cuenta/preferencias/', preferencias, name='preferencias'),
     path('recuperar-contrasena/', RecuperarPassword.as_view(), name='password_reset'),
     path('recuperar-contrasena/enviado/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),

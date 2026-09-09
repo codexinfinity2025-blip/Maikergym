@@ -293,7 +293,7 @@ class FlujoRegistroTest(TestCase):
         )
         self.assertRedirects(
             respuesta,
-            reverse("objetivo"),
+            reverse("revisar_registro"),
             fetch_redirect_response=False,
         )
 

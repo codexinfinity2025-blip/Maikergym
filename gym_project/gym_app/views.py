@@ -1,4 +1,5 @@
 from datetime import date
+from .routine_edit import proteger_sesion_en_curso
 from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.core.exceptions import ValidationError
@@ -268,7 +269,7 @@ def registrarse(request):
             ]
         )
         login(request, user)
-        return redirect('objetivo')
+        return redirect('revisar_registro')
 
     return render(request, 'registrarse.html')
 
@@ -289,6 +290,7 @@ def nutricion(request):
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
+@proteger_sesion_en_curso
 def objetivo(request):
     perfil = get_perfil(request.user)
     if request.method == 'POST':
@@ -315,6 +317,7 @@ def objetivo(request):
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
+@proteger_sesion_en_curso
 def nivel_entrenamiento_view(request):
     perfil = get_perfil(request.user)
     if not perfil.objetivo:
@@ -354,6 +357,7 @@ def nivel_entrenamiento_view(request):
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
+@proteger_sesion_en_curso
 def prueba_nivel_view(request):
     perfil = get_perfil(request.user)
     if not perfil.objetivo:
@@ -421,6 +425,7 @@ def _normalizar_dias(valores):
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
+@proteger_sesion_en_curso
 def configurar_rutina_view(request):
     perfil = get_perfil(request.user)
     paso = siguiente_paso_personalizacion(perfil)
@@ -504,6 +509,7 @@ def configurar_rutina_view(request):
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
+@proteger_sesion_en_curso
 def crear_rutina_view(request):
     perfil = get_perfil(request.user)
     paso = siguiente_paso_personalizacion(perfil)

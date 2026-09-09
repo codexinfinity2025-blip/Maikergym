@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Revisa tu registro · MaikerGym{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/preferencias.css' %}">{% endblock %}
+{% block content %}
+{% include 'partials/app_nav.html' %}
+<main class="preferences-page">
+    <header><span class="preferences-kicker">TU CUENTA YA ESTÁ CREADA</span><h1>¿Está todo correcto?</h1><p>Revisa los datos que registraste. Si te equivocaste, puedes corregirlos aquí sin crear otra cuenta.</p></header>
+    <form method="post" class="preferences-card">
+        {% csrf_token %}{{ form.non_field_errors }}
+        <div class="preferences-fields">{% for field in form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+        <p>Tu contraseña no se muestra ni se cambia aquí. Más adelante también podrás ajustar tus datos desde Mi cuenta.</p>
+        <button type="submit" class="preferences-save">Confirmar datos y continuar</button>
+        <a class="preferences-back" style="margin:20px 0 0;display:block" href="{% url 'objetivo' %}">Todo está bien, continuar sin cambios →</a>
+    </form>
+</main>
+{% endblock %}

@@ -12,7 +12,7 @@
 
 <main class="training-page">
     <a href="{% url 'preferencias' %}" style="display:inline-block;color:#ffc34a;margin-bottom:18px">Mis datos y preferencias →</a>
-    {% if perfil.modalidad_rutina == 'personalizada' %}<a class="flow-btn" style="display:inline-block;background:#ffb000;color:#111;padding:12px 20px;border-radius:12px;margin-bottom:20px" href="{% url 'crear_rutina' %}">Editar mi rutina</a>{% endif %}
+    <a class="flow-btn" style="display:inline-block;background:#ffb000;color:#111;padding:12px 20px;border-radius:12px;margin:0 0 20px 12px" href="{% url 'modificar_rutina' %}">Modificar mi rutina</a>
         {% if messages %}
         <div class="training-messages">
             {% for message in messages %}
