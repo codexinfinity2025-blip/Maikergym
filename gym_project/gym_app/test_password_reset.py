@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -43,6 +43,24 @@ class RecuperacionTest(TestCase):
         futuro = default_token_generator._now() + timedelta(seconds=1801)
         with patch.object(default_token_generator, '_now', return_value=futuro):
             self.assertFalse(default_token_generator.check_token(self.usuario, token))
+
+    def test_https_real_csrf_reset_and_cross_origin_rejection(self):
+        browser = Client(enforce_csrf_checks=True)
+        uid = urlsafe_base64_encode(force_bytes(self.usuario.pk))
+        token = default_token_generator.make_token(self.usuario)
+        link = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+        redirect = browser.get(link, secure=True)
+        page = browser.get(redirect.url, secure=True)
+        self.assertEqual(page['Referrer-Policy'], 'same-origin')
+        csrf = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', page.content.decode()).group(1)
+        fields = {'csrfmiddlewaretoken': csrf, 'new_password1': 'Nueva-Privada-839!', 'new_password2': 'Nueva-Privada-839!'}
+        self.assertEqual(browser.post(redirect.url, fields, secure=True, HTTP_REFERER='https://evil.example/').status_code, 403)
+        self.assertEqual(browser.post(redirect.url, fields, secure=True).status_code, 403)
+        result = browser.post(redirect.url, fields, secure=True, HTTP_REFERER='https://testserver' + redirect.url)
+        self.assertRedirects(result, reverse('password_reset_complete'), fetch_redirect_response=False)
+        self.usuario.refresh_from_db()
+        self.assertTrue(self.usuario.check_password('Nueva-Privada-839!'))
+        self.assertFalse(default_token_generator.check_token(self.usuario, token))
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend', EMAIL_HOST='')
     def test_smtp_sin_configurar_no_finge_envio(self):

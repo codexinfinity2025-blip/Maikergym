@@ -47,5 +47,7 @@ class ConfirmarPassword(auth_views.PasswordResetConfirmView):
 
     def dispatch(self, *args, **kwargs):
         respuesta = super().dispatch(*args, **kwargs)
-        respuesta['Referrer-Policy'] = 'no-referrer'
+        # HTTPS CSRF checks need a same-origin Referer when Origin is absent.
+        # Still suppress the reset URL for all cross-origin destinations.
+        respuesta['Referrer-Policy'] = 'same-origin'
         return respuesta
