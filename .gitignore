@@ -1,4 +1,6 @@
 # Credenciales y configuraciones privadas
+client_secret*.json
+gmail-oauth*.json
 .env
 .env.*
 !.env.example

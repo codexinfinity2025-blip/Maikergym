@@ -6,8 +6,31 @@ body{
     background-size:cover;
     background-position:center;
     background-attachment:fixed;
+    background-repeat:no-repeat;
     color:#111;
 }
+
+/* Stable, separate account sections: no units or animations on passwords. */
+.cuenta-page .account-workspace{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:24px;background:#111923eb}
+.cuenta-page .account-summary{position:static;width:100%;margin:0;align-self:start}
+.cuenta-page .account-stage{grid-template-columns:170px minmax(0,1fr);padding-top:85px}
+.cuenta-page .account-form{width:100%;min-width:0}
+.cuenta-page .field-row,.cuenta-page .field-row:hover,.cuenta-page .field-row.is-active,.cuenta-page .account-stage,.cuenta-page .photo-box,.cuenta-page .action-btn,.cuenta-page .account-summary{animation:none;transform:none}
+.cuenta-page .account-summary::after{display:none}
+.account-measures,.account-security{padding:22px;border:1px solid #485567;border-radius:16px;background:#19222e;color:#f4f6fa;min-width:0}
+.account-measures h2{font-size:22px;font-weight:800;margin:0 0 8px}
+.account-measures p,.account-security p{color:#c0cad6;line-height:1.6;font-size:14px;margin:8px 0 20px}
+.measure-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.measure-grid label,.account-security label{display:block;font-size:14px;font-weight:700;margin-bottom:8px}
+.measure-grid small{font-size:14px;color:#c0cad6}
+.measure-grid input,.account-security input{width:100%;min-width:0;height:50px;padding:12px;border:1px solid #667487;border-radius:10px;background:#101821;color:#fff;font-size:16px}
+.account-security summary{cursor:pointer;font-weight:700;min-height:30px;color:#ffd06c}
+.account-security input:focus-visible,.measure-grid input:focus-visible{outline:3px solid #6acaff;outline-offset:2px}
+.account-danger{margin-top:24px;border-color:#814a4a}
+.account-danger form{max-width:420px}.account-danger button{margin-top:18px;padding:12px 20px}
+.account-save{padding:15px;border:0;border-radius:12px;background:#ffb511;color:#17191d;font-size:16px;font-weight:800;min-height:50px}
+@media(max-width:980px){.cuenta-page .account-workspace{grid-template-columns:1fr}}
+@media(max-width:680px){.cuenta-page .account-stage{grid-template-columns:1fr}.measure-grid{grid-template-columns:1fr}.account-measures,.account-security{padding:18px}.cuenta-page .account-workspace{padding:16px}.cuenta-page .stage-actions{justify-content:flex-end}.cuenta-page .account-toast{left:16px;right:16px}}
 
 .cuenta-page{
     width:min(1180px,92%);

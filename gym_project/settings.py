@@ -181,7 +181,13 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'cuenta'
 
 # Credenciales únicamente en variables de entorno, nunca en Git.
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
+GMAIL_CLIENT_ID = config('GMAIL_CLIENT_ID', default='')
+GMAIL_CLIENT_SECRET = config('GMAIL_CLIENT_SECRET', default='')
+GMAIL_REFRESH_TOKEN = config('GMAIL_REFRESH_TOKEN', default='')
+# SMTP on Railway requires Pro or above; HTTPS delivery works without SMTP.
+RAILWAY_SMTP_ENABLED = config('RAILWAY_SMTP_ENABLED', default=False, cast=bool)
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')

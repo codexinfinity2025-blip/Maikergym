@@ -1,5 +1,10 @@
 body:has(.flow-page),body:has(.objetivo-page),body:has(.dieta-page),body:has(.notifications-page){background:#111 url('../img/generated/hero-gym.png') center center/cover no-repeat fixed}
 body:has(.dieta-page){background-image:url('../img/generated/diet-plan.png')}
+/* Short onboarding/auth pages keep the footer at the bottom, in normal flow. */
+body:has(> .flow-page){display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+body:has(> .flow-page) > .mg-nav{flex-shrink:0}
+body:has(> .flow-page) > .flow-page{flex:1 0 auto}
+body:has(> .flow-page) > .mg-footer{flex-shrink:0;margin-top:auto;width:100%}
 .weekly-heading{background:#11151af2;color:#fff;border-radius:18px;padding:24px}.weekly-heading p{color:#e0e4ea!important}
 .weekly-heading .eyebrow{color:#ffd16b}
 .flow-heading,.objective-heading{background:#fffffff0;padding:24px;border-radius:20px}
