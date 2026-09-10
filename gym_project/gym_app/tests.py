@@ -137,7 +137,7 @@ class FlujoRegistroTest(TestCase):
             "Press Pallof en polea",
             "Bird dog",
         }
-        self.assertEqual(Ejercicio.objects.count(), 36)
+        self.assertEqual(Ejercicio.objects.count(), 42)
         self.assertEqual(
             set(
                 Ejercicio.objects.filter(nombre__in=nuevos)

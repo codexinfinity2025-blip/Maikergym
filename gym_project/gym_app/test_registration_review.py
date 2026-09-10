@@ -5,6 +5,11 @@ from .models import PerfilUsuario
 
 
 class RegistrationReviewTest(TestCase):
+    def test_registration_page_renders_without_profile(self):
+        response = self.client.get(reverse('registrarse'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Cuerpo completo · trabajo equilibrado')
+
     def test_review_after_registration_and_edit(self):
         data = {'nombre': 'Ana', 'apellido': 'Prueba', 'email': 'review@example.com',
                 'password': 'Secure-Example-583!', 'confirmar_password': 'Secure-Example-583!',

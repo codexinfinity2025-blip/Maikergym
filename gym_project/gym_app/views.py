@@ -205,6 +205,7 @@ def registrarse(request):
 
         contexto = {
             'form_data': request.POST,
+            'enfoque_actual': request.POST.get('enfoque_corporal', 'full_body'),
         }
 
         if password != confirmar_password:
@@ -271,7 +272,7 @@ def registrarse(request):
         login(request, user)
         return redirect('revisar_registro')
 
-    return render(request, 'registrarse.html')
+    return render(request, 'registrarse.html', {'enfoque_actual': 'full_body'})
 
 def rutinas(request):
     return render(request, 'rutinas.html')
@@ -434,6 +435,7 @@ def configurar_rutina_view(request):
 
     contexto = {
         'perfil': perfil,
+        'enfoque_actual': perfil.enfoque_corporal,
         'dias_semana': DiaSemanaChoice.choices,
         'modalidades': ModalidadRutinaChoice.choices,
     }
@@ -503,6 +505,7 @@ def configurar_rutina_view(request):
                 perfil.save(update_fields=['configuracion_entrenamiento_completa'])
                 return redirect('dieta')
         contexto['form_data'] = request.POST
+        contexto['enfoque_actual'] = request.POST.get('enfoque_corporal', perfil.enfoque_corporal)
 
     return render(request, 'configurar_rutina.html', contexto)
 

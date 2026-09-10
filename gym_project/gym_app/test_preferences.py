@@ -74,7 +74,7 @@ class PreferencesTest(TestCase):
     def test_focus_form_preserves_submitted_choice(self):
         self.perfil.enfoque_corporal = 'superior'
         html = render_to_string('partials/enfoque_select.html', {
-            'perfil': self.perfil, 'form_data': {'enfoque_corporal': 'full_body'}})
+            'perfil': self.perfil, 'enfoque_actual': 'full_body'})
         self.assertEqual(html.count('selected'), 1)
         self.assertIn('value="full_body" selected', html)
 
