@@ -18,6 +18,7 @@ from .models import (
     HorarioPlanUsuario,
     NivelEjercicioChoice,
     ObjetivoChoice,
+    PerfilUsuario,
     PlanEntrenamiento,
     SesionEntrenamiento,
     TipoMedicionChoice,
@@ -146,6 +147,10 @@ PARAMETROS_POR_NIVEL = {
     NivelEjercicioChoice.AVANZADO: {"series": 4, "rep_min": 6, "rep_max": 10, "rpe": 8, "tiempo": 60, "distancia": 50},
 }
 
+# Una rutina personal no caduca al terminar unas pocas semanas: se repite en
+# ciclos semanales durante años. El límite sólo protege el campo de datos.
+SEMANA_MAXIMA_RUTINA = 9999
+
 
 def _cerrar_asignacion_actual(usuario):
     hoy = timezone.localdate()
@@ -170,7 +175,7 @@ def _crear_plan_vacio(usuario, objetivo, nivel, dias_por_semana, etiqueta):
             "Programa individual generado con el objetivo, nivel, disponibilidad "
             "y preferencias de recuperación del usuario."
         ),
-        duracion_semanas=12,
+        duracion_semanas=SEMANA_MAXIMA_RUTINA,
         dias_por_semana=dias_por_semana,
         propietario=usuario,
         es_personalizado=True,
@@ -181,7 +186,7 @@ def _crear_plan_vacio(usuario, objetivo, nivel, dias_por_semana, etiqueta):
         nombre="Programa personalizado",
         orden=1,
         semana_inicio=1,
-        semana_fin=12,
+        semana_fin=SEMANA_MAXIMA_RUTINA,
         descripcion="Progresión individual con técnica controlada y ajustes sostenibles.",
         activo=True,
     )
@@ -411,7 +416,17 @@ def crear_rutina_personalizada(usuario, objetivo, nivel, dias_semana, filas):
     if dias_vacios:
         raise ValidationError("Cada día seleccionado necesita al menos un ejercicio.")
 
-    return _crear_asignacion_y_horario(usuario, plan, dias_semana)
+    asignacion = _crear_asignacion_y_horario(usuario, plan, dias_semana)
+
+    # Guardar la elección junto con la rutina, dentro de la misma transacción.
+    # Así una salida de la aplicación o una recarga nunca deja la rutina manual
+    # creada pero el perfil marcado como si debiera generar otra recomendación.
+    PerfilUsuario.objects.filter(user=usuario).update(
+        modalidad_rutina="personalizada",
+        configuracion_entrenamiento_completa=True,
+        aviso_rutina_personalizada_aceptado=True,
+    )
+    return asignacion
 
 
 @transaction.atomic

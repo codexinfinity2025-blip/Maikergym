@@ -319,7 +319,7 @@ class PlanEntrenamiento(models.Model):
         default=12,
         validators=[
             MinValueValidator(1),
-            MaxValueValidator(52),
+            MaxValueValidator(9999),
         ],
     )
     dias_por_semana = models.PositiveSmallIntegerField(
@@ -372,13 +372,13 @@ class FasePlan(models.Model):
     semana_inicio = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(1),
-            MaxValueValidator(52),
+            MaxValueValidator(9999),
         ],
     )
     semana_fin = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(1),
-            MaxValueValidator(52),
+            MaxValueValidator(9999),
         ],
     )
     descripcion = models.TextField(blank=True)
@@ -702,10 +702,12 @@ class AsignacionPlanUsuario(models.Model):
         dias_transcurridos = (hoy - self.fecha_inicio).days
         semana = (dias_transcurridos // 7) + 1
 
-        return min(
-            semana,
-            self.plan.duracion_semanas,
-        )
+        # Las rutinas personalizadas se repiten semana a semana. No se
+        # detienen al llegar a la duración inicial que se usó al crearlas.
+        if self.plan.es_personalizado:
+            return min(semana, 9999)
+
+        return min(semana, self.plan.duracion_semanas)
 
     @property
     def fase_actual(self):
@@ -714,11 +716,20 @@ class AsignacionPlanUsuario(models.Model):
         if semana == 0:
             return None
 
-        return self.plan.fases.filter(
+        fase = self.plan.fases.filter(
             semana_inicio__lte=semana,
             semana_fin__gte=semana,
             activo=True,
         ).first()
+
+        # Compatibilidad con rutinas personales creadas antes de que fueran
+        # continuas: su única fase se reutiliza cada semana.
+        if fase is None and self.plan.es_personalizado:
+            return self.plan.fases.filter(activo=True).order_by(
+                "-semana_fin", "-orden"
+            ).first()
+
+        return fase
 
     def clean(self):
         errores = {}
@@ -844,7 +855,7 @@ class SesionEntrenamiento(models.Model):
     semana_plan = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(1),
-            MaxValueValidator(52),
+            MaxValueValidator(9999),
         ],
     )
     estado = models.CharField(
@@ -885,7 +896,11 @@ class SesionEntrenamiento(models.Model):
         if self.asignacion_id:
             if (
                 self.semana_plan
-                > self.asignacion.plan.duracion_semanas
+                > (
+                    9999
+                    if self.asignacion.plan.es_personalizado
+                    else self.asignacion.plan.duracion_semanas
+                )
             ):
                 errores["semana_plan"] = (
                     "La semana supera la duración del plan."

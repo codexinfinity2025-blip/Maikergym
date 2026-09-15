@@ -13,7 +13,11 @@ def guardar_calendario(asignacion):
     # Nunca reescribir el pasado ni el compromiso de hoy.
     DiaComprometido.objects.filter(usuario=asignacion.usuario, fecha__gt=hoy).update(cancelado=True)
     dias = set(asignacion.horarios.filter(activo=True).values_list('dia_semana', flat=True))
-    for offset in range(asignacion.plan.duracion_semanas * 7):
+    # El calendario social sólo necesita una ventana futura razonable. La
+    # rutina como tal sigue repitiéndose sin caducar; evitar crear decenas de
+    # miles de filas al configurar una rutina de larga duración.
+    semanas_calendario = min(asignacion.plan.duracion_semanas, 16)
+    for offset in range(semanas_calendario * 7):
         fecha = asignacion.fecha_inicio + timedelta(days=offset)
         if fecha >= hoy and fecha.weekday() in dias:
             compromiso, nuevo = DiaComprometido.objects.get_or_create(usuario=asignacion.usuario, fecha=fecha)

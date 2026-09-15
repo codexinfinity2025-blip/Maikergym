@@ -2,6 +2,7 @@ from datetime import date
 from .routine_edit import proteger_sesion_en_curso
 from decimal import Decimal, InvalidOperation
 from django.db import transaction
+from django.db.models import Case, IntegerField, Value, When
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
@@ -853,15 +854,36 @@ def mi_entrenamiento_view(request):
             siguiente_paso_personalizacion(perfil)
         )
 
-    asignacion = (
+    # Una rutina creada por el usuario nunca debe ser reemplazada visualmente
+    # por una propuesta automática antigua.  Normalmente sólo existe una
+    # asignación activa, pero este orden también protege los datos de cuentas
+    # que fueron configuradas antes de que existiera la rutina personalizada.
+    asignaciones_activas = (
         request.user.planes_asignados
-        .filter(
-            estado=EstadoAsignacionChoice.ACTIVO,
-        )
+        .filter(estado=EstadoAsignacionChoice.ACTIVO)
         .select_related("plan")
         .prefetch_related("horarios")
-        .first()
     )
+    if perfil.modalidad_rutina == ModalidadRutinaChoice.PERSONALIZADA:
+        asignacion = asignaciones_activas.annotate(
+            es_rutina_manual=Case(
+                When(
+                    plan__nombre__startswith="Rutina creada por el usuario",
+                    then=Value(1),
+                ),
+                default=Value(0),
+                output_field=IntegerField(),
+            )
+        ).order_by(
+            "-es_rutina_manual",
+            "-fecha_creacion",
+            "-pk",
+        ).first()
+    else:
+        asignacion = asignaciones_activas.order_by(
+            "-fecha_creacion",
+            "-pk",
+        ).first()
 
     context = {
         "perfil": perfil,
@@ -874,6 +896,8 @@ def mi_entrenamiento_view(request):
         "ejercicios_hoy": [],
         "sesion_hoy": None,
         "fecha_hoy": timezone.localdate(),
+        "ciclo_rutina": None,
+        "siguiente_sesion": None,
     }
 
     if asignacion is None:
@@ -909,15 +933,36 @@ def mi_entrenamiento_view(request):
         key=lambda horario: horario.dia_semana,
     )
 
-    calendario_semana = [
-        {
+    sesiones_semana = {
+        sesion.dia_plan_id: sesion
+        for sesion in asignacion.sesiones.filter(
+            semana_plan=asignacion.semana_actual,
+        )
+    }
+
+    calendario_semana = []
+    for horario in horarios:
+        dia_plan = dias_fase.get(horario.numero_dia_plan)
+        sesion = sesiones_semana.get(dia_plan.id) if dia_plan else None
+        calendario_semana.append({
             "horario": horario,
-            "dia_plan": dias_fase.get(
-                horario.numero_dia_plan
+            "dia_plan": dia_plan,
+            "sesion": sesion,
+            "es_completada": bool(
+                sesion and sesion.estado == EstadoSesionChoice.COMPLETADA
             ),
-        }
-        for horario in horarios
-    ]
+            "es_en_curso": bool(
+                sesion and sesion.estado == EstadoSesionChoice.EN_PROGRESO
+            ),
+        })
+
+    siguiente_sesion = next(
+        (
+            elemento for elemento in calendario_semana
+            if not elemento["es_completada"]
+        ),
+        None,
+    )
 
     horario_hoy = next(
         (
@@ -1081,6 +1126,19 @@ def mi_entrenamiento_view(request):
         "dia_hoy": dia_hoy,
         "ejercicios_hoy": ejercicios_hoy,
         "sesion_hoy": sesion_hoy,
+        "ciclo_rutina": {
+            "semana": asignacion.semana_actual,
+            "dia": horario_hoy.numero_dia_plan if horario_hoy else None,
+            "total_dias": len(calendario_semana),
+            "es_ultimo_dia": bool(
+                horario_hoy
+                and horario_hoy.numero_dia_plan == len(calendario_semana)
+            ),
+            "semana_completada": bool(calendario_semana) and all(
+                elemento["es_completada"] for elemento in calendario_semana
+            ),
+        },
+        "siguiente_sesion": siguiente_sesion,
     })
 
     return render(

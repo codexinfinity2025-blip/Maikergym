@@ -62,14 +62,43 @@
             </a>
         </section>
     {% else %}
+        {% if ciclo_rutina.total_dias %}
+            <section class="routine-progress" aria-label="Racha semanal de entrenamiento">
+                <div class="routine-progress-copy">
+                    <span>Racha de entrenamiento</span>
+                    {% if ciclo_rutina.semana_completada %}
+                        <strong>Semana {{ ciclo_rutina.semana }} completada</strong>
+                        <small class="cycle-success">
+                            ¡Excelente trabajo! Cumpliste tus {{ ciclo_rutina.total_dias }} días. La próxima semana comenzarás en el Día 1.
+                        </small>
+                    {% elif ciclo_rutina.dia %}
+                        <strong>Semana {{ ciclo_rutina.semana }} · Día {{ ciclo_rutina.dia }}</strong>
+                        {% if ciclo_rutina.es_ultimo_dia %}
+                            <small class="cycle-success">Último día de la semana. Cierra tu rutina con buena técnica y celebra tu constancia.</small>
+                        {% else %}
+                            <small>Tu rutina personal continúa guardada para cada día que programaste.</small>
+                        {% endif %}
+                    {% elif siguiente_sesion and siguiente_sesion.dia_plan %}
+                        <strong>Semana {{ ciclo_rutina.semana }}</strong>
+                        <small>
+                            Próximo entrenamiento: Día {{ siguiente_sesion.horario.numero_dia_plan }} ·
+                            {{ siguiente_sesion.horario.get_dia_semana_display }}
+                            — {{ siguiente_sesion.dia_plan.nombre }}
+                        </small>
+                    {% else %}
+                        <strong>Semana {{ ciclo_rutina.semana }}</strong>
+                        <small>Organiza tu próxima sesión y mantén viva tu racha.</small>
+                    {% endif %}
+                </div>
+                <div class="routine-cycle-badge" aria-hidden="true">{{ ciclo_rutina.semana|stringformat:"02d" }}</div>
+            </section>
+        {% endif %}
         <section class="training-summary">
             <article>
-                <span>Semana actual</span>
+                <span>Ciclo actual</span>
 
                 <strong>
-                    {{ semana_actual }}
-                    de
-                    {{ asignacion.plan.duracion_semanas }}
+                    Semana {{ semana_actual }}
                 </strong>
             </article>
 
@@ -117,17 +146,20 @@
                         {% endif %}"
                     >
                         <span class="week-day">
+                            Día {{ elemento.horario.numero_dia_plan }} ·
                             {{ elemento.horario.get_dia_semana_display }}
                         </span>
 
                         {% if elemento.dia_plan %}
                             <strong>{{ elemento.dia_plan.nombre }}</strong>
 
-                            <small>
-                                Día
-                                {{ elemento.horario.numero_dia_plan }}
-                                del plan
-                            </small>
+                            {% if elemento.es_completada %}
+                                <small class="session-label completed">✓ Día completado</small>
+                            {% elif elemento.es_en_curso %}
+                                <small class="session-label in-progress">● Entrenamiento en curso</small>
+                            {% else %}
+                                <small class="session-label">Pendiente en tu rutina</small>
+                            {% endif %}
                         {% else %}
                             <strong>Entrenamiento pendiente</strong>
                             <small>Falta configurar este día</small>

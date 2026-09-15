@@ -8,14 +8,17 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import (
     AsignacionPlanUsuario,
     Ejercicio,
     EstadoAsignacionChoice,
+    EstadoSesionChoice,
     ObjetivoChoice,
     PerfilUsuario,
     PlanEntrenamiento,
+    SesionEntrenamiento,
 )
 from .wellness_content import (
     MENSAJES_MOTIVACIONALES,
@@ -23,7 +26,11 @@ from .wellness_content import (
     obtener_guia_nutricional,
     obtener_mensajes_del_dia,
 )
-from .services import crear_rutina_automatica, _segundos_estimados
+from .services import (
+    _segundos_estimados,
+    crear_rutina_automatica,
+    crear_rutina_personalizada,
+)
 
 
 class FlujoRegistroTest(TestCase):
@@ -430,6 +437,64 @@ class FlujoRegistroTest(TestCase):
             ).distinct().count(),
             2,
         )
+
+    def test_rutina_manual_persiste_y_muestra_racha_semanal_continua(self):
+        """La rutina personal debe seguir siendo la activa al volver al panel."""
+        usuario = User.objects.create_user(username="manual-persistente")
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.objetivo = ObjetivoChoice.SALUD
+        perfil.nivel_declarado = "principiante"
+        perfil.nivel_entrenamiento = "principiante"
+        perfil.prueba_nivel_completada = True
+        perfil.orientacion_nutricional_vista = True
+        perfil.datos_completos = True
+        perfil.save()
+        ejercicios = list(Ejercicio.objects.order_by("id")[:2])
+
+        asignacion = crear_rutina_personalizada(
+            usuario,
+            perfil.objetivo,
+            perfil.nivel_entrenamiento,
+            [0, 2],
+            [
+                {"dia": "1", "ejercicio_id": str(ejercicios[0].pk), "series": "3", "cantidad": "10", "descanso": "60"},
+                {"dia": "2", "ejercicio_id": str(ejercicios[1].pk), "series": "3", "cantidad": "10", "descanso": "60"},
+            ],
+        )
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.modalidad_rutina, "personalizada")
+        self.assertTrue(perfil.configuracion_entrenamiento_completa)
+
+        # Simula una cuenta antigua que conservó una recomendación activa.
+        # La rutina manual debe seguir siendo la que se muestra al usuario.
+        crear_rutina_automatica(
+            usuario, perfil.objetivo, perfil.nivel_entrenamiento,
+            [0, 2], 60, 60,
+        )
+        asignacion.estado = EstadoAsignacionChoice.ACTIVO
+        asignacion.save(update_fields=["estado", "fecha_actualizacion"])
+
+        self.client.force_login(usuario)
+        respuesta = self.client.get(reverse("mi_entrenamiento"))
+        self.assertEqual(respuesta.context["asignacion"].pk, asignacion.pk)
+        self.assertContains(respuesta, "Día 1 · Lunes")
+        self.assertContains(respuesta, "Semana 1")
+
+        dia_uno = asignacion.plan.fases.get().dias.get(numero=1)
+        SesionEntrenamiento.objects.create(
+            asignacion=asignacion,
+            dia_plan=dia_uno,
+            fecha=timezone.localdate(),
+            semana_plan=asignacion.semana_actual,
+            estado=EstadoSesionChoice.COMPLETADA,
+        )
+        respuesta = self.client.get(reverse("mi_entrenamiento"))
+        self.assertContains(respuesta, "Racha de entrenamiento")
+        self.assertContains(respuesta, "Día completado")
+
+        asignacion.fecha_inicio = timezone.localdate() - timedelta(days=(998 * 7))
+        asignacion.save(update_fields=["fecha_inicio", "fecha_actualizacion"])
+        self.assertEqual(asignacion.semana_actual, 999)
 
     def test_nutricion_y_motivacion_tienen_contenido_suficiente(self):
         self.assertEqual(len(MENSAJES_MOTIVACIONALES), 70)

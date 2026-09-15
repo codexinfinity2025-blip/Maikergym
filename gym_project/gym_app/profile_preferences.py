@@ -33,7 +33,12 @@ def preferencias(request):
                 nuevo = form.save(commit=False)
                 nuevo.priorizar_tren_inferior = nuevo.enfoque_corporal == 'inferior'
                 nuevo.save()
-                if cambio and asignacion and not iniciada and perfil.modalidad_rutina == ModalidadRutinaChoice.AUTOMATICA:
+                # La rutina manual es propiedad del usuario: actualizar peso,
+                # altura o enfoque no puede sustituirla por una recomendación.
+                if (
+                    cambio and asignacion and not iniciada
+                    and perfil.modalidad_rutina == ModalidadRutinaChoice.AUTOMATICA
+                ):
                     crear_rutina_automatica(request.user, perfil.objetivo, perfil.nivel_entrenamiento,
                         perfil.dias_entrenamiento, perfil.duracion_sesion_minutos,
                         perfil.descanso_preferido_segundos, minutos_por_dia=perfil.minutos_por_dia,
