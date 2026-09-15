@@ -31,6 +31,7 @@ from .services import (
     crear_rutina_automatica,
     crear_rutina_personalizada,
 )
+from .routine_edit import entrenamiento_en_curso
 
 
 class FlujoRegistroTest(TestCase):
@@ -495,6 +496,39 @@ class FlujoRegistroTest(TestCase):
         asignacion.fecha_inicio = timezone.localdate() - timedelta(days=(998 * 7))
         asignacion.save(update_fields=["fecha_inicio", "fecha_actualizacion"])
         self.assertEqual(asignacion.semana_actual, 999)
+
+    def test_sesion_futura_no_bloquea_edicion_ni_se_muestra_en_curso(self):
+        """Una sesión con fecha futura no puede aparentar que ya empezó."""
+        usuario = User.objects.create_user(username="sesion-futura")
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.objetivo = ObjetivoChoice.SALUD
+        perfil.nivel_entrenamiento = "principiante"
+        perfil.datos_completos = True
+        perfil.save()
+        ejercicio = Ejercicio.objects.order_by("id").first()
+        asignacion = crear_rutina_personalizada(
+            usuario,
+            perfil.objetivo,
+            perfil.nivel_entrenamiento,
+            [1, 3],
+            [
+                {"dia": "1", "ejercicio_id": str(ejercicio.pk), "series": "3", "cantidad": "10", "descanso": "60"},
+                {"dia": "2", "ejercicio_id": str(ejercicio.pk), "series": "3", "cantidad": "10", "descanso": "60"},
+            ],
+        )
+        dia_futuro = asignacion.plan.fases.get().dias.get(numero=2)
+        SesionEntrenamiento.objects.create(
+            asignacion=asignacion,
+            dia_plan=dia_futuro,
+            fecha=timezone.localdate() + timedelta(days=2),
+            semana_plan=asignacion.semana_actual,
+            estado=EstadoSesionChoice.EN_PROGRESO,
+        )
+
+        self.assertFalse(entrenamiento_en_curso(usuario))
+        self.client.force_login(usuario)
+        respuesta = self.client.get(reverse("mi_entrenamiento"))
+        self.assertNotContains(respuesta, "Entrenamiento en curso")
 
     def test_nutricion_y_motivacion_tienen_contenido_suficiente(self):
         self.assertEqual(len(MENSAJES_MOTIVACIONALES), 70)

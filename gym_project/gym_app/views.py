@@ -910,6 +910,18 @@ def mi_entrenamiento_view(request):
     fase_actual = asignacion.fase_actual
     hoy = timezone.localdate()
 
+    # Estado imposible que pudo quedar por una versión anterior: una sesión
+    # futura no se ha podido iniciar todavía. Se devuelve a pendiente para que
+    # no bloquee la edición ni aparezca activa antes de su día.
+    asignacion.sesiones.filter(
+        estado=EstadoSesionChoice.EN_PROGRESO,
+        fecha__gt=hoy,
+    ).update(
+        estado=EstadoSesionChoice.PENDIENTE,
+        fecha_inicio=None,
+        fecha_actualizacion=timezone.now(),
+    )
+
     dias_fase = {}
 
     if fase_actual is not None:
@@ -937,6 +949,7 @@ def mi_entrenamiento_view(request):
         sesion.dia_plan_id: sesion
         for sesion in asignacion.sesiones.filter(
             semana_plan=asignacion.semana_actual,
+            fecha__lte=hoy,
         )
     }
 
@@ -952,7 +965,9 @@ def mi_entrenamiento_view(request):
                 sesion and sesion.estado == EstadoSesionChoice.COMPLETADA
             ),
             "es_en_curso": bool(
-                sesion and sesion.estado == EstadoSesionChoice.EN_PROGRESO
+                sesion
+                and sesion.estado == EstadoSesionChoice.EN_PROGRESO
+                and sesion.fecha == hoy
             ),
         })
 

@@ -2,11 +2,18 @@ from functools import wraps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
+from django.utils import timezone
 from .models import SesionEntrenamiento, EstadoSesionChoice, PerfilUsuario
 
 
 def entrenamiento_en_curso(user):
-    return SesionEntrenamiento.objects.filter(asignacion__usuario=user, estado=EstadoSesionChoice.EN_PROGRESO).exists()
+    # Una sesión futura nunca puede bloquear al usuario. Sólo la sesión del
+    # día de hoy puede estar realmente en curso y requerir que se finalice.
+    return SesionEntrenamiento.objects.filter(
+        asignacion__usuario=user,
+        estado=EstadoSesionChoice.EN_PROGRESO,
+        fecha=timezone.localdate(),
+    ).exists()
 
 
 def proteger_sesion_en_curso(view):
