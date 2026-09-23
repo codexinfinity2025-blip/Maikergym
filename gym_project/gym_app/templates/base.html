@@ -9,19 +9,31 @@
     <link rel="stylesheet" href="{% static 'css/maikergym-pro.css' %}?v=nav-desktop-v2">
     {% block extra_css %}{% endblock %}
     <link rel="stylesheet" href="{% static 'css/experiencia-v3.css' %}?v=footer-flow-5">
+    <link rel="stylesheet" href="{% static 'css/identidad.css' %}?v=1">
 </head>
 <body>
+    <div class="brand-welcome" aria-hidden="true"><span class="mg-logo"></span><span>MaikerGym<small>Tu próximo paso empieza aquí</small></span></div>
     {% block content %}{% endblock %}
 
     <footer class="mg-footer">
         <div class="mg-footer-inner">
-            <button class="mg-footer-brand" onclick="window.location.href='{% url 'inicio' %}'">MaikerGym</button>
+            <a class="mg-footer-brand" href="{% url 'inicio' %}"><span class="mg-logo" aria-hidden="true"></span>MaikerGym</a>
             <nav class="mg-footer-links">
                 <a href="{% url 'inicio' %}">Inicio</a>
                 <a href="{% url 'escogenos' %}">Por qué nosotros</a>
                 <a href="{% url 'precios' %}">Precios</a>
                 <a href="{% url 'contacto' %}">Contacto</a>
+                <a href="{% url 'privacidad' %}">Política de privacidad</a>
             </nav>
+            <section class="mg-social" aria-label="Redes sociales">
+                <h2>Conecta con MaikerGym</h2>
+                <div class="mg-social-links">
+                    <a href="https://www.youtube.com/@Maikergym" target="_blank" rel="noopener noreferrer">YouTube ↗<span class="visually-hidden"> (abre otra pestaña)</span></a>
+                    <a href="https://www.facebook.com/profile.php?id=61594409905271" target="_blank" rel="noopener noreferrer">Facebook ↗<span class="visually-hidden"> (abre otra pestaña)</span></a>
+                    <span class="mg-social-pending">Instagram <small>Próximamente</small></span>
+                    <span class="mg-social-pending">TikTok <small>Próximamente</small></span>
+                </div>
+            </section>
             <p>© 2026 MaikerGym. Transformando objetivos en resultados.</p>
         </div>
     </footer>

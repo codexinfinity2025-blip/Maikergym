@@ -1,6 +1,6 @@
 {% load static %}
 <header class="mg-nav">
-    <button type="button" class="mg-brand" onclick="window.location.href='{% url 'inicio' %}'">MaikerGym</button>
+    <a class="mg-brand" href="{% url 'inicio' %}"><span class="mg-logo" aria-hidden="true"></span><span>MaikerGym</span></a>
     <button
         type="button"
         class="mg-nav-toggle"
