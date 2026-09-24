@@ -187,7 +187,19 @@ def inicio(request):
 def escogenos(request):
     return render(request, 'escogenos.html')
 
+@require_http_methods(["GET", "POST"])
 def precios(request):
+    if request.method == 'POST':
+        elegido = request.POST.get('plan_precio', '')
+        if elegido not in ('mensual', 'semestral', 'premium_anual'):
+            return JsonResponse({'error': 'Plan no válido.'}, status=400)
+        if request.user.is_authenticated:
+            perfil = get_perfil(request.user)
+            perfil.plan_precio = elegido
+            perfil.save(update_fields=['plan_precio'])
+            return redirect('cuenta')
+        request.session['plan_precio_pendiente'] = elegido
+        return redirect('registrarse')
     return render(request, 'precios.html')
 
 @require_http_methods(["GET", "POST"])
@@ -251,6 +263,9 @@ def registrarse(request):
             last_name=apellido,
         )
         perfil = get_perfil(user)
+        elegido = request.session.pop('plan_precio_pendiente', '')
+        if elegido in ('mensual', 'semestral', 'premium_anual'):
+            perfil.plan_precio = elegido
         perfil.enfoque_corporal = enfoque
         perfil.priorizar_tren_inferior = enfoque == 'inferior'
         perfil.fecha_nacimiento = fecha_nacimiento
@@ -264,6 +279,7 @@ def registrarse(request):
         perfil.save(
             update_fields=[
                 'fecha_nacimiento',
+                'plan_precio',
                 'enfoque_corporal', 'priorizar_tren_inferior',
                 'edad',
                 'telefono',

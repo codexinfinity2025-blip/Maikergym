@@ -37,7 +37,7 @@
                 <li>Asesoría física</li>
                 <li>Guía inicial de objetivo</li>
             </ul>
-            <button onclick="window.location.href='{% if user.is_authenticated %}{% url 'cuenta' %}{% else %}{% url 'registrarse' %}{% endif %}'">Elegir plan</button>
+            <form method="post">{% csrf_token %}<input type="hidden" name="plan_precio" value="mensual"><button type="submit">Elegir Mensual</button></form>
         </article>
         <article class="price-card featured">
             <span class="plan-tag">Más elegido</span>
@@ -48,19 +48,20 @@
                 <li>Entrenador</li>
                 <li>Asesoría física y mental</li>
             </ul>
-            <button onclick="window.location.href='{% if user.is_authenticated %}{% url 'cuenta' %}{% else %}{% url 'registrarse' %}{% endif %}'">Elegir plan</button>
+            <form method="post">{% csrf_token %}<input type="hidden" name="plan_precio" value="semestral"><button type="submit">Elegir Semestral</button></form>
         </article>
         <article class="price-card">
             <span class="plan-tag">Completo</span>
-            <h2>Premium</h2>
+            <h2>Premium anual</h2>
             <strong>$820.000</strong>
             <ul>
                 <li>Acceso 24/7</li>
                 <li>Entrenador y nutricionista</li>
                 <li>Asesoría física, mental y alimenticia</li>
             </ul>
-            <button onclick="window.location.href='{% if user.is_authenticated %}{% url 'cuenta' %}{% else %}{% url 'registrarse' %}{% endif %}'">Elegir plan</button>
+            <form method="post">{% csrf_token %}<input type="hidden" name="plan_precio" value="premium_anual"><button type="submit">Elegir Premium anual</button></form>
         </article>
     </section>
+    <p style="color:#fff;background:#15191fe6;padding:16px;border-radius:12px">Elegir un plan guarda tu preferencia; no realiza un cobro ni confirma una membresía pagada.</p>
 </main>
 {% endblock %}

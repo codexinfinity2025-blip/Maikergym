@@ -1,0 +1,25 @@
+.cuenta-page .account-stage{display:grid;grid-template-columns:120px minmax(0,1fr) 240px;gap:28px;min-height:0;padding:32px;border-radius:22px;background:linear-gradient(120deg,#111923ed,#151b23dd);border:1px solid #ffffff25;color:#fff;animation:none}
+.cuenta-page .account-stage::after,.cuenta-page .account-stage::before,.cuenta-page .photo-preview::before,.cuenta-page .photo-preview::after,.cuenta-page .stage-title::before,.cuenta-page .stage-title::after{display:none}
+.cuenta-page .photo-box{width:120px;align-self:center;animation:none}
+.cuenta-page .photo-preview{width:110px;border-radius:50%;border:2px solid #ffbd45;background:linear-gradient(145deg,#513711,#211c15);color:#ffcf78;box-shadow:none}
+.cuenta-page .photo-box button{width:120px;font-size:13px;background:#ffffff12;border:1px solid #ffffff30;border-radius:10px}
+.cuenta-page .stage-title{align-self:center;padding:0}
+.cuenta-page .stage-title h1{font-size:clamp(26px,3vw,40px);color:#fff;line-height:1.2;margin:10px 0;animation:none;text-shadow:none}
+.cuenta-page .stage-title p{font-size:16px;font-weight:400;color:#c3cbd8;line-height:1.6;animation:none}
+.account-kicker{color:#ffc65b;letter-spacing:.13em;font-size:11px;font-weight:800}
+.account-quick-actions{display:flex;align-items:center;flex-wrap:wrap;gap:16px;margin-top:22px}
+.account-training-cta{display:inline-flex;align-items:center;gap:22px;padding:15px 24px;background:linear-gradient(120deg,#ffab00,#ffcf58);border-radius:12px;color:#111!important;font-weight:800;text-decoration:none!important;box-shadow:0 8px 24px #ffad001a}
+.account-edit-link{font-size:14px;color:#e0e5ee;text-decoration:underline;text-underline-offset:4px}
+.account-membership{padding:22px;border:1px solid #ffbf454d;border-radius:16px;background:#ffb0000d;display:flex;flex-direction:column;gap:10px;min-width:0}
+.account-membership>span{color:#e5c27d;letter-spacing:.1em;font-size:10px;font-weight:800}
+.account-membership strong{font-size:23px;color:#ffe0a2;line-height:1.3}
+.account-membership small{font-size:12px;color:#bbc4d2;line-height:1.5}
+.account-membership a{font-size:13px;color:#ffcb66;text-underline-offset:4px}
+.cuenta-page .account-workspace{margin-top:24px;border-radius:20px;padding:28px;border:1px solid #ffffff1c;background:#101820e8}
+.cuenta-page .field-row{display:flex;flex-direction:column;align-items:stretch;border:0;box-shadow:none;background:transparent;gap:8px;overflow:visible}
+.cuenta-page .field-row>span{background:transparent;color:#cbd3df;padding:0;font-size:14px;text-align:left;font-weight:600}
+.cuenta-page .field-row input{width:100%;min-width:0;background:#19232f;border:1px solid #4a586b;border-radius:10px;color:#fff;padding:12px 14px;font-size:16px;text-align:left;min-height:48px}
+.cuenta-page .account-summary{border-radius:16px;background:#19232f;border:1px solid #ffffff22;border-top:3px solid #ffb000;padding:24px;color:#fff}
+.account-training-cta:focus-visible,.account-edit-link:focus-visible,.account-membership a:focus-visible{outline:3px solid #fff;outline-offset:4px}
+@media(max-width:1000px){.cuenta-page .account-stage{grid-template-columns:110px minmax(0,1fr)}.account-membership{grid-column:1/-1}}
+@media(max-width:600px){.cuenta-page .account-stage{grid-template-columns:1fr;padding:22px;gap:20px}.cuenta-page .photo-box{justify-self:start}.account-quick-actions{align-items:stretch;flex-direction:column}.account-training-cta{justify-content:center}.account-edit-link{text-align:center;padding:8px}.cuenta-page .account-workspace{padding:18px}}

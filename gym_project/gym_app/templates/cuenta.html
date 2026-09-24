@@ -5,18 +5,15 @@
 {% block title %}MaikerGym - Mi Cuenta{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/estilos_cuenta.css' %}?v=perfil-ordenado-3">
+    <link rel="stylesheet" href="{% static 'css/estilos_cuenta.css' %}?v=perfil-profesional-4">
+    <link rel="stylesheet" href="{% static 'css/perfil-panel.css' %}?v=1">
 {% endblock %}
 
 {% block content %}
 {% include "partials/app_nav.html" %}
 
 <main class="cuenta-page">
-    <a class="btn" href="{% url 'preferencias' %}" style="display:inline-flex;margin:16px 0;padding:14px 22px;background:#ffb511;color:#17191d;border-radius:14px;text-decoration:none">Editar mis datos y preferencias →</a>
     <section class="account-stage" data-motion="rise">
-        <div class="stage-actions">
-            <button class="action-btn update-btn" type="submit" form="account-form">Actualizar cuenta</button>
-        </div>
 
         <form class="photo-box" method="POST" enctype="multipart/form-data" data-ajax-form>
             {% csrf_token %}
@@ -34,9 +31,20 @@
         </form>
 
         <div class="stage-title">
+            <span class="account-kicker">TU ESPACIO PERSONAL</span>
             <h1>Bienvenido, {{ user.first_name|default:"atleta" }}</h1>
             <p>{% if perfil.personalizacion_completa %}&iquest;Listo para entrenar?{% else %}&iquest;Listo para empezar? Completa tu informaci&oacute;n y deja tu perfil preparado.{% endif %}</p>
+            <div class="account-quick-actions">
+                <a class="account-training-cta" href="{% url 'mi_entrenamiento' %}">Ir a entrenar <span aria-hidden="true">→</span></a>
+                <a class="account-edit-link" href="{% url 'preferencias' %}">Editar mis datos y preferencias</a>
+            </div>
         </div>
+        <aside class="account-membership" aria-label="Plan de precios elegido">
+            <span>MI MEMBRESÍA</span>
+            <strong>{{ perfil.get_plan_precio_display|default:'Elige tu plan' }}</strong>
+            <small>{% if perfil.plan_precio %}Plan elegido · pago no verificado{% else %}Encuentra la opción que va contigo{% endif %}</small>
+            <a href="{% url 'precios' %}">{% if perfil.plan_precio %}Cambiar plan{% else %}Ver planes{% endif %}</a>
+        </aside>
     </section>
 
     <section class="account-workspace">
@@ -131,7 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     if (fileInput && preview) {
-        preview.addEventListener("click", () => fileInput.click());
         fileInput.addEventListener("change", () => {
             const file = fileInput.files && fileInput.files[0];
             if (!file) return;
