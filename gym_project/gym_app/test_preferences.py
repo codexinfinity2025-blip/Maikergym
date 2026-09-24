@@ -42,7 +42,7 @@ class PreferencesTest(TestCase):
         self.assertEqual(response.status_code, 302)
         active = self.user.planes_asignados.get(estado='activo')
         self.assertNotEqual(active.pk, old.pk)
-        self.assertEqual(active.fase_actual.dias.order_by('numero').first().nombre, 'Pecho, hombros y tríceps')
+        self.assertEqual(active.fase_actual.dias.order_by('numero').first().nombre, 'Cuerpo completo')
 
     def test_preserve_started_plan(self):
         old = crear_rutina_automatica(self.user, 'salud', 'principiante', [timezone.localdate().weekday()], 60, 60)
@@ -80,9 +80,9 @@ class PreferencesTest(TestCase):
 
     def test_advanced_focus_all_objectives_and_genders(self):
         expected = {
-            'superior': ['Pecho, hombros y tríceps', 'Tren inferior', 'Espalda, bíceps y abdomen'],
-            'inferior': ['Piernas y glúteos', 'Tren superior', 'Tren inferior'],
-            'full_body': ['Tren inferior', 'Pecho, hombros y tríceps', 'Espalda, bíceps y abdomen'],
+            'superior': ['Cuerpo completo'] * 3,
+            'inferior': ['Cuerpo completo'] * 3,
+            'full_body': ['Cuerpo completo'] * 3,
         }
         for gender in ('masculino', 'femenino', 'otro'):
             self.perfil.genero = gender

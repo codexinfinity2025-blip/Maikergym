@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max, Sum
 from django.utils import timezone
+from .routine_basis import VERSION, distribuir_enfoques, resumen_frecuencia, bloques_basicos
 
 from .models import (
     AsignacionPlanUsuario,
@@ -35,16 +36,6 @@ DIAS_SEMANA_POR_CANTIDAD = {
     5: [0, 1, 2, 3, 4],
     6: [0, 1, 2, 3, 4, 5],
     7: [0, 1, 2, 3, 4, 5, 6],
-}
-
-
-ENFOQUES_POR_CANTIDAD = {
-    1: ["cuerpo_completo"],
-    2: ["cuerpo_completo", "cuerpo_completo"],
-    3: ["tren_inferior", "empuje", "tiron_core"],
-    4: ["tren_inferior", "tren_superior", "piernas_gluteos", "torso_core"],
-    5: ["piernas_gluteos", "empuje", "tiron", "tren_inferior", "acondicionamiento"],
-    6: ["piernas_gluteos", "empuje", "tiron", "tren_inferior", "torso_core", "acondicionamiento"],
 }
 
 
@@ -144,7 +135,7 @@ PARAMETROS_POR_NIVEL = {
     NivelEjercicioChoice.PRINCIPIANTE: {"series": 2, "rep_min": 10, "rep_max": 12, "rpe": 6, "tiempo": 30, "distancia": 20},
     NivelEjercicioChoice.INTERMEDIO: {"series": 3, "rep_min": 8, "rep_max": 12, "rpe": 7, "tiempo": 40, "distancia": 30},
     NivelEjercicioChoice.ENCIMA_PROMEDIO: {"series": 3, "rep_min": 8, "rep_max": 12, "rpe": 8, "tiempo": 50, "distancia": 40},
-    NivelEjercicioChoice.AVANZADO: {"series": 4, "rep_min": 6, "rep_max": 10, "rpe": 8, "tiempo": 60, "distancia": 50},
+    NivelEjercicioChoice.AVANZADO: {"series": 3, "rep_min": 8, "rep_max": 12, "rpe": 8, "tiempo": 60, "distancia": 50},
 }
 
 # Una rutina personal no caduca al terminar unas pocas semanas: se repite en
@@ -258,6 +249,7 @@ def _segundos_estimados(valores):
 @transaction.atomic
 def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, descanso, minutos_por_dia=None, priorizar_tren_inferior=False, enfoque_corporal=None):
     _validar_preferencias(objetivo, nivel, dias_semana)
+    dias_semana = sorted(dias_semana)
     minutos_por_dia = minutos_por_dia or {}
     presupuestos = [minutos_por_dia.get(str(dia), minutos) for dia in dias_semana]
     if any(type(valor) is not int or valor < 45 for valor in presupuestos):
@@ -273,26 +265,16 @@ def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, desc
         ejercicio.nombre: ejercicio
         for ejercicio in Ejercicio.objects.filter(activo=True, nivel__in=niveles[:niveles.index(nivel) + 1])
     }
-    enfoques = ENFOQUES_POR_CANTIDAD[len(dias_semana)]
     if enfoque_corporal not in (None, 'inferior', 'superior', 'full_body'):
         raise ValidationError('Selecciona un enfoque corporal válido.')
-    if enfoque_corporal == 'inferior' or (enfoque_corporal is None and priorizar_tren_inferior):
-        enfoques = {
-            1: ['cuerpo_completo'], 2: ['cuerpo_completo', 'piernas_gluteos'],
-            3: ['piernas_gluteos', 'tren_superior', 'tren_inferior'],
-            4: ['piernas_gluteos', 'tren_superior', 'tren_inferior', 'torso_core'],
-            5: ['piernas_gluteos', 'empuje', 'tren_inferior', 'tiron_core', 'piernas_gluteos'],
-            6: ['piernas_gluteos', 'empuje', 'tren_inferior', 'tiron_core', 'piernas_gluteos', 'torso_core'],
-        }[len(dias_semana)]
-    elif enfoque_corporal == 'superior':
-        enfoques = {
-            1: ['cuerpo_completo'], 2: ['tren_superior', 'cuerpo_completo'],
-            3: ['empuje', 'tren_inferior', 'tiron_core'],
-            4: ['empuje', 'tren_inferior', 'tiron', 'torso_core'],
-            5: ['empuje', 'tren_inferior', 'tiron', 'torso_core', 'cuerpo_completo'],
-            6: ['empuje', 'tren_inferior', 'tiron', 'torso_core', 'tren_inferior', 'tren_superior'],
-        }[len(dias_semana)]
-    # Full body means balanced weekly coverage, not heavy daily full-body sessions.
+    preferencia = enfoque_corporal or ('inferior' if priorizar_tren_inferior else 'full_body')
+    enfoques = distribuir_enfoques(dias_semana, preferencia)
+    plan.descripcion = (
+        f"{VERSION}. Adaptación de recomendaciones generales OMS 2020 y ACSM 2026 "
+        "para adultos sanos; no es una prescripción clínica ni cuenta con su aval. "
+        + resumen_frecuencia(enfoques)
+    )
+    plan.save(update_fields=['descripcion'])
     prioridad = PRIORIDAD_POR_OBJETIVO.get(objetivo, [])
 
     for indice, enfoque in enumerate(enfoques, start=1):
@@ -306,6 +288,14 @@ def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, desc
             activo=True,
         )
         nombres_base = list(EJERCICIOS_POR_ENFOQUE[enfoque])
+        extras = []
+        if enfoque == 'cuerpo_completo':
+            extras = {
+                'superior': ['Press militar sentado con mancuernas', 'Jalón al pecho en polea'],
+                'inferior': ['Curl femoral tumbado en máquina', 'Elevación de talones de pie en máquina'],
+                'full_body': ['Elevación de talones de pie en máquina', 'Press militar sentado con mancuernas'],
+            }[preferencia]
+            nombres_base = extras + nombres_base
         sustitutos = {
             "Sentadilla con barra": "Sentadilla goblet con mancuerna",
             "Peso muerto rumano con barra": "Puente de glúteos en suelo",
@@ -317,7 +307,15 @@ def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, desc
             nombre if nombre in ejercicios else sustitutos.get(nombre, nombre)
             for nombre in nombres_base
         ))
-        candidatos = [nombre for nombre in prioridad if nombre in nombres_base]
+        # Los movimientos básicos son obligatorios: los accesorios no pueden desplazarlos.
+        esenciales = []
+        for alternativas in bloques_basicos(enfoque, preferencia):
+            nombre = next((n for n in alternativas if n in ejercicios), None)
+            if nombre is None:
+                raise ValidationError('Faltan movimientos básicos en el catálogo para tu nivel. Solicita revisar el catálogo antes de generar la rutina.')
+            esenciales.append(nombre)
+        accesorios = [n if n in ejercicios else sustitutos.get(n, n) for n in extras]
+        candidatos = list(dict.fromkeys(esenciales + accesorios + [nombre for nombre in prioridad if nombre in nombres_base]))
         candidatos.extend(nombre for nombre in nombres_base if nombre not in candidatos)
         disponibles = [ejercicios[nombre] for nombre in candidatos if nombre in ejercicios]
         if not disponibles:
@@ -327,23 +325,27 @@ def crear_rutina_automatica(usuario, objetivo, nivel, dias_semana, minutos, desc
         # Reservar calentamiento/transiciones; no añadir volumen ilimitado por disponer de más tiempo.
         segundos = 10 * 60
         seleccion = []
-        limite = 6 if nivel == NivelEjercicioChoice.PRINCIPIANTE else 8
+        limite = 6
         for ejercicio in disponibles:
-            valores = _valores_programacion(ejercicio, nivel, descanso)
+            # Mínimo operativo propio, no un descanso universal atribuido a ACSM.
+            valores = _valores_programacion(ejercicio, nivel, max(120, descanso))
             coste = _segundos_estimados(valores)
             if segundos + coste <= minutos_dia * 60 and len(seleccion) < limite:
                 seleccion.append((ejercicio, valores))
                 segundos += coste
-        if len(seleccion) < min(3, len(disponibles)):
+        if not set(esenciales).issubset({ejercicio.nombre for ejercicio, _ in seleccion}):
             raise ValidationError("El descanso elegido no cabe con una sesión equilibrada. Aumenta el tiempo disponible o reduce el descanso.")
-        dia.descripcion += f" Duración orientativa: {int((segundos + 59) // 60)} min, con descansos y 10 min de preparación. No es obligatorio agotar el tiempo disponible."
+        dia.descripcion += f" Duración orientativa: {int((segundos + 59) // 60)} min, con descansos y 10 min de preparación. Descanso entre series: {max(120, descanso)} s. No es obligatorio agotar el tiempo disponible."
         dia.save(update_fields=["descripcion"])
         for orden, (ejercicio, valores) in enumerate(seleccion, start=1):
             EjercicioProgramado.objects.create(
                 dia=dia,
                 ejercicio=ejercicio,
                 orden=orden,
-                notas="Prioriza una ejecución estable y detén la serie si aparece dolor.",
+                notas=("Usa una carga controlable; no necesitas llegar al fallo. "
+                       "Deja aproximadamente 2–3 repeticiones posibles (más margen al aprender). "
+                       "Si completas el rango con técnica estable en sesiones sucesivas, revisa un aumento pequeño de carga; "
+                       "no aumentamos el peso automáticamente. Detén el ejercicio ante dolor o mareo."),
                 activo=True,
                 **valores,
             )
