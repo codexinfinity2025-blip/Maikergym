@@ -29,18 +29,24 @@ def guardar_calendario(asignacion):
 def resumen_usuario(usuario, inicio=None, fin=None):
     hoy = timezone.localdate()
     fechas = set(SesionEntrenamiento.objects.filter(asignacion__usuario=usuario, estado='completada', fecha__lte=hoy).values_list('fecha', flat=True))
+    acreditadas = {programada or realizada for realizada, programada in
+        SesionEntrenamiento.objects.filter(asignacion__usuario=usuario, estado='completada', fecha__lte=hoy)
+        .values_list('fecha', 'fecha_programada')}
     compromisos = list(DiaComprometido.objects.filter(usuario=usuario, cancelado=False, fecha__lte=hoy).order_by('fecha').values_list('fecha', flat=True))
     racha = mejor = 0
+    semanas = {}
     for fecha in compromisos:
-        if fecha in fechas:
-            racha += 1
-            mejor = max(mejor, racha)
-        elif fecha < hoy:
+        if acreditadas and fecha >= min(acreditadas):
+            semanas.setdefault(fecha - timedelta(days=fecha.weekday()), set()).add(fecha)
+    for lunes, dias in sorted(semanas.items()):
+        racha += len(dias & acreditadas)
+        mejor = max(mejor, racha)
+        if lunes + timedelta(days=6) < hoy and not dias.issubset(acreditadas):
             racha = 0
     inicio = inicio or hoy - timedelta(days=hoy.weekday())
     fin = fin or inicio + timedelta(days=6)
     programados = [f for f in compromisos if inicio <= f <= min(fin, hoy)]
-    cumplidos = sum(f in fechas for f in programados)
+    cumplidos = sum(f in acreditadas for f in programados)
     sesiones = SesionEntrenamiento.objects.filter(asignacion__usuario=usuario)
     return {'id': usuario.pk, 'nombre': usuario.get_full_name() or usuario.username.split('@')[0],
             'racha': racha, 'mejor': mejor,

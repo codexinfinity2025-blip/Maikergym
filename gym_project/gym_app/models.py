@@ -852,6 +852,7 @@ class SesionEntrenamiento(models.Model):
     fecha = models.DateField(
         default=timezone.localdate,
     )
+    fecha_programada = models.DateField(null=True, blank=True)
     semana_plan = models.PositiveSmallIntegerField(
         validators=[
             MinValueValidator(1),

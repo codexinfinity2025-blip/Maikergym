@@ -29,12 +29,23 @@
         <section class="config-grid">
             <div class="config-card">
                 <h2>Días disponibles</h2>
-                <p>Escoge de 1 a 6 días. Respetaremos exactamente esos días en tu calendario.</p>
+                <label class="field-block">¿Cuántos días puedes entrenar a la semana?
+                    <select name="cantidad_dias" id="cantidad-dias" required>
+                        <option value="">Elige una cantidad</option>
+                        <option value="1">1 día</option><option value="2">2 días</option>
+                        <option value="3">3 días</option><option value="4">4 días</option>
+                        <option value="5">5 días</option><option value="6">6 días</option>
+                    </select>
+                </label>
+                <p>¿Cuáles son? Todos los días están disponibles, incluido el domingo. Elige los que encajen con tu trabajo y tu vida.</p>
+                <button type="button" class="flow-btn secondary" id="solo-fin-semana">Solo sábado y domingo</button>
                 <div class="days-grid">
                     {% for valor, nombre in dias_semana %}
                         <label class="day-chip"><input type="checkbox" name="dias" value="{{ valor }}" {% if valor in perfil.dias_entrenamiento %}checked{% endif %}><span>{{ nombre }}</span></label>
                     {% endfor %}
                 </div>
+                <p id="resumen-dias" aria-live="polite"></p>
+                <p>Si faltas un día, podrás reponer esa sesión en otro día de la misma semana, hasta el domingo, o continuar con tu entrenamiento habitual.</p>
                 <details style="margin-top:1rem">
                     <summary>Personalizar minutos de cada día (opcional)</summary>
                     <p>Si dejas un día vacío, usaremos los minutos por sesión indicados abajo.</p>
@@ -86,6 +97,23 @@
 </main>
 <script>
 const tiemposGuardados = JSON.parse(document.getElementById('tiempos-guardados').textContent);
+const cantidadDias = document.getElementById('cantidad-dias');
+const opcionesDias = [...document.querySelectorAll('input[name="dias"]')];
+cantidadDias.value = String(opcionesDias.filter(c => c.checked).length || '');
+function actualizarDias() {
+    const elegidos = opcionesDias.filter(c => c.checked);
+    const cantidad = Number(cantidadDias.value);
+    cantidadDias.setCustomValidity(elegidos.length === cantidad && cantidad > 0 ? '' : 'Selecciona exactamente los días indicados.');
+    document.getElementById('resumen-dias').textContent = `${elegidos.length} de ${cantidad || '—'} días seleccionados`;
+}
+opcionesDias.forEach(c => c.addEventListener('change', actualizarDias));
+cantidadDias.addEventListener('change', actualizarDias);
+document.getElementById('solo-fin-semana').addEventListener('click', () => {
+    cantidadDias.value = '2';
+    opcionesDias.forEach(c => { c.checked = ['5', '6'].includes(c.value); });
+    actualizarDias();
+});
+actualizarDias();
 Object.entries(tiemposGuardados).forEach(([dia, minutos]) => {
     const campo = document.querySelector(`[name="minutos_dia_${dia}"]`);
     if (campo) campo.value = minutos;

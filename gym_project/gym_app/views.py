@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, timedelta
 from .routine_edit import proteger_sesion_en_curso
 from decimal import Decimal, InvalidOperation
 from django.db import transaction
-from django.db.models import Case, IntegerField, Value, When
+from django.db.models import Case, IntegerField, Value, When, Q
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
@@ -458,6 +458,8 @@ def configurar_rutina_view(request):
 
         if not 1 <= len(dias) <= 6:
             contexto['error'] = 'Selecciona entre uno y seis días diferentes.'
+        elif request.POST.get('cantidad_dias', str(len(dias))) != str(len(dias)):
+            contexto['error'] = 'Marca exactamente la cantidad de días que elegiste; puedes incluir sábado y domingo.'
         elif minutos < 45:
             contexto['error'] = 'El tiempo mínimo por entrenamiento es de 45 minutos.'
         elif any(valor < 45 for valor in tiempos.values()):
@@ -537,9 +539,10 @@ def crear_rutina_view(request):
     filas_iniciales = []
     if asignacion_actual and asignacion_actual.plan.propietario_id == request.user.pk:
         for horario in asignacion_actual.horarios.filter(activo=True):
-            if horario.dia_semana not in perfil.dias_entrenamiento:
+            if horario.numero_dia_plan > len(perfil.dias_entrenamiento):
                 continue
-            numero = perfil.dias_entrenamiento.index(horario.dia_semana) + 1
+            # Conservar los ejercicios por sesión aunque cambien los días elegidos.
+            numero = horario.numero_dia_plan
             fase = asignacion_actual.plan.fases.order_by('orden').first()
             if fase:
                 dia_plan = fase.dias.filter(numero=horario.numero_dia_plan).first()
@@ -945,22 +948,28 @@ def mi_entrenamiento_view(request):
         key=lambda horario: horario.dia_semana,
     )
 
+    lunes = hoy - timedelta(days=hoy.weekday())
+    domingo = lunes + timedelta(days=6)
     sesiones_semana = {
         sesion.dia_plan_id: sesion
         for sesion in asignacion.sesiones.filter(
-            semana_plan=asignacion.semana_actual,
             fecha__lte=hoy,
-        )
+        ).filter(Q(fecha_programada__range=(lunes, domingo)) |
+                 Q(fecha_programada__isnull=True, fecha__range=(lunes, domingo)))
     }
 
     calendario_semana = []
     for horario in horarios:
         dia_plan = dias_fase.get(horario.numero_dia_plan)
         sesion = sesiones_semana.get(dia_plan.id) if dia_plan else None
+        fecha_prevista = lunes + timedelta(days=horario.dia_semana)
         calendario_semana.append({
             "horario": horario,
             "dia_plan": dia_plan,
             "sesion": sesion,
+            "fecha_prevista": fecha_prevista,
+            "puede_reponer": bool(dia_plan and asignacion.fecha_inicio <= fecha_prevista < hoy
+                                  and not (sesion and sesion.estado == EstadoSesionChoice.COMPLETADA)),
             "es_completada": bool(
                 sesion and sesion.estado == EstadoSesionChoice.COMPLETADA
             ),
@@ -1010,7 +1019,22 @@ def mi_entrenamiento_view(request):
     if request.method == "POST":
         accion = request.POST.get("accion")
 
-        if accion == "iniciar_sesion":
+        if accion == 'reponer_dia':
+            elemento = next((e for e in calendario_semana
+                             if e['puede_reponer'] and str(e['dia_plan'].pk) == request.POST.get('dia_plan_id')), None)
+            if elemento is None:
+                messages.error(request, 'Selecciona uno de tus días pendientes de esta semana.')
+            else:
+                try:
+                    sesion, _ = iniciar_sesion_entrenamiento(
+                        asignacion, elemento['dia_plan'], fecha_programada=elemento['fecha_prevista'],
+                    )
+                except ValidationError as error:
+                    messages.error(request, ' '.join(error.messages))
+                else:
+                    messages.success(request, 'Vamos a retomar ese día. Al completar la sesión contará para tu semana.')
+                    return redirect('reproductor_entrenamiento', sesion_id=sesion.pk)
+        elif accion == "iniciar_sesion":
             if dia_hoy is None:
                 messages.error(
                     request,
@@ -1109,9 +1133,10 @@ def mi_entrenamiento_view(request):
         sesion_hoy = (
             asignacion.sesiones
             .filter(
-                semana_plan=asignacion.semana_actual,
+                fecha=hoy,
                 dia_plan=dia_hoy,
             )
+            .filter(Q(fecha_programada=hoy) | Q(fecha_programada__isnull=True))
             .prefetch_related(
                 "ejercicios__ejercicio_programado__ejercicio"
             )
@@ -1133,6 +1158,8 @@ def mi_entrenamiento_view(request):
             )
         )
 
+    from .training_streak import obtener_racha
+    racha = obtener_racha(asignacion, hoy, horarios)
     context.update({
         "fase_actual": fase_actual,
         "semana_actual": asignacion.semana_actual,
@@ -1141,18 +1168,9 @@ def mi_entrenamiento_view(request):
         "dia_hoy": dia_hoy,
         "ejercicios_hoy": ejercicios_hoy,
         "sesion_hoy": sesion_hoy,
-        "ciclo_rutina": {
-            "semana": asignacion.semana_actual,
-            "dia": horario_hoy.numero_dia_plan if horario_hoy else None,
-            "total_dias": len(calendario_semana),
-            "es_ultimo_dia": bool(
-                horario_hoy
-                and horario_hoy.numero_dia_plan == len(calendario_semana)
-            ),
-            "semana_completada": bool(calendario_semana) and all(
-                elemento["es_completada"] for elemento in calendario_semana
-            ),
-        },
+        "ciclo_rutina": racha,
+        "sesion_elegida_hoy": SesionEntrenamiento.objects.filter(
+            asignacion__usuario=request.user, fecha=hoy).select_related('dia_plan').first(),
         "siguiente_sesion": siguiente_sesion,
     })
 

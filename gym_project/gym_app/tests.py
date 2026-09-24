@@ -479,7 +479,7 @@ class FlujoRegistroTest(TestCase):
         respuesta = self.client.get(reverse("mi_entrenamiento"))
         self.assertEqual(respuesta.context["asignacion"].pk, asignacion.pk)
         self.assertContains(respuesta, "Día 1 · Lunes")
-        self.assertContains(respuesta, "Semana 1")
+        self.assertContains(respuesta, "primer paso cuenta")
 
         dia_uno = asignacion.plan.fases.get().dias.get(numero=1)
         SesionEntrenamiento.objects.create(

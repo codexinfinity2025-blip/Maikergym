@@ -511,6 +511,7 @@ def asignar_plan_por_objetivo(usuario, objetivo):
 def iniciar_sesion_entrenamiento(
     asignacion,
     dia_plan,
+    fecha_programada=None,
 ):
     asignacion = (
         AsignacionPlanUsuario.objects
@@ -527,11 +528,17 @@ def iniciar_sesion_entrenamiento(
     hoy = timezone.localdate()
     from .models import PerfilUsuario
     PerfilUsuario.objects.select_for_update().get(user=asignacion.usuario)
-    existente_hoy = SesionEntrenamiento.objects.filter(asignacion__usuario=asignacion.usuario, fecha=hoy).first()
-    if existente_hoy:
-        return existente_hoy, False
-    semana_actual = asignacion.semana_actual
-    fase_actual = asignacion.fase_actual
+    objetivo_fecha = fecha_programada or hoy
+    lunes = hoy - timedelta(days=hoy.weekday())
+    if not max(lunes, asignacion.fecha_inicio) <= objetivo_fecha <= hoy:
+        raise ValidationError('Puedes reponer un día pendiente de esta semana, hasta el domingo.')
+    semana_actual = min((objetivo_fecha - asignacion.fecha_inicio).days // 7 + 1,
+                        9999 if asignacion.plan.es_personalizado else asignacion.plan.duracion_semanas)
+    fase_actual = asignacion.plan.fases.filter(
+        activo=True, semana_inicio__lte=semana_actual, semana_fin__gte=semana_actual,
+    ).first()
+    if fase_actual is None and asignacion.plan.es_personalizado:
+        fase_actual = asignacion.plan.fases.filter(activo=True).order_by('-semana_fin').first()
 
     if semana_actual <= 0:
         raise ValidationError(
@@ -549,7 +556,7 @@ def iniciar_sesion_entrenamiento(
 
     horario = asignacion.horarios.filter(
         numero_dia_plan=dia_plan.numero,
-        dia_semana=hoy.weekday(),
+        dia_semana=objetivo_fecha.weekday(),
         activo=True,
     ).first()
 
@@ -558,6 +565,16 @@ def iniciar_sesion_entrenamiento(
             "Este entrenamiento no corresponde "
             "al día de hoy."
         )
+
+    existente_hoy = SesionEntrenamiento.objects.filter(
+        asignacion__usuario=asignacion.usuario, fecha=hoy,
+    ).first()
+    if existente_hoy:
+        if (existente_hoy.asignacion_id == asignacion.pk
+                and existente_hoy.dia_plan_id == dia_plan.pk
+                and (existente_hoy.fecha_programada or existente_hoy.fecha) == objetivo_fecha):
+            return existente_hoy, False
+        raise ValidationError('Ya elegiste un entrenamiento para hoy. Puedes continuar esa sesión desde tu panel.')
 
     sesion = (
         SesionEntrenamiento.objects
@@ -592,18 +609,25 @@ def iniciar_sesion_entrenamiento(
             asignacion=asignacion,
             dia_plan=dia_plan,
             fecha=hoy,
+            fecha_programada=objetivo_fecha,
             semana_plan=semana_actual,
             estado=EstadoSesionChoice.EN_PROGRESO,
             fecha_inicio=timezone.now(),
         )
         sesion_creada = True
 
-    elif sesion.estado == EstadoSesionChoice.PENDIENTE:
+    elif sesion.estado == EstadoSesionChoice.COMPLETADA:
+        raise ValidationError('Este entrenamiento ya está completado; no necesitas reponerlo.')
+    else:
+        sesion.fecha = hoy
+        sesion.fecha_programada = objetivo_fecha
         sesion.estado = EstadoSesionChoice.EN_PROGRESO
         sesion.fecha_inicio = timezone.now()
         sesion.save(
             update_fields=[
                 "estado",
+                "fecha",
+                "fecha_programada",
                 "fecha_inicio",
                 "fecha_actualizacion",
             ]

@@ -4,7 +4,7 @@
 {% block title %}MaikerGym - Mi entrenamiento{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/mi_entrenamiento.css' %}">
+<link rel="stylesheet" href="{% static 'css/mi_entrenamiento.css' %}?v=streak-days-2">
 {% endblock %}
 
 {% block content %}
@@ -63,21 +63,26 @@
         </section>
     {% else %}
         {% if ciclo_rutina.total_dias %}
-            <section class="routine-progress" aria-label="Racha semanal de entrenamiento">
+            <section class="routine-progress {% if ciclo_rutina.estado != 'activa' %}streak-inactive{% endif %}" aria-label="Racha semanal de entrenamiento">
                 <div class="routine-progress-copy">
                     <span>Racha de entrenamiento</span>
-                    {% if ciclo_rutina.semana_completada %}
-                        <strong>Semana {{ ciclo_rutina.semana }} completada</strong>
+                    {% if ciclo_rutina.estado == 'sin_iniciar' %}
+                        <strong>{% if user.first_name %}{{ user.first_name }}, tu{% else %}Tu{% endif %} primer paso cuenta</strong>
+                        <small>Tu rutina ya te espera. Cuando completes tu primera sesión, empezaremos a celebrar tus avances contigo.</small>
+                    {% elif ciclo_rutina.estado == 'reiniciada' %}
+                        <strong>{% if user.first_name %}{{ user.first_name }}, volvamos{% else %}Volvamos{% endif %} a tomar impulso</strong>
+                        <small>Esta vez quedaron entrenamientos pendientes al cerrar tu semana. Hoy puedes empezar una nueva racha; todo lo que has logrado sigue en tu historial.</small>
+                    {% elif ciclo_rutina.estado == 'pendiente' %}
+                        <strong>Semana {{ ciclo_rutina.semana }} · Día {{ ciclo_rutina.dia }}</strong>
+                        <small>Quedó un día pendiente, pero aún puedes retomarlo. Usa “Reponer día” antes de terminar el domingo y sigue sumando a tu semana.</small>
+                    {% elif ciclo_rutina.semana_completada %}
+                        <strong>Semana {{ ciclo_rutina.semana }} · Día {{ ciclo_rutina.dia }}</strong>
                         <small class="cycle-success">
-                            ¡Excelente trabajo! Cumpliste tus {{ ciclo_rutina.total_dias }} días. La próxima semana comenzarás en el Día 1.
+                            ¡Excelente trabajo! Completaste {{ ciclo_rutina.total_dias }} entrenamientos de este ciclo. Sigue así en tu próxima sesión.
                         </small>
                     {% elif ciclo_rutina.dia %}
                         <strong>Semana {{ ciclo_rutina.semana }} · Día {{ ciclo_rutina.dia }}</strong>
-                        {% if ciclo_rutina.es_ultimo_dia %}
-                            <small class="cycle-success">Último día de la semana. Cierra tu rutina con buena técnica y celebra tu constancia.</small>
-                        {% else %}
-                            <small>Tu rutina personal continúa guardada para cada día que programaste.</small>
-                        {% endif %}
+                        <small>Cada sesión cuenta. Los días de descanso respetan tu progreso.</small>
                     {% elif siguiente_sesion and siguiente_sesion.dia_plan %}
                         <strong>Semana {{ ciclo_rutina.semana }}</strong>
                         <small>
@@ -90,15 +95,15 @@
                         <small>Organiza tu próxima sesión y mantén viva tu racha.</small>
                     {% endif %}
                 </div>
-                <div class="routine-cycle-badge" aria-hidden="true">{{ ciclo_rutina.semana|stringformat:"02d" }}</div>
+                <div class="streak-days"><span class="routine-cycle-badge" aria-hidden="true">{{ ciclo_rutina.dias }}</span><small>Días cumplidos: {{ ciclo_rutina.dias }}</small><small>En tu racha actual</small></div>
             </section>
         {% endif %}
         <section class="training-summary">
             <article>
-                <span>Ciclo actual</span>
+                <span>Tu constancia</span>
 
                 <strong>
-                    Semana {{ semana_actual }}
+                    {% if ciclo_rutina.estado == 'activa' %}Semana {{ ciclo_rutina.semana }} · Día {{ ciclo_rutina.dia }}{% elif ciclo_rutina.estado == 'pendiente' %}Vamos paso a paso{% else %}Cada inicio cuenta{% endif %}
                 </strong>
             </article>
 
@@ -133,7 +138,8 @@
                 </div>
 
                 <p>
-                    Los días se adaptan al plan que tienes activo.
+                    Tú eliges cuándo entrenar, incluidos sábados y domingos.
+                    <a href="{% url 'configurar_rutina' %}">Cambiar mis días</a>
                 </p>
             </div>
 
@@ -160,6 +166,14 @@
                             {% else %}
                                 <small class="session-label">Pendiente en tu rutina</small>
                             {% endif %}
+                            {% if elemento.puede_reponer and not sesion_elegida_hoy %}
+                                <form method="post" class="makeup-action">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="reponer_dia">
+                                    <input type="hidden" name="dia_plan_id" value="{{ elemento.dia_plan.pk }}">
+                                    <button type="submit" class="start-session-button">Reponer día</button>
+                                </form>
+                            {% endif %}
                         {% else %}
                             <strong>Entrenamiento pendiente</strong>
                             <small>Falta configurar este día</small>
@@ -172,6 +186,13 @@
         </section>
 
         <section class="today-section">
+            {% if sesion_elegida_hoy %}
+                <div class="rest-card">
+                    <h2>Tu sesión de hoy</h2>
+                    <p>{{ sesion_elegida_hoy.dia_plan.nombre }} · {{ sesion_elegida_hoy.get_estado_display }}{% if sesion_elegida_hoy.fecha_programada and sesion_elegida_hoy.fecha_programada != fecha_hoy %} · Reposición del {{ sesion_elegida_hoy.fecha_programada|date:"d/m" }}{% endif %}</p>
+                    <a class="continue-session-button" href="{% url 'reproductor_entrenamiento' sesion_elegida_hoy.pk %}">{% if sesion_elegida_hoy.estado == 'completada' %}Ver resultados{% else %}Continuar mi sesión{% endif %}</a>
+                </div>
+            {% endif %}
             {% if horario_hoy and dia_hoy %}
                 <div class="section-heading">
                     <div>
@@ -199,7 +220,7 @@
                                 Continuar entrenamiento
                             {% endif %}
                         </a>
-                    {% else %}
+                    {% elif not sesion_elegida_hoy %}
                         <form method="POST">
                             {% csrf_token %}
 
@@ -213,7 +234,7 @@
                                 class="start-session-button"
                                 type="submit"
                             >
-                                Iniciar entrenamiento
+                                Empezar el entrenamiento de hoy
                             </button>
                         </form>
                     {% endif %}
@@ -509,6 +530,7 @@
                     <p>
                         La recuperación también hace parte del progreso.
                         Descansa, hidrátate y prepárate para la siguiente sesión.
+                        Si te quedó un entrenamiento pendiente esta semana, también puedes elegir “Reponer día” en su tarjeta.
                     </p>
                 </section>
             {% endif %}
