@@ -13,6 +13,6 @@ RUN python -m pip install --upgrade pip \
 COPY . .
 
 # Incluye el visor, Three.js y los avatares GLTF como archivos estáticos.
-RUN python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput --settings=gym_project.build_settings
 
-CMD ["/bin/sh", "-c", "python manage.py migrate --noinput && python manage.py cargar_ejercicios && python manage.py cargar_plan_hipertrofia && (python manage.py createsuperuser --noinput || true) && exec gunicorn gym_project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 180 --access-logfile - --error-logfile -"]
+CMD ["/bin/sh", "-c", "python manage.py migrate --noinput && exec gunicorn gym_project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --threads 2 --timeout 180 --access-logfile - --error-logfile -"]

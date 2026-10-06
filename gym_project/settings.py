@@ -83,6 +83,10 @@ MYSQL_DATABASE = config(
     default=config('MYSQLDATABASE', default=''),
 )
 
+MYSQL_DATABASE = MYSQL_DATABASE.strip()
+if not MYSQL_DATABASE:
+    raise ImproperlyConfigured('Configura MYSQL_DATABASE: MySQL es obligatorio en desarrollo, pruebas y producción.')
+
 if MYSQL_DATABASE:
     DATABASES = {
         'default': {
@@ -112,13 +116,8 @@ if MYSQL_DATABASE:
             },
         }
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+
+AUTHENTICATION_BACKENDS = ['gym_project.gym_app.auth_backend.ActiveProfileBackend']
 
 AUTH_PASSWORD_VALIDATORS = [
     {

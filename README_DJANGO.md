@@ -4,7 +4,7 @@ Sistema de gestión para gimnasio con roles de usuario (Admin, Moderador, Usuari
 
 ## Requisitos Previos
 
-- Python 3.8+
+- Python 3.12 recomendado (Docker), Django 5.2 LTS.
 - pip (gestor de paquetes de Python)
 
 ## Instalación y Configuración
@@ -82,7 +82,7 @@ Ejecuta el archivo `run_local_windows.bat` desde la carpeta del proyecto para:
 - aplicar migraciones
 - ejecutar el servidor
 
-> Si no tienes Python en el PATH, instala Python 3.8+ desde https://www.python.org/downloads/ y marca la opción "Add Python to PATH".
+> Si no tienes Python en el PATH, instala Python 3.12 desde https://www.python.org/downloads/ y marca la opción "Add Python to PATH".
 
 ## Estructura del Proyecto
 
@@ -91,7 +91,6 @@ gym_project/
 ├── manage.py                      # Script de gestión de Django
 ├── setup.py                       # Script de inicialización
 ├── requirements.txt               # Dependencias del proyecto
-├── db.sqlite3                     # Archivo local opcional, no usado si MySQL está configurado
 │
 ├── gym_project/
 │   ├── __init__.py
@@ -166,9 +165,62 @@ Accede al panel administrativo en: `http://127.0.0.1:8000/admin/`
 
 Con las credenciales del superusuario creado.
 
-## Próximas Mejoras
+## Seguridad y despliegue
 
-- Agregar más modelos (Rutinas, Planes, Nutrición)
+- MySQL es obligatorio en desarrollo, pruebas y producción. Configurar
+  `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST` y `MYSQL_PORT`.
+  En producción (`DEBUG=False`) también se exige `SECRET_KEY` propia.
+- `/health/` ejecuta `SELECT 1` y devuelve 503 si la base no está disponible.
+- El contenedor aplica migraciones, pero no vuelve a cargar ni sobrescribir
+  ejercicios/planes y tampoco crea administradores automáticamente.
+- Solo al preparar una base nueva y vacía, ejecutar una vez:
+
+```bash
+python manage.py migrate --noinput
+python manage.py inicializar_catalogo
+python manage.py createsuperuser
+```
+
+El catálogo inicial contiene 42 ejercicios y 4 planes. `inicializar_catalogo`
+rechaza bases con catálogo existente. Los antiguos comandos `cargar_ejercicios`
+y `cargar_plan_hipertrofia` actualizan registros: no ejecutarlos en cada arranque.
+Antes de actualizar una instalación existente, respaldar MySQL y el volumen de
+archivos. Aplicar migraciones, sin volver a inicializar el catálogo.
+
+Las fotos aceptan JPG/PNG/WebP de hasta 5 MB y 16 megapíxeles, se reducen a
+1024 píxeles y se convierten a JPEG sin metadatos. La entrega de fotos antiguas
+también rechaza contenido activo, sin borrar archivos. Peso: 1–500 kg;
+altura: 50–250 cm; hasta dos decimales.
+
+Desactivar el usuario o su perfil bloquea el acceso. Los cambios hechos con
+`save()` se sincronizan entre ambos campos; el backend también bloquea estados
+antiguos inconsistentes. Esta actualización cambia el backend de autenticación:
+las sesiones anteriores deberán iniciar sesión nuevamente.
+
+Verificación local (usa una base de pruebas, no la base de usuarios):
+
+El usuario MySQL de desarrollo necesita permiso para crear y eliminar la base
+`test_<MYSQL_DATABASE>`. Ejecutar las pruebas en un servidor local aislado, nunca
+con las credenciales de producción. Django crea y elimina esa base de pruebas;
+el motor utilizado es MySQL también durante los tests.
+
+```bash
+python manage.py test --noinput
+python manage.py makemigrations --check --dry-run
+```
+
+El envío real de correo requiere credenciales del entorno y una prueba de
+entrega; las pruebas simuladas no certifican que Gmail/Railway esté configurado.
+
+## Funciones implementadas y pendientes
+
+Ya existen rutinas, planes, orientación nutricional, grupos y seguimiento.
+La preferencia mensual/semestral/anual no constituye una pasarela de pago ni
+controla vencimientos. Los paneles personalizados aún tienen acciones pendientes;
+la administración operativa se realiza desde `/admin/`.
+
+Mejoras futuras:
+
 - Implementar sistema de mensajería
 - Agregar autenticación con redes sociales
 - Crear API REST con Django REST Framework

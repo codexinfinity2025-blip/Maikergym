@@ -1,6 +1,5 @@
 from datetime import date, timedelta
 from .routine_edit import proteger_sesion_en_curso
-from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.db.models import Case, IntegerField, Value, When, Q
 from django.core.exceptions import ValidationError
@@ -690,17 +689,14 @@ def datos_personales_view(request):
             or None
         )
         peso_registro = request.POST.get('peso') or None
+        from .profile_validation import validar_medida
         try:
-            altura = Decimal(request.POST.get('altura_cm') or str(perfil.altura_cm or '0'))
-            peso_validado = Decimal(peso_registro or str(perfil.peso or '0'))
-            if not altura.is_finite() or not peso_validado.is_finite() or not 50 <= altura <= 250 or not 1 <= peso_validado <= 500:
-                raise ValueError()
-            perfil.altura_cm = altura
-        except (InvalidOperation, ValueError):
-            return render(request, 'datos_personales.html', {'perfil': perfil, 'error': 'Revisa el peso y la altura en centímetros (50–250 cm).'})
-        perfil.peso = peso_registro or perfil.peso
+            perfil.altura_cm = validar_medida(request.POST.get('altura_cm') or perfil.altura_cm, 'altura_cm')
+            perfil.peso = validar_medida(peso_registro or perfil.peso, 'peso')
+        except ValidationError as error:
+            return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
         if peso_registro and perfil.peso_inicial is None:
-            perfil.peso_inicial = peso_registro
+            perfil.peso_inicial = perfil.peso
 
         fecha_nacimiento = request.POST.get('fecha_nacimiento') or None
         if fecha_nacimiento:
@@ -714,7 +710,11 @@ def datos_personales_view(request):
             perfil.edad = calcular_edad(perfil.fecha_nacimiento)
 
         if request.FILES.get('foto'):
-            perfil.foto = request.FILES['foto']
+            from .profile_validation import normalizar_foto
+            try:
+                perfil.foto = normalizar_foto(request.FILES['foto'])
+            except ValidationError as error:
+                return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
 
         if not perfil.genero or not perfil.peso or perfil.fecha_nacimiento is None:
             return render(request, 'datos_personales.html', {'perfil': perfil, 'error': 'Completa género, peso y fecha de nacimiento para continuar.'})
@@ -786,6 +786,7 @@ def logout_view(request):
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
+@transaction.atomic
 def cuenta_view(request):
     perfil = get_perfil(request.user)
 
@@ -809,18 +810,18 @@ def cuenta_view(request):
             return redirect('inicio')
 
         if accion in ['actualizar_cuenta', 'actualizar_foto']:
-            if request.FILES.get('foto'):
-                perfil.foto = request.FILES['foto']
+            from .profile_validation import normalizar_foto, validar_medida
+            try:
+                if request.FILES.get('foto'):
+                    perfil.foto = normalizar_foto(request.FILES['foto'])
+                if accion == 'actualizar_cuenta':
+                    for campo in ('peso', 'peso_inicial', 'altura_cm'):
+                        if request.POST.get(campo):
+                            setattr(perfil, campo, validar_medida(request.POST[campo], campo))
+            except ValidationError as error:
+                return JsonResponse({'ok': False, 'error': error.messages[0]}, status=400)
 
             if accion == 'actualizar_cuenta':
-                if request.POST.get('altura_cm'):
-                    try:
-                        altura = Decimal(request.POST['altura_cm'])
-                        if not altura.is_finite() or not 50 <= altura <= 250:
-                            raise ValueError()
-                        perfil.altura_cm = altura
-                    except (InvalidOperation, ValueError):
-                        return JsonResponse({'ok': False, 'error': 'Altura inválida: utiliza centímetros entre 50 y 250.'}, status=400)
                 nombre_completo = request.POST.get('nombre', '').strip()
                 if nombre_completo:
                     partes = nombre_completo.split()
@@ -843,8 +844,7 @@ def cuenta_view(request):
 
                 perfil.telefono = request.POST.get('telefono', '').strip() or None
                 perfil.direccion = request.POST.get('direccion', '').strip() or None
-                perfil.peso_inicial = request.POST.get('peso_inicial') or perfil.peso_inicial or perfil.peso
-                perfil.peso = request.POST.get('peso') or perfil.peso
+                perfil.peso_inicial = perfil.peso_inicial or perfil.peso
 
                 request.user.save()
 

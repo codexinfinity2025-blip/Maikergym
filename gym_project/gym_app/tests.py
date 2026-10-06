@@ -478,7 +478,7 @@ class FlujoRegistroTest(TestCase):
         self.client.force_login(usuario)
         respuesta = self.client.get(reverse("mi_entrenamiento"))
         self.assertEqual(respuesta.context["asignacion"].pk, asignacion.pk)
-        self.assertContains(respuesta, "Día 1 · Lunes")
+        self.assertIn("Día 1 · Lunes", ' '.join(respuesta.content.decode().split()))
         self.assertContains(respuesta, "primer paso cuenta")
 
         dia_uno = asignacion.plan.fases.get().dias.get(numero=1)
@@ -503,6 +503,8 @@ class FlujoRegistroTest(TestCase):
         perfil = PerfilUsuario.objects.get(user=usuario)
         perfil.objetivo = ObjetivoChoice.SALUD
         perfil.nivel_entrenamiento = "principiante"
+        perfil.prueba_nivel_completada = True
+        perfil.orientacion_nutricional_vista = True
         perfil.datos_completos = True
         perfil.save()
         ejercicio = Ejercicio.objects.order_by("id").first()

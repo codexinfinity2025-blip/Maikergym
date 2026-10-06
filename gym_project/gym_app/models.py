@@ -174,14 +174,20 @@ class PerfilUsuario(models.Model):
     foto = models.ImageField(upload_to='perfiles/', null=True, blank=True)
     telefono = models.CharField(max_length=30, null=True, blank=True)
     direccion = models.CharField(max_length=160, null=True, blank=True)
-    peso_inicial = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    peso_inicial = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(500)])
     genero = models.CharField(max_length=20, choices=GeneroChoice.choices, null=True, blank=True)
-    peso = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    peso = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(500)])
     edad = models.PositiveIntegerField(null=True, blank=True)
     fecha_nacimiento = models.DateField(null=True, blank=True)
     datos_completos = models.BooleanField(default=False)
     fecha_registro = models.DateTimeField(auto_now_add=True)
     activo = models.BooleanField(default=True)
+    def save(self, *args, **kwargs):
+        if self.foto and not self.foto._committed:
+            from .profile_validation import normalizar_foto
+            self.foto = normalizar_foto(self.foto)
+        super().save(*args, **kwargs)
+
     @property
     def foto_disponible(self):
         if not self.foto:

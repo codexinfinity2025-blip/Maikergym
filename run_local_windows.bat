@@ -16,7 +16,7 @@ if not defined PY_EXEC (
 )
 if not defined PY_EXEC (
     echo ERROR: no se encontro Python en PATH.
-    echo Instala Python 3.8+ y marca "Add Python to PATH".
+    echo Instala Python 3.12 y marca "Add Python to PATH".
     pause
     exit /b 1
 )

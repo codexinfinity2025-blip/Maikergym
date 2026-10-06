@@ -6,8 +6,9 @@ gmail-oauth*.json
 !.env.example
 
 # Bases de datos locales
-db.sqlite3
-*.sqlite3
+*.db
+*.db-*
+*.sql*
 
 # Fotografías y archivos privados de usuarios
 media/

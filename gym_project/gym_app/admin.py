@@ -1,4 +1,6 @@
 ﻿from django.contrib import admin
+from django import forms
+from .profile_validation import normalizar_foto
 from gym_project.gym_app.models import (
     AsignacionPlanUsuario,
     DiaPlan,
@@ -13,8 +15,21 @@ from gym_project.gym_app.models import (
     SerieEjercicioSesion,
 )
 
+class PerfilAdminForm(forms.ModelForm):
+    class Meta:
+        model = PerfilUsuario
+        fields = '__all__'
+
+    def clean_foto(self):
+        foto = self.cleaned_data.get('foto')
+        if foto and hasattr(foto, 'content_type'):
+            return normalizar_foto(foto)
+        return foto
+
+
 @admin.register(PerfilUsuario)
 class PerfilUsuarioAdmin(admin.ModelAdmin):
+    form = PerfilAdminForm
     list_display = ('user', 'rol', 'objetivo', 'nivel_entrenamiento', 'modalidad_rutina', 'configuracion_entrenamiento_completa', 'fecha_registro', 'activo')
     list_filter = ('rol', 'objetivo', 'nivel_entrenamiento', 'modalidad_rutina', 'configuracion_entrenamiento_completa', 'activo', 'fecha_registro')
     search_fields = ('user__email', 'user__username', 'user__first_name', 'user__last_name')

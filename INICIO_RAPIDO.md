@@ -3,7 +3,7 @@
 ## ¿Qué se ha hecho?
 
 Se ha integrado **Django** al proyecto MaikerGym para:
-- ✅ Gestión de base de datos con SQLite
+- ✅ Gestión de base de datos exclusivamente con MySQL
 - ✅ Autenticación de usuarios con roles (Admin, Moderador, Usuario)
 - ✅ Panel administrativo para gestión de perfiles
 - ✅ Protección de vistas según rol del usuario
@@ -14,7 +14,6 @@ Se ha integrado **Django** al proyecto MaikerGym para:
 ```
 gym_project/
 ├── manage.py                      # Gestor Django
-├── db.sqlite3                     # Base de datos
 ├── setup.py                       # Script de inicialización
 ├── requirements.txt               # Dependencias
 ├── README_DJANGO.md               # Documentación completa
@@ -46,7 +45,18 @@ gym_project/
 
 ## Inicio Rápido
 
-### 1. El servidor ya está corriendo en: `http://127.0.0.1:8000/`
+### 1. Configura MySQL y arranca el servidor
+
+Configura las variables `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`,
+`MYSQL_HOST` y `MYSQL_PORT` en `.env` (consulta `.env.example`). Inicia MySQL y ejecuta:
+
+```powershell
+python create_mysql_db.py
+python manage.py migrate
+python manage.py runserver
+```
+
+El servidor estará disponible en `http://127.0.0.1:8000/`.
 
 ### 2. Cuentas locales de desarrollo
 
@@ -126,7 +136,7 @@ python manage.py createsuperuser
 
 4. **Seguridad**:
    - Cambiar `SECRET_KEY` en production
-   - Usar PostgreSQL en lugar de SQLite
+   - Usar una cuenta MySQL con permisos limitados en producción
    - Configurar HTTPS
 
 5. **API REST** (Opcional):

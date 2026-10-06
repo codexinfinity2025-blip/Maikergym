@@ -59,8 +59,10 @@ class SocialTest(TestCase):
         ParticipacionGrupal.objects.create(usuario=self.usuario, rutina=rutina, revision=rutina.revision)
         sesion = comenzar_grupal(self.usuario, rutina)
         self.assertEqual(comenzar_grupal(self.usuario, rutina).pk, sesion.pk)
-        normal, _ = iniciar_sesion_entrenamiento(asignacion, asignacion.plan.fases.get().dias.get())
-        self.assertEqual(normal.pk, sesion.pk)
+        # Una sesión grupal ya elegida no puede sustituirse por otra individual.
+        with self.assertRaisesMessage(ValidationError, 'Ya elegiste un entrenamiento'):
+            iniciar_sesion_entrenamiento(asignacion, asignacion.plan.fases.get().dias.get())
+        self.assertEqual(SesionEntrenamiento.objects.filter(asignacion__usuario=self.usuario, fecha=hoy).count(), 1)
         self.assertEqual(self.client.get(reverse('reproductor_entrenamiento', args=[sesion.pk])).status_code, 200)
         registro = sesion.ejercicios.get()
         argumentos = dict(usuario=self.usuario, ejercicio_sesion_id=registro.pk, series_completadas=registro.ejercicio_programado.series, repeticiones_realizadas=12)
@@ -80,4 +82,8 @@ class SocialTest(TestCase):
     def test_enfoque_inferior_conserva_torso(self):
         a = crear_rutina_automatica(self.usuario, 'salud', 'principiante', [0, 2, 4], 60, 60, priorizar_tren_inferior=True)
         nombres = list(a.plan.fases.get().dias.order_by('numero').values_list('nombre', flat=True))
-        self.assertEqual(nombres, ['Piernas y glúteos', 'Tren superior', 'Tren inferior'])
+        self.assertEqual(nombres, ['Cuerpo completo'] * 3)
+        for dia in a.plan.fases.get().dias.all():
+            grupos = set(dia.ejercicios_programados.values_list('ejercicio__grupo_muscular', flat=True))
+            self.assertTrue(grupos & {'pecho', 'espalda', 'hombros'})
+            self.assertTrue(grupos & {'cuadriceps', 'femorales', 'gluteos'})
