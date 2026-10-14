@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from .profile_validation import validar_fecha_nacimiento
 from .routine_edit import proteger_sesion_en_curso
 from django.db import transaction
 from django.db.models import Case, IntegerField, Value, When, Q
@@ -30,6 +31,7 @@ from gym_project.gym_app.models import (
     PerfilUsuario,
     RolChoice,
     SesionEntrenamiento,
+    TipoDocumentoChoice,
 )
 from gym_project.gym_app.services import (
     asegurar_series_sesion,
@@ -156,7 +158,7 @@ def get_perfil(user):
 def calcular_edad(fecha_nacimiento):
     if not fecha_nacimiento:
         return None
-    hoy = date.today()
+    hoy = timezone.localdate()
     edad = hoy.year - fecha_nacimiento.year
     if (hoy.month, hoy.day) < (fecha_nacimiento.month, fecha_nacimiento.day):
         edad -= 1
@@ -235,24 +237,25 @@ def registrarse(request):
             return render(request, 'registrarse.html', contexto)
 
         try:
-            fecha_nacimiento = date.fromisoformat(
+            fecha_nacimiento = validar_fecha_nacimiento(
                 fecha_nacimiento_texto,
             )
-        except ValueError:
-            contexto['error'] = (
-                'Ingresa una fecha de nacimiento válida.'
-            )
-            return render(request, 'registrarse.html', contexto)
-
-        if fecha_nacimiento > date.today():
-            contexto['error'] = (
-                'La fecha de nacimiento no puede estar en el futuro.'
-            )
+        except ValidationError as error:
+            contexto['error'] = error.messages[0]
             return render(request, 'registrarse.html', contexto)
 
         enfoque = request.POST.get('enfoque_corporal', 'full_body')
         if enfoque not in ('inferior', 'superior', 'full_body'):
             contexto['error'] = 'Selecciona un enfoque corporal válido.'
+            return render(request, 'registrarse.html', contexto)
+        documento = request.POST.get('documento', '').strip()
+        tipo_documento = request.POST.get('tipo_documento', '').strip().upper()
+        tipos_documento_validos = {valor for valor, _ in TipoDocumentoChoice.choices}
+        if bool(documento) != bool(tipo_documento):
+            contexto['error'] = 'Para guardar un documento, completa tanto el tipo como el número; ambos campos también pueden dejarse vacíos.'
+            return render(request, 'registrarse.html', contexto)
+        if tipo_documento and tipo_documento not in tipos_documento_validos:
+            contexto['error'] = 'Selecciona un tipo de documento válido.'
             return render(request, 'registrarse.html', contexto)
         user = User.objects.create_user(
             username=email,
@@ -269,6 +272,8 @@ def registrarse(request):
         perfil.priorizar_tren_inferior = enfoque == 'inferior'
         perfil.fecha_nacimiento = fecha_nacimiento
         perfil.edad = calcular_edad(fecha_nacimiento)
+        perfil.documento = documento
+        perfil.tipo_documento = tipo_documento
         perfil.telefono = (
             request.POST.get('telefono', '').strip() or None
         )
@@ -278,6 +283,8 @@ def registrarse(request):
         perfil.save(
             update_fields=[
                 'fecha_nacimiento',
+                'documento',
+                'tipo_documento',
                 'plan_precio',
                 'enfoque_corporal', 'priorizar_tren_inferior',
                 'edad',
@@ -454,13 +461,27 @@ def configurar_rutina_view(request):
         'enfoque_actual': perfil.enfoque_corporal,
         'dias_semana': DiaSemanaChoice.choices,
         'modalidades': ModalidadRutinaChoice.choices,
+        'descanso_valor': max(1, round(perfil.descanso_preferido_segundos / 60)) if perfil.descanso_preferido_segundos % 60 == 0 else perfil.descanso_preferido_segundos,
+        'descanso_unidad': 'minutos' if perfil.descanso_preferido_segundos % 60 == 0 else 'segundos',
     }
     if request.method == 'POST':
         dias = _normalizar_dias(request.POST.getlist('dias'))
         modalidad = request.POST.get('modalidad')
         try:
             minutos = int(request.POST.get('minutos', ''))
-            descanso = int(request.POST.get('descanso', ''))
+            if 'descanso_valor' in request.POST:
+                descanso_valor = int(request.POST.get('descanso_valor', ''))
+                descanso_unidad = request.POST.get('descanso_unidad', '')
+                if descanso_unidad not in ('segundos', 'minutos'):
+                    raise ValueError
+                descanso = descanso_valor * (60 if descanso_unidad == 'minutos' else 1)
+                contexto['descanso_valor'] = descanso_valor
+                contexto['descanso_unidad'] = descanso_unidad
+            else:
+                # Compatibilidad con formularios abiertos antes del cambio.
+                descanso = int(request.POST.get('descanso', ''))
+                contexto['descanso_valor'] = descanso
+                contexto['descanso_unidad'] = 'segundos'
         except (TypeError, ValueError):
             minutos = descanso = 0
 
@@ -473,8 +494,6 @@ def configurar_rutina_view(request):
 
         if not 1 <= len(dias) <= 6:
             contexto['error'] = 'Selecciona entre uno y seis días diferentes.'
-        elif request.POST.get('cantidad_dias', str(len(dias))) != str(len(dias)):
-            contexto['error'] = 'Marca exactamente la cantidad de días que elegiste; puedes incluir sábado y domingo.'
         elif minutos < 45:
             contexto['error'] = 'El tiempo mínimo por entrenamiento es de 45 minutos.'
         elif any(valor < 45 for valor in tiempos.values()):
@@ -485,9 +504,6 @@ def configurar_rutina_view(request):
             contexto['error'] = 'Selecciona cómo deseas construir tu rutina.'
         else:
             perfil.dias_entrenamiento = dias
-            genero_previo = request.POST.get('genero_previo')
-            if genero_previo in ('femenino', 'masculino', 'otro'):
-                perfil.genero = genero_previo
             enfoque = request.POST.get('enfoque_corporal', perfil.enfoque_corporal)
             if enfoque not in ('inferior', 'superior', 'full_body'):
                 contexto['error'] = 'Selecciona un enfoque corporal válido.'
@@ -505,7 +521,7 @@ def configurar_rutina_view(request):
                 'descanso_preferido_segundos', 'modalidad_rutina',
                 'configuracion_entrenamiento_completa',
                 'aviso_rutina_personalizada_aceptado',
-                'genero', 'priorizar_tren_inferior', 'enfoque_corporal',
+                'priorizar_tren_inferior', 'enfoque_corporal',
             ])
             if modalidad == ModalidadRutinaChoice.PERSONALIZADA:
                 return redirect('crear_rutina')
@@ -523,6 +539,8 @@ def configurar_rutina_view(request):
                 perfil.save(update_fields=['configuracion_entrenamiento_completa'])
                 return redirect('dieta')
         contexto['form_data'] = request.POST
+        contexto['dias_formulario_enviado'] = True
+        contexto['dias_seleccionados'] = [int(dia) for dia in dias]
         contexto['enfoque_actual'] = request.POST.get('enfoque_corporal', perfil.enfoque_corporal)
 
     return render(request, 'configurar_rutina.html', contexto)
@@ -701,12 +719,15 @@ def datos_personales_view(request):
         fecha_nacimiento = request.POST.get('fecha_nacimiento') or None
         if fecha_nacimiento:
             try:
-                perfil.fecha_nacimiento = date.fromisoformat(fecha_nacimiento)
+                perfil.fecha_nacimiento = validar_fecha_nacimiento(fecha_nacimiento)
                 perfil.edad = calcular_edad(perfil.fecha_nacimiento)
-            except ValueError:
-                perfil.fecha_nacimiento = None
-                perfil.edad = None
+            except ValidationError as error:
+                return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
         elif perfil.fecha_nacimiento is not None:
+            try:
+                validar_fecha_nacimiento(perfil.fecha_nacimiento)
+            except ValidationError as error:
+                return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
             perfil.edad = calcular_edad(perfil.fecha_nacimiento)
 
         if request.FILES.get('foto'):

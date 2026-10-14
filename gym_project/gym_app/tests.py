@@ -297,6 +297,8 @@ class FlujoRegistroTest(TestCase):
                 "password": "ClaveSegura2026!",
                 "confirmar_password": "ClaveSegura2026!",
                 "fecha_nacimiento": "2000-05-20",
+                "tipo_documento": "CE",
+                "documento": "A1234567",
             },
         )
         self.assertRedirects(
@@ -310,6 +312,8 @@ class FlujoRegistroTest(TestCase):
         self.assertEqual(perfil.fecha_nacimiento, date(2000, 5, 20))
         self.assertEqual(perfil.telefono, "3001234567")
         self.assertEqual(perfil.direccion, "Calle de prueba 123")
+        self.assertEqual(perfil.tipo_documento, "CE")
+        self.assertEqual(perfil.documento, "A1234567")
 
         respuesta = self.client.post(
             reverse("objetivo"),
@@ -396,6 +400,36 @@ class FlujoRegistroTest(TestCase):
         perfil.refresh_from_db()
         self.assertTrue(perfil.orientacion_nutricional_vista)
         self.assertTrue(perfil.datos_completos)
+
+    def test_descanso_en_minutos_y_dias_sin_campo_de_cantidad(self):
+        usuario = User.objects.create_user(
+            username="dias-minutos@example.com",
+            email="dias-minutos@example.com",
+            password="ClaveSegura2026!",
+        )
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.objetivo = ObjetivoChoice.SALUD
+        perfil.nivel_declarado = "principiante"
+        perfil.nivel_entrenamiento = "principiante"
+        perfil.prueba_nivel_completada = True
+        perfil.genero = "femenino"
+        perfil.save()
+        self.client.force_login(usuario)
+
+        respuesta = self.client.post(reverse("configurar_rutina"), {
+            "dias": ["1", "6"],
+            "minutos": "60",
+            "descanso_valor": "5",
+            "descanso_unidad": "minutos",
+            "modalidad": "personalizada",
+            "genero_previo": "masculino",
+        })
+
+        self.assertRedirects(respuesta, reverse("crear_rutina"), fetch_redirect_response=False)
+        perfil.refresh_from_db()
+        self.assertEqual(perfil.dias_entrenamiento, [1, 6])
+        self.assertEqual(perfil.descanso_preferido_segundos, 300)
+        self.assertEqual(perfil.genero, "femenino")
 
     def test_rutina_manual_exige_aviso_y_un_ejercicio_por_dia(self):
         usuario = User.objects.create_user(

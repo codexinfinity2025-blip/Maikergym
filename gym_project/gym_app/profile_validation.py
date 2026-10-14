@@ -1,12 +1,32 @@
 """Validación compartida de medidas y fotos, también fuera del formulario."""
 from io import BytesIO
 from uuid import uuid4
+from datetime import date
 import warnings
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from PIL import Image, ImageOps, UnidentifiedImageError
+from django.utils import timezone
+
+
+EDAD_MINIMA = 14
+
+
+def validar_fecha_nacimiento(valor, hoy=None):
+    """Validate age on the server using birthdays, not elapsed day counts."""
+    hoy = hoy or timezone.localdate()
+    try:
+        nacimiento = valor if isinstance(valor, date) else date.fromisoformat(valor)
+    except (ValueError, TypeError):
+        raise ValidationError('Ingresa una fecha de nacimiento válida.')
+    if nacimiento > hoy:
+        raise ValidationError('La fecha de nacimiento no puede estar en el futuro.')
+    edad = hoy.year - nacimiento.year - ((hoy.month, hoy.day) < (nacimiento.month, nacimiento.day))
+    if edad < EDAD_MINIMA:
+        raise ValidationError('MaikerGym está disponible desde los 14 años.')
+    return nacimiento
 
 
 def validar_medida(valor, nombre):

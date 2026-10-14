@@ -1,4 +1,4 @@
-from datetime import date
+from django.utils import timezone
 from django import forms
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -7,6 +7,7 @@ from django.shortcuts import render, redirect
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.debug import sensitive_post_parameters
 from .models import PerfilUsuario
+from .profile_validation import validar_fecha_nacimiento
 
 
 class RevisionRegistroForm(forms.Form):
@@ -24,10 +25,7 @@ class RevisionRegistroForm(forms.Form):
         super().__init__(*args, **kwargs)
 
     def clean_fecha_nacimiento(self):
-        value = self.cleaned_data['fecha_nacimiento']
-        if value > date.today():
-            raise forms.ValidationError('La fecha no puede estar en el futuro.')
-        return value
+        return validar_fecha_nacimiento(self.cleaned_data['fecha_nacimiento'])
 
     def clean(self):
         data = super().clean()
@@ -61,7 +59,7 @@ def revisar_registro(request):
                 user.save(update_fields=['first_name', 'last_name', 'email', 'username'])
                 for key in ('fecha_nacimiento', 'telefono', 'direccion', 'enfoque_corporal'):
                     setattr(perfil, key, data[key])
-                today, birth = date.today(), data['fecha_nacimiento']
+                today, birth = timezone.localdate(), data['fecha_nacimiento']
                 perfil.edad = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
                 perfil.priorizar_tren_inferior = data['enfoque_corporal'] == 'inferior'
                 perfil.save(update_fields=['fecha_nacimiento', 'telefono', 'direccion', 'enfoque_corporal', 'edad', 'priorizar_tren_inferior'])

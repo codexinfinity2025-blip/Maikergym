@@ -30,7 +30,7 @@
             {% csrf_token %}
             <div class="form-group"><label class="form-label">Tu enfoque de entrenamiento</label>
                 {% include 'partials/enfoque_select.html' %}
-                <p>Puedes cambiarlo después desde Mis datos y preferencias. Disponible para cualquier persona.</p>
+                <p class="register-helper">Puedes cambiarlo después desde Mis datos y preferencias. Disponible para cualquier persona.</p>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -46,15 +46,26 @@
             <div class="form-row">
                 <div class="form-group flex-grow">
                     <label class="form-label">Número de documento</label>
-                    <input class="form-control" type="text" name="documento" value="{{ form_data.documento|default:'' }}" placeholder="Número de documento">
+                    <input class="form-control" type="text" name="documento" value="{{ form_data.documento|default:'' }}" placeholder="Número de documento (opcional)" autocomplete="off" aria-describedby="ayuda-documento">
                 </div>
                 <div class="form-group document-group">
                     <label class="form-label">Tipo</label>
-                    <select class="form-control" name="tipo_documento">
-                        <option value="CC" {% if form_data.tipo_documento == 'CC' %}selected{% endif %}>CC</option>
-                        <option value="TI" {% if form_data.tipo_documento == 'TI' %}selected{% endif %}>TI</option>
+                    <select class="form-control" name="tipo_documento" aria-describedby="ayuda-documento">
+                        <option value="" {% if not form_data.tipo_documento %}selected{% endif %}>Selecciona</option>
+                        <option value="CC" {% if form_data.tipo_documento == 'CC' %}selected{% endif %}>Cédula de Ciudadanía (CC)</option>
+                        <option value="CE" {% if form_data.tipo_documento == 'CE' %}selected{% endif %}>Cédula de Extranjería (CE)</option>
+                        <option value="TI" {% if form_data.tipo_documento == 'TI' %}selected{% endif %}>Tarjeta de Identidad (TI)</option>
+                        <option value="RC" {% if form_data.tipo_documento == 'RC' %}selected{% endif %}>Registro Civil de Nacimiento (RC)</option>
+                        <option value="PPT" {% if form_data.tipo_documento == 'PPT' %}selected{% endif %}>Permiso por Protección Temporal (PPT)</option>
+                        <option value="PA" {% if form_data.tipo_documento == 'PA' %}selected{% endif %}>Pasaporte (PA)</option>
+                        <option value="SC" {% if form_data.tipo_documento == 'SC' %}selected{% endif %}>Salvoconducto (SC)</option>
+                        <option value="CD" {% if form_data.tipo_documento == 'CD' %}selected{% endif %}>Carné Diplomático (CD)</option>
+                        <option value="LC" {% if form_data.tipo_documento == 'LC' %}selected{% endif %}>Licencia de Conducción (LC)</option>
+                        <option value="TP" {% if form_data.tipo_documento == 'TP' %}selected{% endif %}>Tarjeta Profesional (TP)</option>
+                        <option value="LM" {% if form_data.tipo_documento == 'LM' %}selected{% endif %}>Libreta Militar (LM)</option>
                     </select>
                 </div>
+                <small id="ayuda-documento" class="register-helper register-helper-full">El documento es opcional. Si lo agregas, completa tanto el tipo como el número.</small>
             </div>
 
             <div class="form-row">
@@ -85,8 +96,9 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Fecha de nacimiento</label>
-                <input class="form-control" type="date" name="fecha_nacimiento" value="{{ form_data.fecha_nacimiento|default:'' }}" required>
+                <label class="form-label" for="fecha_nacimiento">Fecha de nacimiento</label>
+                <input class="form-control" id="fecha_nacimiento" type="date" name="fecha_nacimiento" aria-describedby="ayuda-edad" value="{{ form_data.fecha_nacimiento|default:'' }}" required>
+                <small id="ayuda-edad">Desde los 14 años. Usamos esta fecha para calcular tu edad; no necesitas escribirla por separado.</small>
             </div>
 
             <button class="register-submit" type="submit">Registrarse</button>

@@ -21,6 +21,19 @@ class GeneroChoice(models.TextChoices):
     MASCULINO = 'masculino', 'Masculino'
     OTRO = 'otro', 'Otro'
 
+class TipoDocumentoChoice(models.TextChoices):
+    CC = 'CC', 'Cédula de Ciudadanía (CC)'
+    CE = 'CE', 'Cédula de Extranjería (CE)'
+    TI = 'TI', 'Tarjeta de Identidad (TI)'
+    RC = 'RC', 'Registro Civil de Nacimiento (RC)'
+    PPT = 'PPT', 'Permiso por Protección Temporal (PPT)'
+    PA = 'PA', 'Pasaporte (PA)'
+    SC = 'SC', 'Salvoconducto (SC)'
+    CD = 'CD', 'Carné Diplomático (CD)'
+    LC = 'LC', 'Licencia de Conducción (LC)'
+    TP = 'TP', 'Tarjeta Profesional (TP)'
+    LM = 'LM', 'Libreta Militar (LM)'
+
 class ObjetivoChoice(models.TextChoices):
     ESTETICO = "estetico", "Estético"
     HIPERTROFIA = "hipertrofia", "Hipertrofia"
@@ -174,6 +187,13 @@ class PerfilUsuario(models.Model):
     foto = models.ImageField(upload_to='perfiles/', null=True, blank=True)
     telefono = models.CharField(max_length=30, null=True, blank=True)
     direccion = models.CharField(max_length=160, null=True, blank=True)
+    documento = models.CharField(max_length=40, blank=True, default='')
+    tipo_documento = models.CharField(
+        max_length=3,
+        choices=TipoDocumentoChoice.choices,
+        blank=True,
+        default='',
+    )
     peso_inicial = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(500)])
     genero = models.CharField(max_length=20, choices=GeneroChoice.choices, null=True, blank=True)
     peso = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(500)])

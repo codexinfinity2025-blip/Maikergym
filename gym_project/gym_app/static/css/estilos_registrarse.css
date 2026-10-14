@@ -142,6 +142,36 @@ body {
     color: #6ee7b7;
 }
 
+.body-composition-card {
+    padding: 1.1rem;
+    border: 1px solid rgba(245, 160, 0, 0.42);
+    border-radius: 18px;
+    background: rgba(245, 160, 0, 0.07);
+}
+
+.body-composition-card h2 {
+    margin: 0 0 0.5rem;
+    color: #f8fafc;
+    font-size: 1.15rem;
+}
+
+.body-composition-card p,
+.body-composition-card small {
+    color: #cbd5e1;
+    line-height: 1.55;
+}
+
+.body-composition-card a { color: #fdba74; }
+.body-methods { display: grid; gap: 0.55rem; margin: 1rem 0; padding: 0; border: 0; }
+.body-methods legend { margin-bottom: 0.5rem; color: #f8fafc; font-weight: 750; }
+.body-methods label { display: flex; align-items: flex-start; gap: 0.55rem; color: #e2e8f0; }
+.body-methods input { margin-top: 0.28rem; accent-color: #f59e0b; }
+.body-method-panel { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid rgba(203, 213, 225, 0.2); }
+.body-measure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.8rem; margin: 0.8rem 0; }
+.body-composition-guide { display: block; width: 100%; max-height: 360px; margin: 0.8rem 0; object-fit: contain; border-radius: 12px; background: #fff; }
+.body-method-warning { padding: 0.75rem; border-radius: 10px; background: rgba(251, 146, 60, 0.12); }
+.body-estimate-result { min-height: 1.4em; margin: 0.7rem 0; font-weight: 750; }
+
 .register-visual {
     display: flex;
     flex-direction: column;
@@ -202,6 +232,19 @@ body {
     margin-bottom: 1.2rem;
 }
 
+.register-helper {
+    display: block;
+    margin: 0.45rem 0 0;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.register-helper-full {
+    grid-column: 1 / -1;
+    margin-top: -0.8rem;
+}
+
 .form-row {
     display: grid;
     gap: 1rem;
@@ -213,7 +256,11 @@ body {
 }
 
 .form-row .document-group {
-    max-width: 180px;
+    max-width: none;
+}
+
+.form-row:has(.document-group) {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.9fr);
 }
 
 .form-row .flex-grow {

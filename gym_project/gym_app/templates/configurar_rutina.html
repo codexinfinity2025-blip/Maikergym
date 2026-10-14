@@ -19,9 +19,6 @@
         {% csrf_token %}
         <section class="config-card" style="margin-bottom:16px">
             <h2>Tu enfoque personal</h2>
-            <label class="field-block">Género
-                <select name="genero_previo"><option value="">Conservar mi perfil</option><option value="femenino" {% if perfil.genero == 'femenino' %}selected{% endif %}>Femenino</option><option value="masculino" {% if perfil.genero == 'masculino' %}selected{% endif %}>Masculino</option><option value="otro" {% if perfil.genero == 'otro' %}selected{% endif %}>Otro</option></select>
-            </label>
             <label class="field-block">¿Dónde quieres enfocar tu entrenamiento?
                 {% include 'partials/enfoque_select.html' %}
             </label><p>Tú eliges la zona que quieres priorizar, independientemente de tu género o nivel. Adaptamos la distribución semanal de la rutina automática sin excluir por completo el resto del cuerpo. Con un solo día disponible, la sesión es de cuerpo completo.</p>
@@ -29,19 +26,11 @@
         <section class="config-grid">
             <div class="config-card">
                 <h2>Días disponibles</h2>
-                <label class="field-block">¿Cuántos días puedes entrenar a la semana?
-                    <select name="cantidad_dias" id="cantidad-dias" required>
-                        <option value="">Elige una cantidad</option>
-                        <option value="1">1 día</option><option value="2">2 días</option>
-                        <option value="3">3 días</option><option value="4">4 días</option>
-                        <option value="5">5 días</option><option value="6">6 días</option>
-                    </select>
-                </label>
-                <p>¿Cuáles son? Todos los días están disponibles, incluido el domingo. Elige los que encajen con tu trabajo y tu vida.</p>
+                <p>Marca directamente de 1 a 6 días que puedas entrenar. No tienes que indicar una cantidad aparte.</p>
                 <button type="button" class="flow-btn secondary" id="solo-fin-semana">Solo sábado y domingo</button>
                 <div class="days-grid">
                     {% for valor, nombre in dias_semana %}
-                        <label class="day-chip"><input type="checkbox" name="dias" value="{{ valor }}" {% if valor in perfil.dias_entrenamiento %}checked{% endif %}><span>{{ nombre }}</span></label>
+                        <label class="day-chip"><input type="checkbox" name="dias" value="{{ valor }}" {% if dias_formulario_enviado %}{% if valor in dias_seleccionados %}checked{% endif %}{% elif valor in perfil.dias_entrenamiento %}checked{% endif %}><span>{{ nombre }}</span></label>
                     {% endfor %}
                 </div>
                 <p id="resumen-dias" aria-live="polite"></p>
@@ -64,11 +53,14 @@
                         <small class="helper">Mínimo 45 minutos; puedes dedicar el tiempo que necesites.</small>
                     </label>
                     <label class="field-block">Descanso entre series
-                        <div style="display:grid;grid-template-columns:1fr auto;gap:.45rem;align-items:center">
-                            <input type="number" name="descanso" min="15" max="1800" step="5" value="{{ perfil.descanso_preferido_segundos|default:60 }}" required>
-                            <span>seg</span>
+                        <div class="time-unit-grid">
+                            <input type="number" id="descanso-valor" name="descanso_valor" min="1" max="1800" step="1" value="{{ descanso_valor|default:1 }}" required>
+                            <select id="descanso-unidad" name="descanso_unidad" aria-label="Tipo de tiempo para el descanso">
+                                <option value="segundos" {% if descanso_unidad == 'segundos' %}selected{% endif %}>segundos</option>
+                                <option value="minutos" {% if descanso_unidad != 'segundos' %}selected{% endif %}>minutos</option>
+                            </select>
                         </div>
-                        <small class="helper">Se tendrá en cuenta al calcular la duración orientativa de la sesión.</small>
+                        <small class="helper">Elige segundos o minutos; se convertirá automáticamente al guardar.</small>
                     </label>
                 </div>
             </div>
@@ -79,7 +71,7 @@
                     <label class="choice-card mode-card">
                         <input type="radio" name="modalidad" value="automatica" {% if perfil.modalidad_rutina != 'personalizada' %}checked{% endif %} required>
                         <span class="choice-icon">✨</span><strong>Recomendada por MaikerGym</strong>
-                        <p>Combinamos objetivo, nivel, días, tiempo y descanso.</p>
+                        <p>Combina objetivo, nivel, días, tiempo y descanso, usando guías generales de salud y ejercicio (incluida la OMS) como contexto. No es una prescripción clínica ni está certificada por la OMS; puedes elegir la opción manual si prefieres.</p>
                     </label>
                     <label class="choice-card mode-card">
                         <input type="radio" name="modalidad" value="personalizada" {% if perfil.modalidad_rutina == 'personalizada' %}checked{% endif %} required>
@@ -97,23 +89,42 @@
 </main>
 <script>
 const tiemposGuardados = JSON.parse(document.getElementById('tiempos-guardados').textContent);
-const cantidadDias = document.getElementById('cantidad-dias');
 const opcionesDias = [...document.querySelectorAll('input[name="dias"]')];
-cantidadDias.value = String(opcionesDias.filter(c => c.checked).length || '');
 function actualizarDias() {
     const elegidos = opcionesDias.filter(c => c.checked);
-    const cantidad = Number(cantidadDias.value);
-    cantidadDias.setCustomValidity(elegidos.length === cantidad && cantidad > 0 ? '' : 'Selecciona exactamente los días indicados.');
-    document.getElementById('resumen-dias').textContent = `${elegidos.length} de ${cantidad || '—'} días seleccionados`;
+    const nombres = elegidos.map(c => c.closest('label').querySelector('span').textContent.trim());
+    document.getElementById('resumen-dias').textContent = elegidos.length
+        ? `${elegidos.length} ${elegidos.length === 1 ? 'día seleccionado' : 'días seleccionados'}: ${nombres.join(', ')}`
+        : 'Aún no has seleccionado días.';
 }
-opcionesDias.forEach(c => c.addEventListener('change', actualizarDias));
-cantidadDias.addEventListener('change', actualizarDias);
+opcionesDias.forEach(c => c.addEventListener('change', () => {
+    if (opcionesDias.filter(opcion => opcion.checked).length > 6) c.checked = false;
+    actualizarDias();
+}));
 document.getElementById('solo-fin-semana').addEventListener('click', () => {
-    cantidadDias.value = '2';
     opcionesDias.forEach(c => { c.checked = ['5', '6'].includes(c.value); });
     actualizarDias();
 });
 actualizarDias();
+const descansoUnidad = document.getElementById('descanso-unidad');
+const descansoValor = document.getElementById('descanso-valor');
+let unidadDescansoAnterior = descansoUnidad.value;
+function actualizarRangoDescanso() {
+    const enMinutos = descansoUnidad.value === 'minutos';
+    const actual = Number(descansoValor.value);
+    if (descansoUnidad.value !== unidadDescansoAnterior && actual > 0) {
+        descansoValor.value = descansoUnidad.value === 'minutos'
+            ? String(Math.max(1, Math.round(actual / 60)))
+            : String(actual * 60);
+    }
+    descansoValor.min = enMinutos ? '1' : '15';
+    descansoValor.max = enMinutos ? '30' : '1800';
+    descansoValor.step = enMinutos ? '1' : '5';
+    descansoValor.setCustomValidity('');
+    unidadDescansoAnterior = descansoUnidad.value;
+}
+descansoUnidad.addEventListener('change', actualizarRangoDescanso);
+actualizarRangoDescanso();
 Object.entries(tiemposGuardados).forEach(([dia, minutos]) => {
     const campo = document.querySelector(`[name="minutos_dia_${dia}"]`);
     if (campo) campo.value = minutos;
