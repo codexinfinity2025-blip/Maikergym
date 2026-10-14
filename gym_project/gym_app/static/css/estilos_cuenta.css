@@ -27,6 +27,7 @@ body{
 .account-security summary{cursor:pointer;font-weight:700;min-height:30px;color:#ffd06c}
 .account-security input:focus-visible,.measure-grid input:focus-visible{outline:3px solid #6acaff;outline-offset:2px}
 .account-danger{margin-top:24px;border-color:#814a4a}
+.account-action-message{margin:12px 0 18px;padding:14px 16px;border:1px solid #f87171;border-radius:12px;background:#451a1a;color:#fee2e2;font-size:15px;font-weight:700;line-height:1.5}
 .account-danger form{max-width:420px}.account-danger button{margin-top:18px;padding:12px 20px}
 .account-save{padding:15px;border:0;border-radius:12px;background:#ffb511;color:#17191d;font-size:16px;font-weight:800;min-height:50px}
 @media(max-width:980px){.cuenta-page .account-workspace{grid-template-columns:1fr}}

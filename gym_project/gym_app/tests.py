@@ -654,6 +654,18 @@ class EliminacionCuentaTest(TestCase):
         self.assertEqual(respuesta.url, reverse('cuenta'))
         self.assertIn('La contraseña no coincide', ' '.join(str(m) for m in respuesta.wsgi_request._messages))
 
+    def test_accion_de_cuenta_ausente_no_falla_silenciosamente(self):
+        usuario = self._usuario_completo_sin_datos('accion-ausente')
+        self.client.force_login(usuario)
+
+        respuesta = self.client.post(reverse('cuenta'), {
+            'password_actual': 'Clave-segura-123!',
+        })
+
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual(respuesta.url, reverse('cuenta'))
+        self.assertIn('acción válida', ' '.join(str(m) for m in respuesta.wsgi_request._messages))
+
     def test_error_de_base_de_datos_no_sale_como_500_ni_borra_parcialmente(self):
         usuario = self._usuario_completo_sin_datos('fallo-al-borrar')
         self.client.force_login(usuario)

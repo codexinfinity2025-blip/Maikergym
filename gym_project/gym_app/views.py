@@ -980,6 +980,10 @@ def cuenta_view(request):
                     planes_propios.filter(pk__in=planes_compartidos).update(propietario=None)
                     user.delete()
             except ProtectedError:
+                logger.exception(
+                    'Eliminación detenida por una relación protegida user_id=%s',
+                    user.pk,
+                )
                 messages.error(
                     request,
                     'No se pudo eliminar la cuenta porque todavía está vinculada a '
@@ -1046,6 +1050,17 @@ def cuenta_view(request):
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'ok': True, 'foto_url': perfil.foto.url if perfil.foto else ''})
             return redirect('cuenta')
+
+        logger.warning(
+            'POST de cuenta con acción no reconocida user_id=%s accion=%r',
+            request.user.pk,
+            accion,
+        )
+        messages.error(
+            request,
+            'No se recibió una acción válida. Recarga la página e inténtalo de nuevo.',
+        )
+        return redirect('cuenta')
 
     peso_inicial = perfil.peso_inicial or perfil.peso
     context = {

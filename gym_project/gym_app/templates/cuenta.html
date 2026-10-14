@@ -5,7 +5,7 @@
 {% block title %}MaikerGym - Mi Cuenta{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/estilos_cuenta.css' %}?v=perfil-profesional-4">
+    <link rel="stylesheet" href="{% static 'css/estilos_cuenta.css' %}?v=eliminar-mensaje-5">
     <link rel="stylesheet" href="{% static 'css/perfil-panel.css' %}?v=1">
 {% endblock %}
 
@@ -13,7 +13,6 @@
 {% include "partials/app_nav.html" %}
 
 <main class="cuenta-page">
-    {% for message in messages %}<div class="flow-alert" role="status">{{ message }}</div>{% endfor %}
     <section class="account-stage" data-motion="rise">
 
         <form class="photo-box" method="POST" enctype="multipart/form-data" data-ajax-form>
@@ -97,8 +96,9 @@
             </div>
         </aside>
     </section>
-    <details class="account-security account-danger">
+    <details class="account-security account-danger" {% if messages %}open{% endif %}>
         <summary>Eliminar mi cuenta</summary>
+        {% for message in messages %}<div id="account-action-message" class="account-action-message" role="alert">{{ message }}</div>{% endfor %}
         <p>Esta acción elimina tu cuenta. Confirma tu contraseña únicamente si deseas continuar.</p>
         <form method="POST" data-confirm-delete>
             {% csrf_token %}
@@ -169,6 +169,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
+
+    const accountMessage = document.querySelector("#account-action-message");
+    if (accountMessage) {
+        window.requestAnimationFrame(() => accountMessage.scrollIntoView({block: "center"}));
+    }
 
     document.querySelectorAll(".field-row input, .weight-grid input").forEach((input) => {
         const wrap = input.closest(".field-row") || input.closest(".weight-grid");
