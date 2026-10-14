@@ -78,6 +78,33 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gym_project.wsgi.application'
 
+# Ensure application-level exceptions (including account deletion failures)
+# are visible in Railway's container Deploy Logs.
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'application': {
+            'format': '{levelname} {asctime} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://sys.stdout',
+            'formatter': 'application',
+        },
+    },
+    'loggers': {
+        'gym_project.gym_app': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}
+
 MYSQL_DATABASE = config(
     'MYSQL_DATABASE',
     default=config('MYSQLDATABASE', default=''),
