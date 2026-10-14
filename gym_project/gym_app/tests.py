@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.db import IntegrityError
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.urls import reverse
@@ -652,6 +653,22 @@ class EliminacionCuentaTest(TestCase):
         self.assertEqual(respuesta.status_code, 302)
         self.assertEqual(respuesta.url, reverse('cuenta'))
         self.assertIn('La contraseña no coincide', ' '.join(str(m) for m in respuesta.wsgi_request._messages))
+
+    def test_error_de_base_de_datos_no_sale_como_500_ni_borra_parcialmente(self):
+        usuario = self._usuario_completo_sin_datos('fallo-al-borrar')
+        self.client.force_login(usuario)
+
+        with patch.object(User, 'delete', side_effect=IntegrityError('fallo simulado')):
+            with patch('gym_project.gym_app.views.logger.exception'):
+                respuesta = self.client.post(reverse('cuenta'), {
+                    'accion': 'eliminar_cuenta',
+                    'password_actual': 'Clave-segura-123!',
+                })
+
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual(respuesta.url, reverse('cuenta'))
+        self.assertTrue(User.objects.filter(pk=usuario.pk).exists())
+        self.assertIn('error interno', ' '.join(str(m) for m in respuesta.wsgi_request._messages))
 
     def test_eliminar_cuenta_sin_sucesor_cierra_el_grupo_vacio(self):
         from .models import GrupoAmigos, IntegranteGrupo

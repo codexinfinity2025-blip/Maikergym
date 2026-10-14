@@ -913,7 +913,6 @@ def logout_view(request):
 
 @login_required(login_url='login')
 @require_http_methods(["GET", "POST"])
-@transaction.atomic
 def cuenta_view(request):
     perfil = get_perfil(request.user)
 
@@ -1040,9 +1039,10 @@ def cuenta_view(request):
                 perfil.direccion = request.POST.get('direccion', '').strip() or None
                 perfil.peso_inicial = perfil.peso_inicial or perfil.peso
 
-                request.user.save()
-
-            perfil.save()
+            with transaction.atomic():
+                if accion == 'actualizar_cuenta':
+                    request.user.save()
+                perfil.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({'ok': True, 'foto_url': perfil.foto.url if perfil.foto else ''})
             return redirect('cuenta')
