@@ -2,7 +2,7 @@ from datetime import date, timedelta
 import logging
 from .profile_validation import validar_fecha_nacimiento
 from .routine_edit import proteger_sesion_en_curso
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Case, IntegerField, Value, When, Q
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -23,6 +23,7 @@ from django.utils import timezone
 from gym_project.gym_app.models import (
     DiaSemanaChoice,
     Ejercicio,
+    GeneroChoice,
     EstadoAsignacionChoice,
     EstadoSerieChoice,
     EstadoSesionChoice,
@@ -225,6 +226,22 @@ def registrarse(request):
             'enfoque_actual': request.POST.get('enfoque_corporal', 'full_body'),
         }
 
+        if not nombre or not apellido:
+            contexto['error'] = 'Completa tu nombre y apellido para continuar.'
+            return render(request, 'registrarse.html', contexto)
+        campos = (
+            (nombre, User._meta.get_field('first_name').max_length, 'Nombre'),
+            (apellido, User._meta.get_field('last_name').max_length, 'Apellido'),
+            (email, User._meta.get_field('username').max_length, 'Correo'),
+            (request.POST.get('documento', '').strip(), PerfilUsuario._meta.get_field('documento').max_length, 'Documento'),
+            (request.POST.get('telefono', '').strip(), PerfilUsuario._meta.get_field('telefono').max_length, 'Teléfono'),
+            (request.POST.get('direccion', '').strip(), PerfilUsuario._meta.get_field('direccion').max_length, 'Dirección'),
+        )
+        for valor, limite, etiqueta in campos:
+            if len(valor) > limite:
+                contexto['error'] = f'{etiqueta}: utiliza como máximo {limite} caracteres.'
+                return render(request, 'registrarse.html', contexto)
+
         if password != confirmar_password:
             contexto['error'] = 'Las contraseñas no coinciden.'
             return render(request, 'registrarse.html', contexto)
@@ -260,41 +277,33 @@ def registrarse(request):
         if tipo_documento and tipo_documento not in tipos_documento_validos:
             contexto['error'] = 'Selecciona un tipo de documento válido.'
             return render(request, 'registrarse.html', contexto)
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password,
-            first_name=nombre,
-            last_name=apellido,
-        )
-        perfil = get_perfil(user)
-        elegido = request.session.pop('plan_precio_pendiente', '')
-        if elegido in ('mensual', 'semestral', 'premium_anual'):
-            perfil.plan_precio = elegido
-        perfil.enfoque_corporal = enfoque
-        perfil.priorizar_tren_inferior = enfoque == 'inferior'
-        perfil.fecha_nacimiento = fecha_nacimiento
-        perfil.edad = calcular_edad(fecha_nacimiento)
-        perfil.documento = documento
-        perfil.tipo_documento = tipo_documento
-        perfil.telefono = (
-            request.POST.get('telefono', '').strip() or None
-        )
-        perfil.direccion = (
-            request.POST.get('direccion', '').strip() or None
-        )
-        perfil.save(
-            update_fields=[
-                'fecha_nacimiento',
-                'documento',
-                'tipo_documento',
-                'plan_precio',
-                'enfoque_corporal', 'priorizar_tren_inferior',
-                'edad',
-                'telefono',
-                'direccion',
-            ]
-        )
+        elegido = request.session.get('plan_precio_pendiente', '')
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=email, email=email, password=password,
+                    first_name=nombre, last_name=apellido,
+                )
+                perfil = get_perfil(user)
+                if elegido in ('mensual', 'semestral', 'premium_anual'):
+                    perfil.plan_precio = elegido
+                perfil.enfoque_corporal = enfoque
+                perfil.priorizar_tren_inferior = enfoque == 'inferior'
+                perfil.fecha_nacimiento = fecha_nacimiento
+                perfil.edad = calcular_edad(fecha_nacimiento)
+                perfil.documento = documento
+                perfil.tipo_documento = tipo_documento
+                perfil.telefono = request.POST.get('telefono', '').strip() or None
+                perfil.direccion = request.POST.get('direccion', '').strip() or None
+                perfil.save(update_fields=[
+                    'fecha_nacimiento', 'documento', 'tipo_documento',
+                    'plan_precio', 'enfoque_corporal', 'priorizar_tren_inferior',
+                    'edad', 'telefono', 'direccion',
+                ])
+        except IntegrityError:
+            contexto['error'] = 'No se pudo completar el registro. Revisa el correo e inténtalo nuevamente.'
+            return render(request, 'registrarse.html', contexto)
+        request.session.pop('plan_precio_pendiente', None)
         login(request, user)
         return redirect('revisar_registro')
 
@@ -709,6 +718,10 @@ def datos_personales_view(request):
             or perfil.genero
             or None
         )
+        if perfil.genero not in GeneroChoice.values:
+            return render(request, 'datos_personales.html', {
+                'perfil': perfil, 'error': 'Selecciona un género válido para continuar.',
+            }, status=400)
         peso_registro = request.POST.get('peso') or None
         from .profile_validation import validar_medida
         try:

@@ -712,6 +712,11 @@ def _convertir_decimal(
             f"{nombre_campo.capitalize()} debe ser un número válido."
         )
 
+    if not resultado.is_finite():
+        raise ValidationError(
+            f"{nombre_campo.capitalize()} debe ser un número válido."
+        )
+
     if resultado < 0:
         raise ValidationError(
             f"{nombre_campo.capitalize()} no puede ser negativo."

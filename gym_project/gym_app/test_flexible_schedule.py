@@ -4,7 +4,6 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
-from django.http import HttpResponse
 from django.urls import reverse
 
 from .models import AsignacionPlanUsuario, DiaPlan, HorarioPlanUsuario
@@ -73,7 +72,7 @@ class FlexibleScheduleTests(TestCase):
         self.assertTrue(result['semana_completada'])
         self.assertEqual((result['semana'], result['dia']), (1, 2))
 
-    def test_configuration_saves_weekend_choice_and_rejects_quantity_mismatch(self):
+    def test_configuration_saves_weekend_choice_and_ignores_legacy_quantity(self):
         self.client.force_login(self.user)
         data = {'dias': ['5', '6'], 'cantidad_dias': '2', 'minutos': '60',
                 'descanso': '60', 'modalidad': 'personalizada', 'enfoque_corporal': 'full_body'}
@@ -83,9 +82,9 @@ class FlexibleScheduleTests(TestCase):
             from .models import PerfilUsuario
             self.assertEqual(PerfilUsuario.objects.get(user=self.user).dias_entrenamiento, [5, 6])
             data['cantidad_dias'] = '3'
-            with patch('gym_project.gym_app.views.render', return_value=HttpResponse()) as render:
-                self.client.post(reverse('configurar_rutina'), data)
-                self.assertIn('exactamente', render.call_args.args[2]['error'])
+            response = self.client.post(reverse('configurar_rutina'), data)
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(PerfilUsuario.objects.get(user=self.user).dias_entrenamiento, [5, 6])
 
     def test_social_completion_credits_makeup_to_original_date(self):
         from .models import DiaComprometido

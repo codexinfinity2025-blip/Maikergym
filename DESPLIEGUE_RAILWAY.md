@@ -5,6 +5,40 @@ La aplicación se despliega como un servicio Django/Gunicorn con MySQL. El
 WhiteNoise, ejecuta las migraciones pendientes al iniciar y arranca Gunicorn.
 `.env` y los datos locales están excluidos tanto de Git como de la imagen Docker.
 
+## Publicar GitHub y Railway con un comando en Windows
+
+Las correcciones deben estar confirmadas en Git y la rama `main` debe estar limpia.
+Desde PowerShell, en esta carpeta, ejecutar:
+
+```powershell
+.\PUBLICAR.cmd
+```
+
+El comando comprueba el remoto `nuevo` de
+`codexinfinity2025-blip/Maikergym`, el acceso al proyecto vinculado de Railway,
+sube `HEAD:main` y solicita un despliegue del servicio web existente. No crea
+proyectos ni servicios nuevos. También existe el modo `--comprobar`, que no sube.
+
+Requiere Git y la CLI oficial de Railway, disponible en PATH o en la copia
+local ya usada por este proyecto. En otro equipo, instalar con
+`npm install -g @railway/cli` e iniciar sesión con `railway login` en la cuenta
+que tiene acceso al proyecto MaikerGym. El proyecto debe estar vinculado localmente.
+En esta instalación se puede abrir el inicio de sesión con
+`.\PUBLICAR.cmd --login`, que también encuentra la CLI local.
+
+La sesión comprobada el 14 de octubre de 2026 no tenía acceso a MaikerGym.
+Debe corregirse el inicio de sesión antes de publicar; el script se detiene
+en esa comprobación antes del push. Los identificadores de destino usados son:
+
+- Proyecto: `56932f69-87d4-4401-a581-09bbb89103d4`.
+- Entorno: `fd181040-02a8-4327-83d9-66df5286b676`.
+- Servicio web: `89d2dd62-d093-48c7-9d3f-21b51adb659f`.
+
+La salida exitosa significa que Railway aceptó la solicitud: aún debe terminar
+el build y el health check. Si el servicio tiene autodeploy de GitHub habilitado,
+el push también puede iniciar un despliegue; la subida explícita por CLI puede
+generar otra entrega. Esta ruta no depende de que autodeploy esté habilitado.
+
 ## Servicios de Railway
 
 En un proyecto de Railway crea:

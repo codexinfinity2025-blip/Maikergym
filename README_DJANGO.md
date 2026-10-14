@@ -6,6 +6,23 @@ Sistema de gestión para gimnasio con roles de usuario (Admin, Moderador, Usuari
 
 - Python 3.12 recomendado (Docker), Django 5.2 LTS.
 - pip (gestor de paquetes de Python)
+- MySQL 8.0.11 o posterior. Si el servidor local es MariaDB, Django 5.2
+  necesita MariaDB 10.5 o posterior; MariaDB 10.4 de algunas instalaciones
+  XAMPP no es compatible. No bajar Django para eludir este requisito.
+  [Compatibilidad del motor](https://docs.djangoproject.com/en/5.2/ref/databases/).
+
+Usar un entorno virtual evita ejecutar accidentalmente un Django global distinto
+del fijado en `requirements.txt`. En Windows, desde la raíz del proyecto:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m django --version
+```
+
+Utilizar ese mismo intérprete para `manage.py`. Antes de migrar una base existente,
+confirmar la versión del servidor y disponer de respaldo. Las pruebas deben
+apuntar a una instancia local compatible y crear su propia base `test_...`.
 
 ## Instalación y Configuración
 
