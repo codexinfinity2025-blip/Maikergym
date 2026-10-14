@@ -13,6 +13,7 @@
 {% include "partials/app_nav.html" %}
 
 <main class="cuenta-page">
+    {% for message in messages %}<div class="flow-alert" role="status">{{ message }}</div>{% endfor %}
     <section class="account-stage" data-motion="rise">
 
         <form class="photo-box" method="POST" enctype="multipart/form-data" data-ajax-form>

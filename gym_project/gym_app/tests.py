@@ -60,6 +60,7 @@ class FlujoRegistroTest(TestCase):
         self.assertEqual(len(perfil.mensajes_entregados), 3)
         self.assertNotContains(self.client.get(reverse('notificaciones')), '70 mensajes')
 
+
     def test_evaluacion_corporal_no_inventa_meta(self):
         usuario = User.objects.create_user(username='altura')
         perfil = PerfilUsuario.objects.get(user=usuario)
@@ -592,3 +593,64 @@ class FlujoRegistroTest(TestCase):
             )
         self.assertEqual(len(vistos), 69)
         self.assertEqual(len(set(vistos)), 69)
+
+
+class EliminacionCuentaTest(TestCase):
+    def _usuario_completo_sin_datos(self, username):
+        usuario = User.objects.create_user(username=username, password='Clave-segura-123!')
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.rol = 'admin'  # Permite entrar a Mi cuenta sin el flujo de personalización.
+        perfil.save(update_fields=['rol'])
+        return usuario
+
+    def test_eliminar_cuenta_transfiere_administracion_y_no_muestra_json_crudo(self):
+        from .models import GrupoAmigos, IntegranteGrupo
+
+        usuario = self._usuario_completo_sin_datos('sale-del-grupo')
+        sucesor = self._usuario_completo_sin_datos('nuevo-admin')
+        grupo = GrupoAmigos.objects.create(nombre='Equipo', administrador=usuario)
+        IntegranteGrupo.objects.create(usuario=usuario, grupo=grupo)
+        IntegranteGrupo.objects.create(usuario=sucesor, grupo=grupo)
+        self.client.force_login(usuario)
+
+        respuesta = self.client.post(reverse('cuenta'), {
+            'accion': 'eliminar_cuenta',
+            'password_actual': 'Clave-segura-123!',
+        })
+
+        self.assertFalse(User.objects.filter(pk=usuario.pk).exists())
+        grupo.refresh_from_db()
+        self.assertEqual(grupo.administrador_id, sucesor.pk)
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual(respuesta.url, reverse('inicio'))
+
+    def test_contrasena_incorrecta_muestra_mensaje_en_cuenta(self):
+        usuario = self._usuario_completo_sin_datos('no-se-borra')
+        self.client.force_login(usuario)
+
+        respuesta = self.client.post(reverse('cuenta'), {
+            'accion': 'eliminar_cuenta',
+            'password_actual': 'incorrecta',
+        })
+
+        self.assertTrue(User.objects.filter(pk=usuario.pk).exists())
+        self.assertEqual(respuesta.status_code, 302)
+        self.assertEqual(respuesta.url, reverse('cuenta'))
+        self.assertIn('La contraseña no coincide', ' '.join(str(m) for m in respuesta.wsgi_request._messages))
+
+    def test_eliminar_cuenta_sin_sucesor_cierra_el_grupo_vacio(self):
+        from .models import GrupoAmigos, IntegranteGrupo
+
+        usuario = self._usuario_completo_sin_datos('ultimo-del-grupo')
+        grupo = GrupoAmigos.objects.create(nombre='Grupo vacío al salir', administrador=usuario)
+        IntegranteGrupo.objects.create(usuario=usuario, grupo=grupo)
+        self.client.force_login(usuario)
+
+        respuesta = self.client.post(reverse('cuenta'), {
+            'accion': 'eliminar_cuenta',
+            'password_actual': 'Clave-segura-123!',
+        })
+
+        self.assertFalse(User.objects.filter(pk=usuario.pk).exists())
+        self.assertFalse(GrupoAmigos.objects.filter(pk=grupo.pk).exists())
+        self.assertEqual(respuesta.url, reverse('inicio'))

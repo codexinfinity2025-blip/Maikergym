@@ -819,14 +819,58 @@ def cuenta_view(request):
 
         if accion == 'eliminar_cuenta':
             if not request.user.check_password(request.POST.get('password_actual', '')):
-                return JsonResponse({'ok': False, 'error': 'Confirma tu contraseña actual para eliminar la cuenta.'}, status=400)
+                messages.error(request, 'La contraseña no coincide. No se eliminó tu cuenta.')
+                return redirect('cuenta')
             user = request.user
             from django.db.models.deletion import ProtectedError
+            from .models import (
+                GrupoAmigos,
+                ParticipacionGrupal,
+                RecompensaEjercicio,
+            )
             try:
                 with transaction.atomic():
+                    sesiones_usuario = SesionEntrenamiento.objects.filter(
+                        asignacion__usuario=user
+                    ).values_list('pk', flat=True)
+                    # Preserve a shared group by transferring its administration
+                    # before deleting the owner. A group with no other members can
+                    # be removed along with its now-private proposals/results.
+                    grupos_administrados = GrupoAmigos.objects.select_for_update().filter(
+                        administrador=user
+                    )
+                    for grupo in grupos_administrados:
+                        sucesor = grupo.integrantes.exclude(usuario=user).select_related(
+                            'usuario'
+                        ).order_by('desde').first()
+                        if sucesor:
+                            grupo.administrador = sucesor.usuario
+                            grupo.save(update_fields=['administrador'])
+                        else:
+                            # Group participations point to sessions with PROTECT;
+                            # detach those links so deleting an empty group cannot
+                            # block removal of the account that owns the sessions.
+                            ParticipacionGrupal.objects.filter(
+                                rutina__grupo=grupo
+                            ).update(sesion=None)
+                            grupo.delete()
+
+                    # These records belong to the account being erased. Remove the
+                    # protective references first; shared group summaries and the
+                    # other members' workouts remain untouched.
+                    RecompensaEjercicio.objects.filter(usuario=user).delete()
+                    ParticipacionGrupal.objects.filter(
+                        Q(usuario=user) | Q(sesion_id__in=sesiones_usuario)
+                    ).update(sesion=None)
                     user.delete()
             except ProtectedError:
-                return JsonResponse({'ok': False, 'error': 'La cuenta tiene registros protegidos o administra un grupo. Contacta al administrador para gestionar su eliminación sin perder el historial compartido.'}, status=409)
+                messages.error(
+                    request,
+                    'No se pudo eliminar la cuenta porque todavía está vinculada a '
+                    'información compartida. No se borró ningún dato; contacta al '
+                    'soporte para revisarlo.',
+                )
+                return redirect('cuenta')
             logout(request)
             return redirect('inicio')
 
