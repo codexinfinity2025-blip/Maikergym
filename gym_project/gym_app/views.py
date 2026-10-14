@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import logging
 from .profile_validation import validar_fecha_nacimiento
 from .routine_edit import proteger_sesion_en_curso
 from django.db import transaction
@@ -48,6 +49,8 @@ from gym_project.gym_app.wellness_content import (
     obtener_guia_nutricional,
     obtener_mensajes_del_dia,
 )
+
+logger = logging.getLogger(__name__)
 
 DIETAS_POR_OBJETIVO = {
     'estetico': {
@@ -880,6 +883,18 @@ def cuenta_view(request):
                     'No se pudo eliminar la cuenta porque todavía está vinculada a '
                     'información compartida. No se borró ningún dato; contacta al '
                     'soporte para revisarlo.',
+                )
+                return redirect('cuenta')
+            except Exception:
+                # Railway's access log only reports the HTTP 500; explicitly log
+                # the traceback so the next failure identifies the DB/model cause.
+                logger.exception(
+                    'Fallo inesperado al eliminar la cuenta user_id=%s', user.pk
+                )
+                messages.error(
+                    request,
+                    'No se pudo completar la eliminación por un error interno. '
+                    'No se borró ningún dato; inténtalo más tarde o contacta al soporte.',
                 )
                 return redirect('cuenta')
             logout(request)
