@@ -121,6 +121,33 @@ body {
     border-radius: 14px;
 }
 
+.register-form select.form-control,
+.register-form select {
+    min-height: 58px;
+    padding: 0.9rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    background-color: #fff;
+    color: #172033;
+    color-scheme: light;
+    font-size: 1rem;
+    font-weight: 600;
+    appearance: auto;
+}
+
+.register-form select option {
+    background: #fff;
+    color: #172033;
+    font-size: 1rem;
+}
+
+.register-form select:focus {
+    background-color: #fff;
+    color: #172033;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.2);
+}
+
 .profile-setup-panel .register-submit {
     width: 100%;
     margin-top: 0.5rem;
@@ -149,6 +176,53 @@ body {
     background: rgba(245, 160, 0, 0.07);
 }
 
+.body-composition-intro { margin-bottom: 0; }
+.body-composition-content { margin-top: 1rem; }
+.body-visual-panel { margin: 1rem 0 1.25rem; }
+.body-visual-panel h3 { margin: 0 0 0.35rem; color: #fff; font-size: 1.02rem; }
+.body-visual-panel p { margin-bottom: 0.7rem; font-size: 0.9rem; }
+.body-visual-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+.body-visual-option {
+    display: flex;
+    min-width: 0;
+    min-height: 190px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.4rem 0.3rem;
+    border: 1px solid rgba(203, 213, 225, 0.24);
+    border-radius: 13px;
+    background: rgba(9, 19, 43, 0.78);
+    color: #f8fafc;
+    cursor: pointer;
+    text-align: center;
+}
+.body-visual-option:has(input:checked) { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.24); }
+.body-visual-option input { accent-color: #f59e0b; }
+.body-visual-image {
+    display: block;
+    width: 100%;
+    max-width: 105px;
+    height: 145px;
+    background-repeat: no-repeat;
+    background-size: 700% 100%;
+    background-position: var(--sprite-position) center;
+    background-color: #fff;
+    border-radius: 9px;
+}
+[data-visual-gender="masculino"] .body-visual-image { background-image: url("../img/body-composition/referencia_grasa_masculina.png"); }
+[data-visual-gender="femenino"] .body-visual-image { background-image: url("../img/body-composition/referencia_grasa_femenina.png"); }
+.body-visual-value { display: block; padding-top: 0.25rem; font-size: 0.86rem; font-weight: 800; }
+.body-method-choice { display: flex; align-items: flex-start; gap: 0.6rem; margin: 0.5rem 0; color: #f8fafc; cursor: pointer; }
+.body-method-choice input { flex: 0 0 auto; margin-top: 0.25rem; accent-color: #f59e0b; }
+.body-method-panel[hidden],
+.body-visual-panel[hidden],
+.body-composition-content[hidden],
+#body-age-note[hidden],
+#body-gender-note[hidden],
+#medida-cadera-wrap[hidden] { display: none !important; }
+.body-methods { margin-top: 0.85rem; }
+
 .body-composition-card h2 {
     margin: 0 0 0.5rem;
     color: #f8fafc;
@@ -168,8 +242,7 @@ body {
 .body-methods input { margin-top: 0.28rem; accent-color: #f59e0b; }
 .body-method-panel { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid rgba(203, 213, 225, 0.2); }
 .body-measure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.8rem; margin: 0.8rem 0; }
-.body-composition-guide { display: block; width: 100%; max-height: 360px; margin: 0.8rem 0; object-fit: contain; border-radius: 12px; background: #fff; }
-.body-method-warning { padding: 0.75rem; border-radius: 10px; background: rgba(251, 146, 60, 0.12); }
+.body-method-warning { padding: 0.75rem; border: 1px solid rgba(251, 146, 60, 0.28); border-radius: 10px; background: rgba(251, 146, 60, 0.12); color: #ffedd5 !important; }
 .body-estimate-result { min-height: 1.4em; margin: 0.7rem 0; font-weight: 750; }
 
 .register-visual {
@@ -260,7 +333,7 @@ body {
 }
 
 .form-row:has(.document-group) {
-    grid-template-columns: minmax(0, 1fr) minmax(230px, 0.9fr);
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
 }
 
 .form-row .flex-grow {
@@ -398,6 +471,8 @@ select {
     .form-row {
         grid-template-columns: 1fr;
     }
+
+    .body-visual-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
     .form-row .document-group {
         max-width: none;

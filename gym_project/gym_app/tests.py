@@ -32,6 +32,7 @@ from .services import (
     crear_rutina_personalizada,
 )
 from .routine_edit import entrenamiento_en_curso
+from .profile_validation import estimar_grasa_navy
 
 
 class FlujoRegistroTest(TestCase):
@@ -67,9 +68,20 @@ class FlujoRegistroTest(TestCase):
         perfil.peso = 75
         perfil.altura_cm = 175
         perfil.fecha_nacimiento = date(1990, 1, 1)
+        perfil.porcentaje_grasa_estimado = 15
+        perfil.metodo_estimacion_grasa = "visual"
         resultado = perfil.evaluacion_corporal_interna()
         self.assertEqual(resultado['imc'], 24.49)
+        self.assertEqual(resultado['masa_grasa_estimada_kg'], 11.2)
+        self.assertEqual(resultado['masa_sin_grasa_estimada_kg'], 63.8)
         self.assertIsNone(resultado['brecha_objetivo'])
+
+    def test_formula_navy_valida_y_rechaza_medidas_imposibles(self):
+        porcentaje = estimar_grasa_navy('masculino', 175, 85, 38)
+        self.assertGreaterEqual(porcentaje, 2)
+        self.assertLessEqual(porcentaje, 60)
+        with self.assertRaises(ValidationError):
+            estimar_grasa_navy('masculino', 175, 30, 38)
 
     def test_generador_respeta_nivel_presupuesto_y_dias(self):
         usuario = User.objects.create_user(username="presupuesto")
@@ -379,6 +391,7 @@ class FlujoRegistroTest(TestCase):
                 "genero": "masculino",
                 "peso": "72.50",
                 "altura_cm": "175",
+                "metodo_grasa": "visual:15",
             },
         )
         self.assertRedirects(
@@ -401,6 +414,8 @@ class FlujoRegistroTest(TestCase):
         perfil.refresh_from_db()
         self.assertTrue(perfil.orientacion_nutricional_vista)
         self.assertTrue(perfil.datos_completos)
+        self.assertEqual(float(perfil.porcentaje_grasa_estimado), 15.0)
+        self.assertEqual(perfil.metodo_estimacion_grasa, "visual")
 
     def test_descanso_en_minutos_y_dias_sin_campo_de_cantidad(self):
         usuario = User.objects.create_user(

@@ -34,6 +34,10 @@ class TipoDocumentoChoice(models.TextChoices):
     TP = 'TP', 'Tarjeta Profesional (TP)'
     LM = 'LM', 'Libreta Militar (LM)'
 
+class MetodoGrasaChoice(models.TextChoices):
+    VISUAL = 'visual', 'Autoestimación visual adulta'
+    NAVY = 'navy', 'Circunferencias U.S. Navy'
+
 class ObjetivoChoice(models.TextChoices):
     ESTETICO = "estetico", "Estético"
     HIPERTROFIA = "hipertrofia", "Hipertrofia"
@@ -115,6 +119,19 @@ class PerfilUsuario(models.Model):
     priorizar_tren_inferior = models.BooleanField(default=False)
     altura_cm = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(50), MaxValueValidator(250)])
     mensajes_entregados = models.JSONField(default=list, blank=True)
+    porcentaje_grasa_estimado = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(2), MaxValueValidator(60)],
+    )
+    metodo_estimacion_grasa = models.CharField(
+        max_length=12,
+        choices=MetodoGrasaChoice.choices,
+        blank=True,
+        default='',
+    )
 
     def evaluacion_corporal_interna(self):
         # Indicador de cribado, no diagnóstico ni estimación de masa muscular.
@@ -127,9 +144,25 @@ class PerfilUsuario(models.Model):
             return {"estado": "requiere_valoracion_por_edad"}
         imc = float(self.peso) / (float(self.altura_cm) / 100) ** 2
         categoria = "bajo" if imc < 18.5 else "referencia" if imc < 25 else "elevado" if imc < 30 else "muy_elevado"
-        return {"estado": "orientativo", "imc": round(imc, 2), "categoria": categoria,
+        porcentaje_grasa = (
+            float(self.porcentaje_grasa_estimado)
+            if self.porcentaje_grasa_estimado is not None else None
+        )
+        masa_grasa = (
+            round(float(self.peso) * porcentaje_grasa / 100, 1)
+            if porcentaje_grasa is not None else None
+        )
+        masa_sin_grasa = (
+            round(float(self.peso) - masa_grasa, 1)
+            if masa_grasa is not None else None
+        )
+        return {"estado": "orientativo", "edad": edad, "imc": round(imc, 2), "categoria": categoria,
+                "porcentaje_grasa_estimado": porcentaje_grasa,
+                "metodo_estimacion_grasa": self.metodo_estimacion_grasa,
+                "masa_grasa_estimada_kg": masa_grasa,
+                "masa_sin_grasa_estimada_kg": masa_sin_grasa,
                 "objetivo": self.objetivo, "brecha_objetivo": None,
-                "pendiente": "Valorar composición corporal, capacidad física y evolución; peso y altura no determinan cuánto falta para el objetivo."}
+                "pendiente": "La estimación visual o por circunferencias puede desviarse para una persona. El IMC es un indicador de cribado; no mide condición física, masa muscular ni diagnostica. Valorar también capacidad física, salud y evolución."}
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol = models.CharField(
         max_length=20,

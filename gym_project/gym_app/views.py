@@ -1,6 +1,10 @@
 from datetime import date, timedelta
 import logging
-from .profile_validation import validar_fecha_nacimiento
+from .profile_validation import (
+    REFERENCIAS_GRASA_VISUAL,
+    estimar_grasa_navy,
+    validar_fecha_nacimiento,
+)
 from .routine_edit import proteger_sesion_en_curso
 from django.db import transaction, IntegrityError
 from django.db.models import Case, IntegerField, Value, When, Q
@@ -29,6 +33,7 @@ from gym_project.gym_app.models import (
     EstadoSesionChoice,
     ModalidadRutinaChoice,
     NivelEjercicioChoice,
+    MetodoGrasaChoice,
     ObjetivoChoice,
     PerfilUsuario,
     RolChoice,
@@ -712,6 +717,36 @@ def datos_personales_view(request):
     if request.method == 'GET' and perfil.datos_completos:
         return redirect('mi_entrenamiento')
 
+    def render_datos_personales(error=None, status=200):
+        form_data = request.POST if request.method == 'POST' else None
+        if form_data is not None:
+            metodo_seleccionado = form_data.get('metodo_grasa', 'omitir')
+        elif perfil.metodo_estimacion_grasa == MetodoGrasaChoice.VISUAL and perfil.porcentaje_grasa_estimado is not None:
+            metodo_seleccionado = f'visual:{int(perfil.porcentaje_grasa_estimado)}'
+        elif perfil.metodo_estimacion_grasa == MetodoGrasaChoice.NAVY:
+            metodo_seleccionado = 'navy'
+        else:
+            metodo_seleccionado = 'omitir'
+
+        opciones_visuales = {
+            genero: [
+                {
+                    'valor': valor,
+                    'posicion': f'{indice * 100 / 6:.4f}%',
+                    'seleccion': f'visual:{valor}',
+                }
+                for indice, valor in enumerate(valores)
+            ]
+            for genero, valores in REFERENCIAS_GRASA_VISUAL.items()
+        }
+        return render(request, 'datos_personales.html', {
+            'perfil': perfil,
+            'error': error,
+            'form_data': form_data,
+            'metodo_grasa_seleccionado': metodo_seleccionado,
+            'opciones_visuales': opciones_visuales,
+        }, status=status)
+
     if request.method == 'POST':
         perfil.genero = (
             request.POST.get('genero')
@@ -719,16 +754,14 @@ def datos_personales_view(request):
             or None
         )
         if perfil.genero not in GeneroChoice.values:
-            return render(request, 'datos_personales.html', {
-                'perfil': perfil, 'error': 'Selecciona un género válido para continuar.',
-            }, status=400)
+            return render_datos_personales('Selecciona un género válido para continuar.', 400)
         peso_registro = request.POST.get('peso') or None
         from .profile_validation import validar_medida
         try:
             perfil.altura_cm = validar_medida(request.POST.get('altura_cm') or perfil.altura_cm, 'altura_cm')
             perfil.peso = validar_medida(peso_registro or perfil.peso, 'peso')
         except ValidationError as error:
-            return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
+            return render_datos_personales(error.messages[0], 400)
         if peso_registro and perfil.peso_inicial is None:
             perfil.peso_inicial = perfil.peso
 
@@ -738,12 +771,12 @@ def datos_personales_view(request):
                 perfil.fecha_nacimiento = validar_fecha_nacimiento(fecha_nacimiento)
                 perfil.edad = calcular_edad(perfil.fecha_nacimiento)
             except ValidationError as error:
-                return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
+                return render_datos_personales(error.messages[0], 400)
         elif perfil.fecha_nacimiento is not None:
             try:
                 validar_fecha_nacimiento(perfil.fecha_nacimiento)
             except ValidationError as error:
-                return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
+                return render_datos_personales(error.messages[0], 400)
             perfil.edad = calcular_edad(perfil.fecha_nacimiento)
 
         if request.FILES.get('foto'):
@@ -751,16 +784,73 @@ def datos_personales_view(request):
             try:
                 perfil.foto = normalizar_foto(request.FILES['foto'])
             except ValidationError as error:
-                return render(request, 'datos_personales.html', {'perfil': perfil, 'error': error.messages[0]}, status=400)
+                return render_datos_personales(error.messages[0], 400)
 
         if not perfil.genero or not perfil.peso or perfil.fecha_nacimiento is None:
-            return render(request, 'datos_personales.html', {'perfil': perfil, 'error': 'Completa género, peso y fecha de nacimiento para continuar.'})
+            return render_datos_personales('Completa género, peso y fecha de nacimiento para continuar.', 400)
+
+        metodo_grasa = request.POST.get('metodo_grasa', 'omitir')
+        edad_actual = calcular_edad(perfil.fecha_nacimiento)
+        perfil.porcentaje_grasa_estimado = None
+        perfil.metodo_estimacion_grasa = ''
+        if edad_actual >= 20:
+            try:
+                if metodo_grasa.startswith('visual:'):
+                    valor = int(metodo_grasa.partition(':')[2])
+                    if valor not in REFERENCIAS_GRASA_VISUAL.get(perfil.genero, ()):
+                        raise ValidationError('Selecciona una referencia visual que corresponda a la opción de género elegida.')
+                    perfil.porcentaje_grasa_estimado = valor
+                    perfil.metodo_estimacion_grasa = MetodoGrasaChoice.VISUAL
+                elif metodo_grasa == 'navy':
+                    porcentaje = estimar_grasa_navy(
+                        perfil.genero,
+                        perfil.altura_cm,
+                        request.POST.get('medida_abdomen'),
+                        request.POST.get('medida_cuello'),
+                        request.POST.get('medida_cadera') or None,
+                    )
+                    perfil.porcentaje_grasa_estimado = porcentaje
+                    perfil.metodo_estimacion_grasa = MetodoGrasaChoice.NAVY
+                elif metodo_grasa != 'omitir':
+                    raise ValidationError('Selecciona una imagen, las medidas con cinta o continuar sin estimar.')
+            except (ValidationError, TypeError, ValueError) as error:
+                mensaje = error.messages[0] if isinstance(error, ValidationError) else 'Revisa la selección de composición corporal.'
+                return render_datos_personales(mensaje, 400)
+        elif metodo_grasa != 'omitir':
+            return render_datos_personales(
+                'La estimación de composición corporal está disponible en este formulario solo para personas de 20 años o más.',
+                400,
+            )
 
         perfil.datos_completos = True
         perfil.save()
+        evaluacion = perfil.evaluacion_corporal_interna()
+        if evaluacion['estado'] == 'orientativo':
+            categoria = {
+                'bajo': 'por debajo del rango de referencia adulta',
+                'referencia': 'dentro del rango de referencia adulta',
+                'elevado': 'por encima del rango de referencia adulta',
+                'muy_elevado': 'en un rango alto de IMC adulto',
+            }[evaluacion['categoria']]
+            resumen = (
+                f"Resumen orientativo (20+): IMC {evaluacion['imc']:.1f}, {categoria}. "
+            )
+            if evaluacion['porcentaje_grasa_estimado'] is not None:
+                metodo = 'referencia visual' if evaluacion['metodo_estimacion_grasa'] == MetodoGrasaChoice.VISUAL else 'circunferencias U.S. Navy'
+                resumen += (
+                    f"Grasa estimada ≈{evaluacion['porcentaje_grasa_estimado']:.1f}% por {metodo}; "
+                    f"masa grasa ≈{evaluacion['masa_grasa_estimada_kg']:.1f} kg y masa restante ≈{evaluacion['masa_sin_grasa_estimada_kg']:.1f} kg. "
+                )
+            resumen += 'Son aproximaciones de cribado, no un diagnóstico ni una calificación de tu condición física.'
+            messages.info(request, resumen)
+        else:
+            messages.info(
+                request,
+                f"Tus datos se guardaron. A los {edad_actual} años no aplicamos categorías adultas de IMC ni estimamos grasa con siluetas; la valoración de crecimiento requiere curvas por edad y sexo.",
+            )
         return redirect('mi_entrenamiento')
 
-    return render(request, 'datos_personales.html', {'perfil': perfil})
+    return render_datos_personales()
 
 def contacto(request):
     return render(request, 'contacto.html')

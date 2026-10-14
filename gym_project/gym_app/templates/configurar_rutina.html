@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}MaikerGym - Configurar rutina{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v1">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v2">{% endblock %}
 
 {% block content %}
 {% include "partials/app_nav.html" %}
@@ -26,7 +26,7 @@
         <section class="config-grid">
             <div class="config-card">
                 <h2>Días disponibles</h2>
-                <p>Marca directamente de 1 a 6 días que puedas entrenar. No tienes que indicar una cantidad aparte.</p>
+                <p>Selecciona los días que tienes disponibles para entrenar.</p>
                 <button type="button" class="flow-btn secondary" id="solo-fin-semana">Solo sábado y domingo</button>
                 <div class="days-grid">
                     {% for valor, nombre in dias_semana %}

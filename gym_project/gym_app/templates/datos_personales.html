@@ -4,7 +4,7 @@
 {% block title %}MaikerGym - Datos personales{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}">
+    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=registro-composicion-2">
 {% endblock %}
 
 {% block content %}
@@ -22,12 +22,6 @@
 
     <section class="register-panel profile-setup-panel">
         <h2 class="panel-title">Personaliza tu cuenta</h2>
-        {% if perfil.fecha_nacimiento %}
-            <p class="saved-data-note">
-                <strong>Fecha de nacimiento guardada.</strong>
-                La registraste al crear tu cuenta y no necesitas escribirla otra vez.
-            </p>
-        {% endif %}
         {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
         <form method="POST" enctype="multipart/form-data" class="register-form">
             {% csrf_token %}
@@ -37,13 +31,51 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Género</label>
-                <select class="form-control" name="genero" required>
+                <select class="form-control" name="genero" id="genero" required>
                     <option value="">Selecciona</option>
                     <option value="femenino" {% if perfil.genero == 'femenino' %}selected{% endif %}>Femenino</option>
                     <option value="masculino" {% if perfil.genero == 'masculino' %}selected{% endif %}>Masculino</option>
                     <option value="otro" {% if perfil.genero == 'otro' %}selected{% endif %}>Otro</option>
                 </select>
             </div>
+            <section class="body-composition-card" aria-labelledby="body-composition-title"
+                     data-age="{{ perfil.edad|default:0 }}" data-sex="{{ perfil.genero|default:'' }}">
+                <h2 id="body-composition-title">Composición corporal (opcional)</h2>
+                <p class="body-composition-intro">Primero selecciona tu género. Si tienes 20 años o más, elige la silueta adulta que más se aproxime o calcula una estimación con cinta métrica. La selección se guardará con tu perfil.</p>
+                <div class="body-composition-content" id="body-composition-content" hidden>
+                    <p class="body-method-warning" id="body-age-note" hidden>Para menores de 20 no mostramos porcentajes ni categorías adultas: la valoración requiere referencias específicas de edad y sexo. Puedes continuar sin estimación.</p>
+                    <p class="body-method-warning" id="body-gender-note" hidden>No hay una referencia visual o ecuación de circunferencia adecuada para esta selección. Puedes continuar sin estimar.</p>
+                    {% for genero, opciones in opciones_visuales.items %}
+                    <div class="body-visual-panel" data-visual-gender="{{ genero }}" hidden>
+                        <h3>Elige la silueta adulta más parecida</h3>
+                        <p>Estimación visual aproximada, no medición clínica ni evaluación de salud.</p>
+                        <div class="body-visual-grid">
+                            {% for opcion in opciones %}
+                            <label class="body-visual-option">
+                                <input type="radio" name="metodo_grasa" value="{{ opcion.seleccion }}" {% if metodo_grasa_seleccionado == opcion.seleccion %}checked{% endif %}>
+                                <span class="body-visual-image" role="img" aria-label="Silueta de referencia aproximada {{ opcion.valor }} por ciento" style="--sprite-position: {{ opcion.posicion }}"></span>
+                                <span class="body-visual-value">≈ {{ opcion.valor }}%</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <fieldset class="body-methods">
+                        <legend>Otras opciones</legend>
+                        <label class="body-method-choice"><input type="radio" name="metodo_grasa" value="navy" {% if metodo_grasa_seleccionado == 'navy' %}checked{% endif %}> Calcular con cinta métrica (método U.S. Navy)</label>
+                        <div class="body-method-panel" id="metodo-cinta" hidden>
+                            <p>Ingresa las medidas en centímetros; MaikerGym calculará y guardará la estimación al enviar el formulario.</p>
+                            <div class="body-measure-grid">
+                                <label class="form-label">Abdomen a la altura del ombligo (cm)<input class="form-control body-measure" id="medida-abdomen" name="medida_abdomen" type="number" min="40" max="200" step="0.1" value="{{ form_data.medida_abdomen|default:'' }}"></label>
+                                <label class="form-label">Cuello, debajo de la laringe (cm)<input class="form-control body-measure" id="medida-cuello" name="medida_cuello" type="number" min="20" max="80" step="0.1" value="{{ form_data.medida_cuello|default:'' }}"></label>
+                                <label class="form-label" id="medida-cadera-wrap" hidden>Cadera, parte más ancha (cm)<input class="form-control body-measure" id="medida-cadera" name="medida_cadera" type="number" min="50" max="220" step="0.1" value="{{ form_data.medida_cadera|default:'' }}"></label>
+                            </div>
+                            <small>Estimación poblacional aproximada; su uso original fue en poblaciones militares adultas. <a href="https://www.ncbi.nlm.nih.gov/books/NBK235939/" target="_blank" rel="noopener noreferrer">National Academies: ecuaciones Hodgdon–Beckett</a>.</small>
+                        </div>
+                        <label class="body-method-choice"><input type="radio" name="metodo_grasa" value="omitir" {% if metodo_grasa_seleccionado == 'omitir' %}checked{% endif %}> Continuar sin estimación</label>
+                    </fieldset>
+                </div>
+            </section>
             <div class="form-group">
                 <label class="form-label">Peso (kg)</label>
                 <input class="form-control" type="number" name="peso" value="{{ perfil.peso|default:'' }}" min="1" max="500" step="0.01" required>
@@ -58,90 +90,46 @@
                 <input class="form-control" type="date" name="fecha_nacimiento" required>
             </div>
             {% endif %}
-            <section class="body-composition-card" aria-labelledby="body-composition-title" data-age="{{ perfil.edad|default:0 }}" data-sex="{{ perfil.genero|default:'' }}">
-                <h2 id="body-composition-title">¿Quieres estimar tu porcentaje de grasa corporal?</h2>
-                {% if perfil.edad and perfil.edad >= 18 %}
-                    <p>Es opcional. Puedes usar medidas con cinta (método de circunferencias U.S. Navy) o consultar una guía visual. Son referencias aproximadas, no diagnósticos ni medidas exactas; puedes omitirlas y continuar.</p>
-                    <fieldset class="body-methods">
-                        <legend>Elige una opción</legend>
-                        <label><input type="radio" name="metodo_grasa_ui" value="ninguno" checked> Omitir por ahora</label>
-                        <label><input type="radio" name="metodo_grasa_ui" value="cinta"> Estimar con medidas de cinta</label>
-                        <label><input type="radio" name="metodo_grasa_ui" value="visual"> Ver una guía visual</label>
-                    </fieldset>
-                    <div class="body-method-panel" id="metodo-cinta" hidden>
-                        <p>La fórmula de referencia es distinta según la ecuación adulta utilizada. Ingresa las medidas en centímetros. Estos campos no se envían ni se guardan; el cálculo ocurre solo en este navegador.</p>
-                        {% if perfil.genero == 'otro' or not perfil.genero %}
-                            <p class="body-method-warning">No podemos seleccionar automáticamente una de las ecuaciones adultas a partir del dato de género. Puedes continuar sin este cálculo o usar la guía visual.</p>
-                        {% else %}
-                            <div class="body-measure-grid">
-                                <label class="form-label">Abdomen a la altura del ombligo (cm)<input class="form-control body-measure" id="medida-abdomen" type="number" min="40" max="200" step="0.1"></label>
-                                <label class="form-label">Cuello, debajo de la laringe (cm)<input class="form-control body-measure" id="medida-cuello" type="number" min="20" max="80" step="0.1"></label>
-                                {% if perfil.genero == 'femenino' %}
-                                    <label class="form-label">Cadera, parte más ancha (cm)<input class="form-control body-measure" id="medida-cadera" type="number" min="50" max="220" step="0.1"></label>
-                                {% endif %}
-                            </div>
-                            <button class="flow-btn secondary" type="button" id="calcular-grasa">Calcular estimación</button>
-                        {% endif %}
-                        <p id="resultado-grasa" class="body-estimate-result" role="status" aria-live="polite"></p>
-                        <small>Referencia: <a href="https://www.ncbi.nlm.nih.gov/books/NBK235939/" target="_blank" rel="noopener noreferrer">ecuaciones de circunferencia Hodgdon–Beckett revisadas por National Academies</a>. Su uso original fue en poblaciones militares adultas; el resultado puede diferir de otros métodos.</small>
-                    </div>
-                    <div class="body-method-panel" id="metodo-visual" hidden>
-                        <p>Úsala solo para comparar siluetas de forma general; no selecciones una cifra como si fuera una medición. La guía no determina tu salud ni tu composición exacta.</p>
-                        <img class="body-composition-guide" src="{% static 'img/body-composition/guia_visual_usuario.png' %}" alt="Guía visual cualitativa de siluetas corporales aportada como referencia">
-                        <small>Referencia visual aportada al proyecto; fuente y licencia originales pendientes de verificación.</small>
-                    </div>
-                {% else %}
-                    <p>La estimación de grasa corporal queda omitida. Las ecuaciones de circunferencia y esta guía visual son para adultos y no son apropiadas para valorar a menores. Puedes continuar sin calcularla.</p>
-                {% endif %}
-            </section>
             <button class="register-submit" type="submit">Guardar y ver mi entrenamiento</button>
         </form>
     </section>
 </main>
-{% if perfil.edad and perfil.edad >= 18 %}
 <script>
 (() => {
     const card = document.querySelector('.body-composition-card');
-    const radios = [...document.querySelectorAll('input[name="metodo_grasa_ui"]')];
+    const content = document.getElementById('body-composition-content');
+    const gender = document.getElementById('genero');
+    const radios = [...document.querySelectorAll('input[name="metodo_grasa"]')];
     const cinta = document.getElementById('metodo-cinta');
-    const visual = document.getElementById('metodo-visual');
-    const resultado = document.getElementById('resultado-grasa');
-    function actualizarMetodo() {
-        const elegido = radios.find(radio => radio.checked)?.value;
-        cinta.hidden = elegido !== 'cinta';
-        visual.hidden = elegido !== 'visual';
-        resultado.textContent = '';
+    const ageNote = document.getElementById('body-age-note');
+    const genderNote = document.getElementById('body-gender-note');
+    const hipWrap = document.getElementById('medida-cadera-wrap');
+    function actualizar() {
+        const sex = gender.value;
+        const age = Number(card.dataset.age || 0);
+        const eligible = age >= 20 && ['masculino', 'femenino'].includes(sex);
+        content.hidden = !sex;
+        ageNote.hidden = !sex || age >= 20;
+        genderNote.hidden = !sex || age < 20 || ['masculino', 'femenino'].includes(sex);
+        document.querySelectorAll('[data-visual-gender]').forEach(panel => {
+            panel.hidden = !eligible || panel.dataset.visualGender !== sex;
+        });
+        const navyRadio = document.querySelector('input[name="metodo_grasa"][value="navy"]');
+        navyRadio.disabled = !eligible;
+        document.querySelector('input[name="metodo_grasa"][value="omitir"]').disabled = !sex || age < 20;
+        const elegido = radios.find(radio => radio.checked)?.value || '';
+        const visualElegido = radios.find(radio => radio.checked && radio.value.startsWith('visual:'));
+        const visualActivo = visualElegido && visualElegido.closest('[data-visual-gender]')?.dataset.visualGender === sex;
+        if ((!eligible && elegido !== 'omitir') || (elegido.startsWith('visual:') && !visualActivo)) {
+            radios.forEach(radio => { radio.checked = radio.value === 'omitir'; });
+        }
+        cinta.hidden = !eligible || elegido !== 'navy';
+        hipWrap.hidden = sex !== 'femenino';
+        card.dataset.sex = sex;
     }
-    radios.forEach(radio => radio.addEventListener('change', actualizarMetodo));
-    const calcular = document.getElementById('calcular-grasa');
-    if (calcular) calcular.addEventListener('click', () => {
-        const abdomen = Number(document.getElementById('medida-abdomen').value);
-        const cuello = Number(document.getElementById('medida-cuello').value);
-        const altura = Number(document.getElementById('altura_cm').value);
-        const genero = card.dataset.sex;
-        const caderaInput = document.getElementById('medida-cadera');
-        const cadera = caderaInput ? Number(caderaInput.value) : null;
-        if (!abdomen || !cuello || !altura || (caderaInput && !cadera)) {
-            resultado.textContent = 'Completa todas las medidas con la cinta en centímetros.';
-            return;
-        }
-        let densidad;
-        if (genero === 'masculino' && abdomen > cuello) {
-            densidad = 1.0324 - 0.19077 * Math.log10(abdomen - cuello) + 0.15456 * Math.log10(altura);
-        } else if (genero === 'femenino' && abdomen + cadera > cuello) {
-            densidad = 1.29579 - 0.35004 * Math.log10(abdomen + cadera - cuello) + 0.22100 * Math.log10(altura);
-        } else {
-            resultado.textContent = 'No se puede calcular con estas medidas. Revísalas o continúa sin la estimación.';
-            return;
-        }
-        const porcentaje = 495 / densidad - 450;
-        if (!Number.isFinite(porcentaje) || porcentaje < 2 || porcentaje > 60) {
-            resultado.textContent = 'El resultado no es válido para estas medidas. Verifica cómo colocaste la cinta.';
-            return;
-        }
-        resultado.textContent = `Estimación orientativa: ${porcentaje.toFixed(1)} %. No es un diagnóstico ni una medición exacta. Tus medidas no se guardan.`;
-    });
+    gender.addEventListener('change', actualizar);
+    radios.forEach(radio => radio.addEventListener('change', actualizar));
+    actualizar();
 })();
 </script>
-{% endif %}
 {% endblock %}
