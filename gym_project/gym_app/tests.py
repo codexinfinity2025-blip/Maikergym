@@ -654,3 +654,49 @@ class EliminacionCuentaTest(TestCase):
         self.assertFalse(User.objects.filter(pk=usuario.pk).exists())
         self.assertFalse(GrupoAmigos.objects.filter(pk=grupo.pk).exists())
         self.assertEqual(respuesta.url, reverse('inicio'))
+
+    def test_eliminar_cuenta_limpia_su_plan_pero_conserva_plan_compartido(self):
+        from .models import (
+            AsignacionPlanUsuario,
+            DiaPlan,
+            FasePlan,
+            PlanEntrenamiento,
+        )
+
+        usuario = self._usuario_completo_sin_datos('propietario-que-se-va')
+        otro_usuario = self._usuario_completo_sin_datos('usuario-que-sigue')
+        plan = PlanEntrenamiento.objects.create(
+            nombre='Plan personal compartido',
+            objetivo='salud',
+            nivel='principiante',
+            descripcion='Plan de prueba',
+            propietario=usuario,
+            es_personalizado=True,
+        )
+        fase = FasePlan.objects.create(
+            plan=plan,
+            nombre='Base',
+            orden=1,
+            semana_inicio=1,
+            semana_fin=12,
+        )
+        dia = DiaPlan.objects.create(fase=fase, numero=1, nombre='Día 1')
+        asignacion_usuario = AsignacionPlanUsuario.objects.create(usuario=usuario, plan=plan)
+        AsignacionPlanUsuario.objects.create(usuario=otro_usuario, plan=plan)
+        SesionEntrenamiento.objects.create(
+            asignacion=asignacion_usuario,
+            dia_plan=dia,
+            semana_plan=1,
+        )
+        self.client.force_login(usuario)
+
+        respuesta = self.client.post(reverse('cuenta'), {
+            'accion': 'eliminar_cuenta',
+            'password_actual': 'Clave-segura-123!',
+        })
+
+        self.assertFalse(User.objects.filter(pk=usuario.pk).exists())
+        plan.refresh_from_db()
+        self.assertIsNone(plan.propietario_id)
+        self.assertTrue(AsignacionPlanUsuario.objects.filter(usuario=otro_usuario, plan=plan).exists())
+        self.assertEqual(respuesta.url, reverse('inicio'))

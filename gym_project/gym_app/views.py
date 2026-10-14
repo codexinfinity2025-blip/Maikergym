@@ -824,8 +824,10 @@ def cuenta_view(request):
             user = request.user
             from django.db.models.deletion import ProtectedError
             from .models import (
+                AsignacionPlanUsuario,
                 GrupoAmigos,
                 ParticipacionGrupal,
+                PlanEntrenamiento,
                 RecompensaEjercicio,
             )
             try:
@@ -862,6 +864,15 @@ def cuenta_view(request):
                     ParticipacionGrupal.objects.filter(
                         Q(usuario=user) | Q(sesion_id__in=sesiones_usuario)
                     ).update(sesion=None)
+                    # Remove this account's assignment/history before its private
+                    # custom plans cascade. If another account still uses one of
+                    # those plans, keep it but detach the deleted owner.
+                    planes_propios = PlanEntrenamiento.objects.filter(propietario=user)
+                    AsignacionPlanUsuario.objects.filter(usuario=user).delete()
+                    planes_compartidos = AsignacionPlanUsuario.objects.filter(
+                        plan__in=planes_propios
+                    ).values_list('plan_id', flat=True).distinct()
+                    planes_propios.filter(pk__in=planes_compartidos).update(propietario=None)
                     user.delete()
             except ProtectedError:
                 messages.error(
