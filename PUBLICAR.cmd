@@ -35,8 +35,14 @@ if not "%REMOTO%"=="https://github.com/codexinfinity2025-blip/Maikergym.git" (
 echo Comprobando acceso a GitHub...
 git ls-remote --exit-code nuevo refs/heads/main
 if errorlevel 1 goto :fallo
-echo Comprobando acceso al proyecto Railway vinculado...
-call "%RAILWAY_CLI%" status --json
+echo Comprobando la vinculacion al servicio Railway de MaikerGym...
+call "%RAILWAY_CLI%" link --workspace 92507bfd-24fd-4959-8a68-867797cae993 --project a386113e-970d-4d54-907b-dbac9ea86d83 --environment 7a3843e8-125f-4c89-a769-689a4af6fcfe --service 8571e71e-a8b8-4c3d-8866-fe4ecd5426ef
+if errorlevel 1 (
+    echo ERROR: no se pudo acceder al servicio Railway de MaikerGym.
+    echo Ejecuta: .\PUBLICAR.cmd --login
+    goto :fallo
+)
+call "%RAILWAY_CLI%" status
 if errorlevel 1 (
     echo ERROR: inicia sesion en Railway con la cuenta que administra MaikerGym.
     echo Ejecuta: .\PUBLICAR.cmd --login
@@ -56,7 +62,7 @@ echo Publicando el commit en GitHub...
 git push nuevo HEAD:main
 if errorlevel 1 goto :fallo
 echo Solicitando despliegue en el servicio web de MaikerGym...
-call "%RAILWAY_CLI%" up --project 56932f69-87d4-4401-a581-09bbb89103d4 --environment fd181040-02a8-4327-83d9-66df5286b676 --service 89d2dd62-d093-48c7-9d3f-21b51adb659f --detach
+call "%RAILWAY_CLI%" up --project a386113e-970d-4d54-907b-dbac9ea86d83 --environment 7a3843e8-125f-4c89-a769-689a4af6fcfe --service 8571e71e-a8b8-4c3d-8866-fe4ecd5426ef --detach
 if errorlevel 1 (
     echo ERROR: GitHub fue actualizado, pero la solicitud de despliegue Railway fallo.
     echo Corrige el acceso y ejecuta este mismo comando nuevamente.

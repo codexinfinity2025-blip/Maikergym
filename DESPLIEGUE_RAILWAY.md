@@ -26,13 +26,15 @@ que tiene acceso al proyecto MaikerGym. El proyecto debe estar vinculado localme
 En esta instalación se puede abrir el inicio de sesión con
 `.\PUBLICAR.cmd --login`, que también encuentra la CLI local.
 
-La sesión comprobada el 14 de octubre de 2026 no tenía acceso a MaikerGym.
-Debe corregirse el inicio de sesión antes de publicar; el script se detiene
-en esa comprobación antes del push. Los identificadores de destino usados son:
+La vinculación antigua apuntaba a otro proyecto. El 14 de octubre de 2026 se
+verificó el proyecto `sunny-charisma`, entorno `production`, servicio `Maikergym`,
+con el dominio `maikergym-production.up.railway.app` y el repositorio correcto.
+La cuenta `codexinfinity2025@gmail.com` tiene acceso. El script vuelve a vincular
+explícitamente este destino antes del push. Los identificadores usados son:
 
-- Proyecto: `56932f69-87d4-4401-a581-09bbb89103d4`.
-- Entorno: `fd181040-02a8-4327-83d9-66df5286b676`.
-- Servicio web: `89d2dd62-d093-48c7-9d3f-21b51adb659f`.
+- Proyecto: `a386113e-970d-4d54-907b-dbac9ea86d83`.
+- Entorno: `7a3843e8-125f-4c89-a769-689a4af6fcfe`.
+- Servicio web: `8571e71e-a8b8-4c3d-8866-fe4ecd5426ef`.
 
 La salida exitosa significa que Railway aceptó la solicitud: aún debe terminar
 el build y el health check. Si el servicio tiene autodeploy de GitHub habilitado,
