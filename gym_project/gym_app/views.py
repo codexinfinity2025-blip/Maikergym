@@ -974,9 +974,13 @@ def cuenta_view(request):
                     # those plans, keep it but detach the deleted owner.
                     planes_propios = PlanEntrenamiento.objects.filter(propietario=user)
                     AsignacionPlanUsuario.objects.filter(usuario=user).delete()
-                    planes_compartidos = AsignacionPlanUsuario.objects.filter(
-                        plan__in=planes_propios
-                    ).values_list('plan_id', flat=True).distinct()
+                    # Materialize IDs first: MySQL rejects updating a table while
+                    # selecting from that same table in an UPDATE subquery (1093).
+                    planes_compartidos = list(
+                        AsignacionPlanUsuario.objects.filter(
+                            plan__in=planes_propios
+                        ).values_list('plan_id', flat=True).distinct()
+                    )
                     planes_propios.filter(pk__in=planes_compartidos).update(propietario=None)
                     user.delete()
             except ProtectedError:
