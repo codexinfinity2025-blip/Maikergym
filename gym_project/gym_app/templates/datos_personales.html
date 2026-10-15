@@ -41,9 +41,9 @@
             <section class="body-composition-card" aria-labelledby="body-composition-title"
                      data-age="{{ perfil.edad|default:0 }}" data-sex="{{ perfil.genero|default:'' }}">
                 <h2 id="body-composition-title">Composición corporal (opcional)</h2>
-                <p class="body-composition-intro">Primero selecciona tu género. Si tienes 20 años o más, elige la silueta adulta que más se aproxime o calcula una estimación con cinta métrica. La selección se guardará con tu perfil.</p>
+                <p class="body-composition-intro">Primero selecciona tu género. Si tienes 18 años o más, elige la silueta adulta que más se aproxime o calcula una estimación con cinta métrica. La selección se guardará con tu perfil.</p>
                 <div class="body-composition-content" id="body-composition-content" hidden>
-                    <p class="body-method-warning" id="body-age-note" hidden>Para menores de 20 no mostramos porcentajes ni categorías adultas: la valoración requiere referencias específicas de edad y sexo. Puedes continuar sin estimación.</p>
+                    <p class="body-method-warning" id="body-age-note" hidden>La estimación de grasa está disponible desde los 18 años. Para menores de 18, puedes continuar sin estimación.</p>
                     <p class="body-method-warning" id="body-gender-note" hidden>No hay una referencia visual o ecuación de circunferencia adecuada para esta selección. Puedes continuar sin estimar.</p>
                     {% for genero, opciones in opciones_visuales.items %}
                     <div class="body-visual-panel" data-visual-gender="{{ genero }}" hidden>
@@ -108,16 +108,16 @@
     function actualizar() {
         const sex = gender.value;
         const age = Number(card.dataset.age || 0);
-        const eligible = age >= 20 && ['masculino', 'femenino'].includes(sex);
+        const eligible = age >= 18 && ['masculino', 'femenino'].includes(sex);
         content.hidden = !sex;
-        ageNote.hidden = !sex || age >= 20;
-        genderNote.hidden = !sex || age < 20 || ['masculino', 'femenino'].includes(sex);
+        ageNote.hidden = !sex || age >= 18;
+        genderNote.hidden = !sex || age < 18 || ['masculino', 'femenino'].includes(sex);
         document.querySelectorAll('[data-visual-gender]').forEach(panel => {
             panel.hidden = !eligible || panel.dataset.visualGender !== sex;
         });
         const navyRadio = document.querySelector('input[name="metodo_grasa"][value="navy"]');
         navyRadio.disabled = !eligible;
-        document.querySelector('input[name="metodo_grasa"][value="omitir"]').disabled = !sex || age < 20;
+        document.querySelector('input[name="metodo_grasa"][value="omitir"]').disabled = !sex || age < 18;
         const elegido = radios.find(radio => radio.checked)?.value || '';
         const visualElegido = radios.find(radio => radio.checked && radio.value.startsWith('visual:'));
         const visualActivo = visualElegido && visualElegido.closest('[data-visual-gender]')?.dataset.visualGender === sex;

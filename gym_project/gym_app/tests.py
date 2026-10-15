@@ -109,6 +109,22 @@ class FlujoRegistroTest(TestCase):
         self.assertEqual(resultado['masa_sin_grasa_estimada_kg'], 63.8)
         self.assertIsNone(resultado['brecha_objetivo'])
 
+    def test_composicion_corporal_disponible_desde_los_18_sin_categoria_imc_adulta(self):
+        usuario = User.objects.create_user(username='adulto_joven')
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.peso = 70
+        perfil.altura_cm = 175
+        perfil.fecha_nacimiento = date(2008, 10, 14)
+        perfil.porcentaje_grasa_estimado = 15
+        perfil.metodo_estimacion_grasa = 'visual'
+        with patch('gym_project.gym_app.models.timezone.localdate', return_value=date(2026, 10, 14)):
+            resultado = perfil.evaluacion_corporal_interna()
+        self.assertEqual(resultado['estado'], 'valoracion_edad_especifica')
+        self.assertIsNone(resultado['imc'])
+        self.assertEqual(resultado['porcentaje_grasa_estimado'], 15)
+        self.assertEqual(resultado['masa_grasa_estimada_kg'], 10.5)
+        self.assertEqual(resultado['masa_sin_grasa_estimada_kg'], 59.5)
+
     def test_formula_navy_valida_y_rechaza_medidas_imposibles(self):
         porcentaje = estimar_grasa_navy('masculino', 175, 85, 38)
         self.assertGreaterEqual(porcentaje, 2)

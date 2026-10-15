@@ -22,8 +22,9 @@
             <div><dt>Estatura</dt><dd>{{ perfil.altura_cm|floatformat:0 }} cm</dd></div>
         </dl>
 
-        {% if evaluacion.estado == 'orientativo' %}
+        {% if evaluacion.estado == 'orientativo' or evaluacion.estado == 'valoracion_edad_especifica' %}
             <div class="composition-result-grid">
+                {% if evaluacion.estado == 'orientativo' %}
                 <article class="composition-result-metric">
                     <span>IMC</span>
                     <strong>{{ evaluacion.imc|floatformat:1 }}</strong>
@@ -34,6 +35,7 @@
                         {% else %}Rango alto de IMC adulto{% endif %}
                     </small>
                 </article>
+                {% endif %}
                 {% if evaluacion.porcentaje_grasa_estimado != None %}
                 <article class="composition-result-metric">
                     <span>Grasa corporal estimada</span>
@@ -54,18 +56,27 @@
                 <article class="composition-result-metric composition-result-no-estimate">
                     <span>Porcentaje de grasa</span>
                     <strong>Sin estimación</strong>
-                    <small>No elegiste una silueta ni ingresaste medidas. El IMC por sí solo no determina tu composición corporal.</small>
+                    <small>No elegiste una silueta ni ingresaste medidas. Sin esa estimación no se puede calcular la composición corporal.</small>
                 </article>
                 {% endif %}
             </div>
         {% else %}
             <div class="composition-result-youth" role="note">
                 <h2>La referencia cambia según la edad</h2>
-                <p>Para menores de 20 años no usamos categorías adultas de IMC ni estimaciones de grasa basadas en siluetas. La interpretación requiere curvas de crecimiento apropiadas para la edad y el sexo.</p>
+                <p>La estimación de composición corporal está disponible desde los 18 años. Para menores de 18, la interpretación del crecimiento y la composición corporal requiere referencias específicas de edad y orientación profesional.</p>
             </div>
         {% endif %}
 
-        <p class="composition-result-disclaimer">Estas cifras son aproximaciones de cribado. El IMC no mide músculo ni diagnostica; la comparación visual puede desviarse de la composición real de una persona.</p>
+        {% if evaluacion.estado == 'valoracion_edad_especifica' %}
+            <div class="composition-result-youth" role="note">
+                <h2>Interpretación específica para los 18–19 años</h2>
+                <p>Entre los 18 y 19 años, el cuerpo todavía puede estar completando su desarrollo. Por eso, el porcentaje de grasa y las masas derivadas son solo aproximaciones generales, no una medición exacta ni una valoración de salud. No mostramos una categoría adulta de IMC para esta edad.</p>
+            </div>
+        {% endif %}
+
+        {% if evaluacion.estado == 'orientativo' %}
+            <p class="composition-result-disclaimer">Estas cifras son aproximaciones de cribado. El IMC no mide músculo ni diagnostica; la comparación visual puede desviarse de la composición real de una persona.</p>
+        {% endif %}
         <a class="composition-result-continue" href="{% url 'mi_entrenamiento' %}">Continuar a mi entrenamiento</a>
     </section>
 </main>

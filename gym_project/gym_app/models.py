@@ -140,10 +140,8 @@ class PerfilUsuario(models.Model):
             return {"estado": "datos_insuficientes"}
         hoy = timezone.localdate()
         edad = hoy.year - self.fecha_nacimiento.year - ((hoy.month, hoy.day) < (self.fecha_nacimiento.month, self.fecha_nacimiento.day))
-        if edad < 20:
+        if edad < 18:
             return {"estado": "requiere_valoracion_por_edad"}
-        imc = float(self.peso) / (float(self.altura_cm) / 100) ** 2
-        categoria = "bajo" if imc < 18.5 else "referencia" if imc < 25 else "elevado" if imc < 30 else "muy_elevado"
         porcentaje_grasa = (
             float(self.porcentaje_grasa_estimado)
             if self.porcentaje_grasa_estimado is not None else None
@@ -156,6 +154,22 @@ class PerfilUsuario(models.Model):
             round(float(self.peso) - masa_grasa, 1)
             if masa_grasa is not None else None
         )
+        if edad < 20:
+            return {
+                "estado": "valoracion_edad_especifica",
+                "edad": edad,
+                "imc": None,
+                "categoria": None,
+                "porcentaje_grasa_estimado": porcentaje_grasa,
+                "metodo_estimacion_grasa": self.metodo_estimacion_grasa,
+                "masa_grasa_estimada_kg": masa_grasa,
+                "masa_sin_grasa_estimada_kg": masa_sin_grasa,
+                "objetivo": self.objetivo,
+                "brecha_objetivo": None,
+                "pendiente": "Entre los 18 y 19 años el cuerpo todavía puede estar completando su desarrollo; esta estimación es solo orientativa y no mostramos categorías adultas de IMC.",
+            }
+        imc = float(self.peso) / (float(self.altura_cm) / 100) ** 2
+        categoria = "bajo" if imc < 18.5 else "referencia" if imc < 25 else "elevado" if imc < 30 else "muy_elevado"
         return {"estado": "orientativo", "edad": edad, "imc": round(imc, 2), "categoria": categoria,
                 "porcentaje_grasa_estimado": porcentaje_grasa,
                 "metodo_estimacion_grasa": self.metodo_estimacion_grasa,

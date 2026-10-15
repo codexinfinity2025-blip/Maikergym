@@ -801,7 +801,7 @@ def datos_personales_view(request):
         edad_actual = calcular_edad(perfil.fecha_nacimiento)
         perfil.porcentaje_grasa_estimado = None
         perfil.metodo_estimacion_grasa = ''
-        if edad_actual >= 20:
+        if edad_actual >= 18:
             try:
                 if metodo_grasa.startswith('visual:'):
                     valor = int(metodo_grasa.partition(':')[2])
@@ -826,7 +826,7 @@ def datos_personales_view(request):
                 return render_datos_personales(mensaje, 400)
         elif metodo_grasa != 'omitir':
             return render_datos_personales(
-                'La estimación de composición corporal está disponible en este formulario solo para personas de 20 años o más.',
+                'La estimación de composición corporal está disponible en este formulario solo para personas de 18 años o más.',
                 400,
             )
 
