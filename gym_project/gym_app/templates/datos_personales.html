@@ -4,7 +4,7 @@
 {% block title %}MaikerGym - Datos personales{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=registro-composicion-2">
+    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=registro-composicion-3">
 {% endblock %}
 
 {% block content %}
@@ -90,7 +90,8 @@
                 <input class="form-control" type="date" name="fecha_nacimiento" required>
             </div>
             {% endif %}
-            <button class="register-submit" type="submit">Guardar y ver mi entrenamiento</button>
+            <p class="composition-save-note">Al guardar, verás un resumen orientativo con tus datos antes de pasar a la rutina.</p>
+            <button class="register-submit" type="submit">Guardar y ver mi resumen corporal</button>
         </form>
     </section>
 </main>

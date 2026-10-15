@@ -825,32 +825,20 @@ def datos_personales_view(request):
         perfil.datos_completos = True
         perfil.save()
         evaluacion = perfil.evaluacion_corporal_interna()
-        if evaluacion['estado'] == 'orientativo':
-            categoria = {
-                'bajo': 'por debajo del rango de referencia adulta',
-                'referencia': 'dentro del rango de referencia adulta',
-                'elevado': 'por encima del rango de referencia adulta',
-                'muy_elevado': 'en un rango alto de IMC adulto',
-            }[evaluacion['categoria']]
-            resumen = (
-                f"Resumen orientativo (20+): IMC {evaluacion['imc']:.1f}, {categoria}. "
-            )
-            if evaluacion['porcentaje_grasa_estimado'] is not None:
-                metodo = 'referencia visual' if evaluacion['metodo_estimacion_grasa'] == MetodoGrasaChoice.VISUAL else 'circunferencias U.S. Navy'
-                resumen += (
-                    f"Grasa estimada ≈{evaluacion['porcentaje_grasa_estimado']:.1f}% por {metodo}; "
-                    f"masa grasa ≈{evaluacion['masa_grasa_estimada_kg']:.1f} kg y masa restante ≈{evaluacion['masa_sin_grasa_estimada_kg']:.1f} kg. "
-                )
-            resumen += 'Son aproximaciones de cribado, no un diagnóstico ni una calificación de tu condición física.'
-            messages.info(request, resumen)
-        else:
-            messages.info(
-                request,
-                f"Tus datos se guardaron. A los {edad_actual} años no aplicamos categorías adultas de IMC ni estimamos grasa con siluetas; la valoración de crecimiento requiere curvas por edad y sexo.",
-            )
-        return redirect('mi_entrenamiento')
+        return redirect('resultado_corporal')
 
     return render_datos_personales()
+
+
+@login_required(login_url='login')
+def resultado_corporal_view(request):
+    perfil = get_perfil(request.user)
+    if not perfil.datos_completos:
+        return redirect('datos_personales')
+    return render(request, 'resultado_corporal.html', {
+        'perfil': perfil,
+        'evaluacion': perfil.evaluacion_corporal_interna(),
+    })
 
 def contacto(request):
     return render(request, 'contacto.html')

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}MaikerGym - Resumen corporal{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=resumen-corporal-1">
+{% endblock %}
+
+{% block content %}
+{% include "partials/app_nav.html" %}
+
+<main class="composition-result-page">
+    <section class="composition-result-card" aria-labelledby="composition-result-title">
+        <span class="composition-result-eyebrow">Tu perfil está listo</span>
+        <h1 id="composition-result-title">Resumen corporal orientativo</h1>
+        <p class="composition-result-intro">Usamos los datos que guardaste para mostrarte una referencia antes de continuar. No es un diagnóstico ni una calificación de tu estado físico.</p>
+
+        <dl class="composition-result-measures" aria-label="Datos usados para el resumen">
+            {% if evaluacion.edad %}<div><dt>Edad</dt><dd>{{ evaluacion.edad }} años</dd></div>{% endif %}
+            <div><dt>Peso</dt><dd>{{ perfil.peso|floatformat:1 }} kg</dd></div>
+            <div><dt>Estatura</dt><dd>{{ perfil.altura_cm|floatformat:0 }} cm</dd></div>
+        </dl>
+
+        {% if evaluacion.estado == 'orientativo' %}
+            <div class="composition-result-grid">
+                <article class="composition-result-metric">
+                    <span>IMC</span>
+                    <strong>{{ evaluacion.imc|floatformat:1 }}</strong>
+                    <small>
+                        {% if evaluacion.categoria == 'bajo' %}Por debajo del rango adulto de referencia
+                        {% elif evaluacion.categoria == 'referencia' %}Dentro del rango adulto de referencia
+                        {% elif evaluacion.categoria == 'elevado' %}Por encima del rango adulto de referencia
+                        {% else %}Rango alto de IMC adulto{% endif %}
+                    </small>
+                </article>
+                {% if evaluacion.porcentaje_grasa_estimado != None %}
+                <article class="composition-result-metric">
+                    <span>Grasa corporal estimada</span>
+                    <strong>≈ {{ evaluacion.porcentaje_grasa_estimado|floatformat:1 }}%</strong>
+                    <small>{% if evaluacion.metodo_estimacion_grasa == 'visual' %}Estimación basada en la silueta que elegiste{% else %}Estimación basada en las medidas U.S. Navy{% endif %}</small>
+                </article>
+                <article class="composition-result-metric">
+                    <span>Masa grasa estimada</span>
+                    <strong>≈ {{ evaluacion.masa_grasa_estimada_kg|floatformat:1 }} kg</strong>
+                    <small>Peso × porcentaje de grasa estimado</small>
+                </article>
+                <article class="composition-result-metric">
+                    <span>Resto del peso estimado</span>
+                    <strong>≈ {{ evaluacion.masa_sin_grasa_estimada_kg|floatformat:1 }} kg</strong>
+                    <small>Incluye músculo, huesos, agua y otros tejidos; no equivale a masa muscular</small>
+                </article>
+                {% else %}
+                <article class="composition-result-metric composition-result-no-estimate">
+                    <span>Porcentaje de grasa</span>
+                    <strong>Sin estimación</strong>
+                    <small>No elegiste una silueta ni ingresaste medidas. El IMC por sí solo no determina tu composición corporal.</small>
+                </article>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="composition-result-youth" role="note">
+                <h2>La referencia cambia según la edad</h2>
+                <p>Para menores de 20 años no usamos categorías adultas de IMC ni estimaciones de grasa basadas en siluetas. La interpretación requiere curvas de crecimiento apropiadas para la edad y el sexo.</p>
+            </div>
+        {% endif %}
+
+        <p class="composition-result-disclaimer">Estas cifras son aproximaciones de cribado. El IMC no mide músculo ni diagnostica; la comparación visual puede desviarse de la composición real de una persona.</p>
+        <a class="composition-result-continue" href="{% url 'mi_entrenamiento' %}">Continuar a mi entrenamiento</a>
+    </section>
+</main>
+{% endblock %}

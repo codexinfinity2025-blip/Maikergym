@@ -299,7 +299,7 @@ class FlujoRegistroTest(TestCase):
             [0, 2, 5],
         )
 
-    def test_registro_no_repite_datos_y_llega_al_entrenamiento(self):
+    def test_registro_muestra_resumen_corporal_antes_del_entrenamiento(self):
         respuesta = self.client.post(
             reverse("registrarse"),
             {
@@ -397,12 +397,16 @@ class FlujoRegistroTest(TestCase):
         )
         self.assertRedirects(
             respuesta,
-            reverse("mi_entrenamiento"),
+            reverse("resultado_corporal"),
             fetch_redirect_response=False,
         )
 
         perfil.refresh_from_db()
         self.assertTrue(perfil.personalizacion_completa())
+        evaluacion = perfil.evaluacion_corporal_interna()
+        self.assertEqual(evaluacion['imc'], 23.67)
+        self.assertEqual(evaluacion['masa_grasa_estimada_kg'], 10.9)
+        self.assertEqual(evaluacion['masa_sin_grasa_estimada_kg'], 61.6)
         asignacion = AsignacionPlanUsuario.objects.get(
             usuario=usuario,
             estado=EstadoAsignacionChoice.ACTIVO,

@@ -39,6 +39,7 @@ urlpatterns = [
     path('notificaciones/', views.notificaciones_view, name='notificaciones'),
     path('notificaciones/siguiente/', views.siguiente_mensaje_view, name='siguiente_mensaje'),
     path('datos-personales/', views.datos_personales_view, name='datos_personales'),
+    path('resumen-corporal/', views.resultado_corporal_view, name='resultado_corporal'),
     path('contacto/', views.contacto, name='contacto'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
