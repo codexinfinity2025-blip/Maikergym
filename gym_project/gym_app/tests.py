@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.db import IntegrityError
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils import timezone
@@ -37,6 +37,38 @@ from .profile_validation import estimar_grasa_navy
 
 
 class FlujoRegistroTest(TestCase):
+    def test_registro_menor_de_18_requiere_autorizacion_adulta(self):
+        hoy = timezone.localdate()
+        nacimiento = date(hoy.year - 16, hoy.month, min(hoy.day, 28))
+        datos = {
+            'nombre': 'Persona',
+            'apellido': 'Menor',
+            'email': 'menor-con-autorizacion@example.com',
+            'password': 'ClaveSegura2026!',
+            'confirmar_password': 'ClaveSegura2026!',
+            'fecha_nacimiento': nacimiento.isoformat(),
+        }
+
+        from django.contrib.auth.models import AnonymousUser
+        from .views import registrarse as registrarse_view
+
+        solicitud = RequestFactory().post(reverse('registrarse'), datos)
+        solicitud.user = AnonymousUser()
+        solicitud.session = {}
+        respuesta = registrarse_view(solicitud)
+        self.assertEqual(respuesta.status_code, 200)
+        contenido = respuesta.content.decode()
+        self.assertIn('Registro para menores de 18 años', contenido)
+        self.assertIn('autorización y supervisión', contenido)
+        self.assertFalse(User.objects.filter(email=datos['email']).exists())
+
+        datos['autorizacion_menor'] = 'on'
+        respuesta = self.client.post(reverse('registrarse'), datos)
+        self.assertRedirects(respuesta, reverse('revisar_registro'), fetch_redirect_response=False)
+        usuario = User.objects.get(email=datos['email'])
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        self.assertEqual(perfil.edad, 16)
+
     def test_sugerencias_alimentos_y_dos_platos_por_comida(self):
         for objetivo in ObjetivoChoice.values:
             guia = obtener_guia_nutricional(objetivo)

@@ -269,6 +269,14 @@ def registrarse(request):
             contexto['error'] = error.messages[0]
             return render(request, 'registrarse.html', contexto)
 
+        if calcular_edad(fecha_nacimiento) < 18 and request.POST.get('autorizacion_menor') != 'on':
+            contexto['mostrar_aviso_menor'] = True
+            contexto['error'] = (
+                'Para registrar una cuenta siendo menor de 18 años, confirma que '
+                'tienes autorización y supervisión de una persona adulta responsable.'
+            )
+            return render(request, 'registrarse.html', contexto)
+
         enfoque = request.POST.get('enfoque_corporal', 'full_body')
         if enfoque not in ('inferior', 'superior', 'full_body'):
             contexto['error'] = 'Selecciona un enfoque corporal válido.'

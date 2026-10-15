@@ -27,10 +27,10 @@ body {
 
 .register-page {
     display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 2rem;
-    width: min(1200px, 100%);
-    align-items: center;
+    grid-template-columns: minmax(360px, 0.95fr) minmax(600px, 1.25fr);
+    gap: clamp(1.5rem, 2.5vw, 3rem);
+    width: min(1680px, calc(100% - 4rem));
+    align-items: start;
 }
 
 .profile-setup-page {
@@ -255,6 +255,7 @@ body {
 
 .register-visual img {
     width: 100%;
+    height: clamp(600px, 78svh, 860px);
     border-radius: 32px;
     box-shadow: 0 24px 80px rgba(2, 9, 24, 0.45);
     object-fit: cover;
@@ -427,6 +428,49 @@ select {
     color: #e2e8f0;
 }
 
+.minor-consent {
+    padding: 1.15rem 1.25rem;
+    border: 2px solid #f59e0b;
+    border-radius: 18px;
+    background: #fff7e6;
+    color: #202938;
+    box-shadow: 0 12px 30px rgba(245, 158, 11, .16);
+}
+
+.minor-consent[hidden] {
+    display: none !important;
+}
+
+.minor-consent h3 {
+    margin: 0 0 .45rem;
+    color: #7c2d12;
+    font-size: 1.12rem;
+}
+
+.minor-consent p {
+    margin: 0 0 .8rem;
+    color: #374151;
+    line-height: 1.55;
+}
+
+.minor-consent-check {
+    display: flex;
+    align-items: flex-start;
+    gap: .7rem;
+    color: #172033;
+    font-weight: 700;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.minor-consent-check input {
+    flex: 0 0 auto;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin: .15rem 0 0;
+    accent-color: #d97706;
+}
+
 @media (max-width: 900px) {
     .register-page {
         grid-template-columns: 1fr;
@@ -434,6 +478,10 @@ select {
 
     .register-visual {
         order: -1;
+    }
+
+    .register-visual img {
+        height: clamp(300px, 45svh, 480px);
     }
 
     .profile-setup-page {
@@ -445,6 +493,18 @@ select {
     .profile-visual img {
         max-height: 300px;
         aspect-ratio: 16 / 7;
+    }
+}
+
+@media (min-width: 901px) and (max-width: 1199px) {
+    .register-page {
+        width: calc(100% - 2rem);
+        grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+        gap: 1.25rem;
+    }
+
+    .register-visual img {
+        height: clamp(520px, 72svh, 760px);
     }
 }
 

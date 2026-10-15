@@ -4,7 +4,7 @@
 {% block title %}MaikerGym - Registrarse{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=registro-composicion-2">
+    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=registro-menores-layout-1">
 {% endblock %}
 
 {% block content %}
@@ -97,12 +97,51 @@
 
             <div class="form-group">
                 <label class="form-label" for="fecha_nacimiento">Fecha de nacimiento</label>
-                <input class="form-control" id="fecha_nacimiento" type="date" name="fecha_nacimiento" aria-describedby="ayuda-edad" value="{{ form_data.fecha_nacimiento|default:'' }}" required>
-                <small id="ayuda-edad">Desde los 14 años. Usamos esta fecha para calcular tu edad; no necesitas escribirla por separado.</small>
+                <input class="form-control" id="fecha_nacimiento" type="date" name="fecha_nacimiento" aria-describedby="ayuda-edad aviso-menor" value="{{ form_data.fecha_nacimiento|default:'' }}" required>
+                <small id="ayuda-edad">Debes tener al menos 14 años. Si eres menor de 18, pediremos autorización de tu madre, padre o tutor.</small>
             </div>
+
+            <section id="aviso-menor" class="minor-consent" role="alert" aria-labelledby="aviso-menor-titulo" {% if not mostrar_aviso_menor %}hidden{% endif %}>
+                <h3 id="aviso-menor-titulo">Registro para menores de 18 años</h3>
+                <p>Para continuar, una persona adulta responsable debe autorizar tu registro y acompañar el uso de las recomendaciones de entrenamiento. MaikerGym ofrece orientación general; no reemplaza una valoración médica o profesional.</p>
+                <label class="minor-consent-check">
+                    <input type="checkbox" id="autorizacion-menor" name="autorizacion_menor" value="on" {% if form_data.autorizacion_menor %}checked{% endif %}>
+                    <span>Confirmo que cuento con autorización de mi madre, padre o tutor legal y que usaré las recomendaciones con supervisión adulta.</span>
+                </label>
+            </section>
 
             <button class="register-submit" type="submit">Registrarse</button>
         </form>
     </section>
 </main>
+<script>
+(() => {
+    const nacimiento = document.getElementById('fecha_nacimiento');
+    const aviso = document.getElementById('aviso-menor');
+    const autorizacion = document.getElementById('autorizacion-menor');
+    if (!nacimiento || !aviso || !autorizacion) return;
+
+    function actualizarAvisoMenor() {
+        if (!nacimiento.value) {
+            aviso.hidden = true;
+            autorizacion.required = false;
+            return;
+        }
+        const fecha = new Date(`${nacimiento.value}T00:00:00`);
+        const hoy = new Date();
+        let edad = hoy.getFullYear() - fecha.getFullYear();
+        if (hoy.getMonth() < fecha.getMonth() ||
+            (hoy.getMonth() === fecha.getMonth() && hoy.getDate() < fecha.getDate())) {
+            edad--;
+        }
+        const esMenor = Number.isFinite(edad) && edad >= 0 && edad < 18;
+        aviso.hidden = !esMenor;
+        autorizacion.required = esMenor;
+    }
+
+    nacimiento.addEventListener('input', actualizarAvisoMenor);
+    nacimiento.addEventListener('change', actualizarAvisoMenor);
+    actualizarAvisoMenor();
+})();
+</script>
 {% endblock %}
