@@ -10,7 +10,7 @@
         <div class="preferences-fields">{% for field in form %}<div><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
         <p>Tu contraseña no se muestra ni se cambia aquí. Más adelante también podrás ajustar tus datos desde Mi cuenta.</p>
         <button type="submit" class="preferences-save">Confirmar datos y continuar</button>
-        <a class="preferences-back" style="margin:20px 0 0;display:block" href="{% url 'objetivo' %}">Todo está bien, continuar sin cambios →</a>
+        <a class="preferences-back" style="margin:20px 0 0;display:block" href="{% url 'datos_personales' %}">Todo está bien, continuar sin cambios →</a>
     </form>
 </main>
 {% endblock %}

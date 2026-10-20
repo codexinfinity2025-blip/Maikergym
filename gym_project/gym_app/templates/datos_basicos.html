@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Datos básicos · MaikerGym{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/progreso_onboarding.css' %}?v=1">
+{% endblock %}
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="onboarding-page">
+    <header class="onboarding-heading">
+        <span class="eyebrow">Tu perfil · Paso 1</span>
+        <h1>Empecemos con tus datos físicos</h1>
+        <p>Con esta base podemos adaptar las siguientes sugerencias. No tienes que definir todavía un objetivo de apariencia.</p>
+    </header>
+    {% if error %}<div class="onboarding-alert" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" enctype="multipart/form-data" class="onboarding-card">
+        {% csrf_token %}
+        <label class="field-block" for="genero">Género
+            <select id="genero" name="genero" required>
+                <option value="">Selecciona</option>
+                <option value="femenino" {% if form_data.genero|default:perfil.genero == 'femenino' %}selected{% endif %}>Femenino</option>
+                <option value="masculino" {% if form_data.genero|default:perfil.genero == 'masculino' %}selected{% endif %}>Masculino</option>
+                <option value="otro" {% if form_data.genero|default:perfil.genero == 'otro' %}selected{% endif %}>Otro</option>
+            </select>
+        </label>
+        <div class="onboarding-fields">
+            <label class="field-block" for="peso">Peso actual (kg)
+                <input id="peso" name="peso" type="number" min="1" max="500" step="0.01" value="{{ form_data.peso|default:perfil.peso|default:'' }}" required>
+            </label>
+            <label class="field-block" for="altura_cm">Estatura (cm)
+                <input id="altura_cm" name="altura_cm" type="number" min="50" max="250" step="0.1" value="{{ form_data.altura_cm|default:perfil.altura_cm|default:'' }}" required>
+            </label>
+        </div>
+        {% if not perfil.fecha_nacimiento %}
+        <label class="field-block" for="fecha_nacimiento">Fecha de nacimiento
+            <input id="fecha_nacimiento" name="fecha_nacimiento" type="date" value="{{ form_data.fecha_nacimiento|default:'' }}" required>
+        </label>
+        {% endif %}
+        <p class="onboarding-note">Guardaremos este peso como tu punto de partida para comparar tus próximos registros. El peso por sí solo no determina tu salud ni tu progreso.</p>
+        <button class="onboarding-primary" type="submit">Guardar y continuar</button>
+    </form>
+</main>
+{% endblock %}

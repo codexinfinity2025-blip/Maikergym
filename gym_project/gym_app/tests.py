@@ -19,6 +19,7 @@ from .models import (
     ObjetivoChoice,
     PerfilUsuario,
     PlanEntrenamiento,
+    RegistroProgresoPeso,
     SesionEntrenamiento,
 )
 from .wellness_content import (
@@ -170,13 +171,21 @@ class FlujoRegistroTest(TestCase):
         perfil.nivel_declarado = "intermedio"
         perfil.nivel_entrenamiento = "intermedio"
         perfil.prueba_nivel_completada = True
-        perfil.modalidad_rutina = "personalizada"
+        perfil.genero = 'masculino'
+        perfil.peso = 75
+        perfil.altura_cm = 175
+        perfil.fecha_nacimiento = date(1990, 1, 1)
         perfil.dias_entrenamiento = [0, 3]
+        perfil.datos_completos = True
+        perfil.disponibilidad_completa = True
         perfil.save()
         self.client.force_login(usuario)
-        for ruta in ("nivel_entrenamiento", "prueba_nivel", "configurar_rutina", "crear_rutina", "dieta", "notificaciones"):
-            with self.subTest(ruta=ruta):
-                self.assertEqual(self.client.get(reverse(ruta)).status_code, 200)
+        self.assertEqual(self.client.get(reverse('composicion_corporal')).status_code, 200)
+        self.assertRedirects(
+            self.client.get(reverse('configurar_rutina')),
+            reverse('composicion_corporal'), fetch_redirect_response=False,
+        )
+        self.assertEqual(self.client.get(reverse('notificaciones')).status_code, 200)
 
     @classmethod
     def setUpTestData(cls):
@@ -292,6 +301,20 @@ class FlujoRegistroTest(TestCase):
             email="perder-peso@example.com",
             password="ClaveSegura2026!",
         )
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.datos_completos = True
+        perfil.genero = 'masculino'
+        perfil.peso = 80
+        perfil.altura_cm = 175
+        perfil.fecha_nacimiento = date(1990, 1, 1)
+        perfil.disponibilidad_completa = True
+        perfil.dias_entrenamiento = [0, 2, 5]
+        perfil.duracion_sesion_minutos = 60
+        perfil.descanso_preferido_segundos = 75
+        perfil.nivel_declarado = 'principiante'
+        perfil.nivel_entrenamiento = 'principiante'
+        perfil.prueba_nivel_completada = True
+        perfil.save()
         self.client.force_login(usuario)
 
         respuesta = self.client.post(
@@ -299,12 +322,12 @@ class FlujoRegistroTest(TestCase):
             {"objetivo": ObjetivoChoice.PERDER_PESO},
         )
 
-        self.assertRedirects(
-            respuesta,
-            reverse("nivel_entrenamiento"),
-            fetch_redirect_response=False,
-        )
-        perfil = PerfilUsuario.objects.get(user=usuario)
+        self.assertRedirects(respuesta, reverse('composicion_corporal'), fetch_redirect_response=False)
+        perfil.refresh_from_db()
+        respuesta = self.client.post(reverse('composicion_corporal'), {'metodo_grasa': 'omitir'})
+        self.assertRedirects(respuesta, reverse('resultado_corporal'), fetch_redirect_response=False)
+        respuesta = self.client.post(reverse('resultado_corporal'), {})
+        self.assertRedirects(respuesta, reverse('configurar_rutina'), fetch_redirect_response=False)
         self.assertEqual(
             perfil.objetivo,
             ObjetivoChoice.PERDER_PESO,
@@ -314,21 +337,10 @@ class FlujoRegistroTest(TestCase):
         )
 
         respuesta = self.client.post(
-            reverse("nivel_entrenamiento"),
-            {"nivel": "principiante"},
-        )
-        self.assertRedirects(
-            respuesta,
-            reverse("configurar_rutina"),
-            fetch_redirect_response=False,
-        )
-        respuesta = self.client.post(
             reverse("configurar_rutina"),
             {
-                "dias": ["0", "2", "5"],
-                "minutos": "60",
-                "descanso": "75",
                 "modalidad": "automatica",
+                "enfoque_corporal": "full_body",
             },
         )
         self.assertRedirects(
@@ -377,25 +389,18 @@ class FlujoRegistroTest(TestCase):
         self.assertEqual(perfil.tipo_documento, "CE")
         self.assertEqual(perfil.documento, "A1234567")
 
-        respuesta = self.client.post(
-            reverse("objetivo"),
-            {"objetivo": ObjetivoChoice.ESTETICO},
-        )
-        self.assertRedirects(
-            respuesta,
-            reverse("nivel_entrenamiento"),
-            fetch_redirect_response=False,
-        )
-
-        respuesta = self.client.post(
-            reverse("nivel_entrenamiento"),
-            {"nivel": "intermedio"},
-        )
-        self.assertRedirects(
-            respuesta,
-            reverse("prueba_nivel"),
-            fetch_redirect_response=False,
-        )
+        self.client.force_login(usuario)
+        respuesta = self.client.post(reverse('datos_personales'), {
+            'genero': 'masculino', 'peso': '72.50', 'altura_cm': '175',
+        })
+        self.assertRedirects(respuesta, reverse('disponibilidad'), fetch_redirect_response=False)
+        respuesta = self.client.post(reverse('disponibilidad'), {
+            'dias': ['1', '3', '5'], 'minutos': '75',
+            'descanso_valor': '90', 'descanso_unidad': 'segundos',
+        })
+        self.assertRedirects(respuesta, reverse('nivel_entrenamiento'), fetch_redirect_response=False)
+        respuesta = self.client.post(reverse('nivel_entrenamiento'), {'nivel': 'intermedio'})
+        self.assertRedirects(respuesta, reverse('prueba_nivel'), fetch_redirect_response=False)
         respuesta = self.client.post(
             reverse("prueba_nivel"),
             {clave: "2" for clave in (
@@ -405,16 +410,20 @@ class FlujoRegistroTest(TestCase):
         )
         self.assertRedirects(
             respuesta,
-            reverse("configurar_rutina"),
+            reverse("objetivo"),
             fetch_redirect_response=False,
         )
+        respuesta = self.client.post(reverse('objetivo'), {'objetivo': ObjetivoChoice.ESTETICO})
+        self.assertRedirects(respuesta, reverse('composicion_corporal'), fetch_redirect_response=False)
+        respuesta = self.client.post(reverse('composicion_corporal'), {'metodo_grasa': 'visual:15'})
+        self.assertRedirects(respuesta, reverse('resultado_corporal'), fetch_redirect_response=False)
+        respuesta = self.client.post(reverse('resultado_corporal'), {})
+        self.assertRedirects(respuesta, reverse('configurar_rutina'), fetch_redirect_response=False)
         respuesta = self.client.post(
             reverse("configurar_rutina"),
             {
-                "dias": ["1", "3", "5"],
-                "minutos": "75",
-                "descanso": "90",
                 "modalidad": "automatica",
+                "enfoque_corporal": "full_body",
             },
         )
         self.assertRedirects(
@@ -430,22 +439,7 @@ class FlujoRegistroTest(TestCase):
         respuesta = self.client.post(reverse("dieta"))
         self.assertRedirects(
             respuesta,
-            reverse("datos_personales"),
-            fetch_redirect_response=False,
-        )
-
-        respuesta = self.client.post(
-            reverse("datos_personales"),
-            {
-                "genero": "masculino",
-                "peso": "72.50",
-                "altura_cm": "175",
-                "metodo_grasa": "visual:15",
-            },
-        )
-        self.assertRedirects(
-            respuesta,
-            reverse("resultado_corporal"),
+            reverse("cuenta"),
             fetch_redirect_response=False,
         )
 
@@ -481,24 +475,59 @@ class FlujoRegistroTest(TestCase):
         perfil.nivel_declarado = "principiante"
         perfil.nivel_entrenamiento = "principiante"
         perfil.prueba_nivel_completada = True
+        perfil.datos_completos = True
+        perfil.genero = 'femenino'
+        perfil.peso = 65
+        perfil.altura_cm = 165
+        perfil.fecha_nacimiento = date(1990, 1, 1)
         perfil.genero = "femenino"
         perfil.save()
         self.client.force_login(usuario)
 
-        respuesta = self.client.post(reverse("configurar_rutina"), {
-            "dias": ["1", "6"],
-            "minutos": "60",
+        respuesta = self.client.post(reverse("disponibilidad"), {
+            "dias": ["1", "6"], "minutos": "60",
             "descanso_valor": "5",
             "descanso_unidad": "minutos",
-            "modalidad": "personalizada",
-            "genero_previo": "masculino",
         })
 
-        self.assertRedirects(respuesta, reverse("crear_rutina"), fetch_redirect_response=False)
+        self.assertRedirects(respuesta, reverse("nivel_entrenamiento"), fetch_redirect_response=False)
         perfil.refresh_from_db()
         self.assertEqual(perfil.dias_entrenamiento, [1, 6])
         self.assertEqual(perfil.descanso_preferido_segundos, 300)
         self.assertEqual(perfil.genero, "femenino")
+
+    def test_revision_bimestral_guarda_peso_y_respuestas_de_habitos(self):
+        usuario = User.objects.create_user(username='revision-bimestral')
+        registro_inicial = RegistroProgresoPeso.objects.create(
+            usuario=usuario, peso=80, es_inicial=True,
+        )
+        RegistroProgresoPeso.objects.filter(pk=registro_inicial.pk).update(
+            creado=datetime(2026, 1, 1, 12, tzinfo=ZoneInfo('America/Bogota')),
+        )
+        perfil = PerfilUsuario.objects.get(user=usuario)
+        perfil.objetivo = ObjetivoChoice.SALUD
+        perfil.peso = 80
+        perfil.save(update_fields=['objetivo', 'peso'])
+        self.client.force_login(usuario)
+
+        with patch('gym_project.gym_app.views.timezone.localdate', return_value=date(2026, 2, 28)):
+            respuesta = self.client.get(reverse('progreso_peso'))
+        self.assertRedirects(respuesta, reverse('mi_entrenamiento'), fetch_redirect_response=False)
+
+        respuestas = {
+            'peso': '79.2', 'progreso_percibido': 'dificil',
+            'adherencia_entrenamiento': 'mayoria',
+            'adherencia_alimentacion': 'algunas', 'descanso': 'variable',
+            'estres': 'moderado', 'molestias_o_lesiones': 'no',
+        }
+        with patch('gym_project.gym_app.views.timezone.localdate', return_value=date(2026, 3, 1)):
+            respuesta = self.client.post(reverse('progreso_peso'), respuestas)
+        self.assertRedirects(respuesta, reverse('progreso_peso') + '?guardado=1', fetch_redirect_response=False)
+        registro = RegistroProgresoPeso.objects.filter(usuario=usuario).first()
+        self.assertEqual(float(registro.peso), 79.2)
+        self.assertEqual(registro.progreso_percibido, 'dificil')
+        self.assertEqual(registro.adherencia_entrenamiento, 'mayoria')
+        self.assertEqual(registro.adherencia_alimentacion, 'algunas')
 
     def test_rutina_manual_exige_aviso_y_un_ejercicio_por_dia(self):
         usuario = User.objects.create_user(
@@ -511,11 +540,19 @@ class FlujoRegistroTest(TestCase):
         perfil.nivel_declarado = "principiante"
         perfil.nivel_entrenamiento = "principiante"
         perfil.prueba_nivel_completada = True
+        perfil.datos_completos = True
+        perfil.disponibilidad_completa = True
+        perfil.composicion_corporal_completa = True
+        perfil.genero = 'masculino'
+        perfil.peso = 75
+        perfil.altura_cm = 175
+        perfil.fecha_nacimiento = date(1990, 1, 1)
+        perfil.dias_entrenamiento = [0, 4]
         perfil.save()
         self.client.force_login(usuario)
         respuesta = self.client.post(reverse("configurar_rutina"), {
-            "dias": ["0", "4"], "minutos": "60", "descanso": "60",
             "modalidad": "personalizada",
+            "enfoque_corporal": "full_body",
         })
         self.assertRedirects(respuesta, reverse("crear_rutina"), fetch_redirect_response=False)
         ejercicios = list(Ejercicio.objects.order_by("id")[:2])
@@ -552,6 +589,13 @@ class FlujoRegistroTest(TestCase):
         perfil.prueba_nivel_completada = True
         perfil.orientacion_nutricional_vista = True
         perfil.datos_completos = True
+        perfil.disponibilidad_completa = True
+        perfil.composicion_corporal_completa = True
+        perfil.fecha_nacimiento = date(1990, 1, 1)
+        perfil.peso = 75
+        perfil.altura_cm = 175
+        perfil.genero = 'masculino'
+        perfil.dias_entrenamiento = [0, 2]
         perfil.save()
         ejercicios = list(Ejercicio.objects.order_by("id")[:2])
 
@@ -609,6 +653,13 @@ class FlujoRegistroTest(TestCase):
         perfil.prueba_nivel_completada = True
         perfil.orientacion_nutricional_vista = True
         perfil.datos_completos = True
+        perfil.disponibilidad_completa = True
+        perfil.composicion_corporal_completa = True
+        perfil.fecha_nacimiento = date(1990, 1, 1)
+        perfil.peso = 75
+        perfil.altura_cm = 175
+        perfil.genero = 'masculino'
+        perfil.dias_entrenamiento = [1, 3]
         perfil.save()
         ejercicio = Ejercicio.objects.order_by("id").first()
         asignacion = crear_rutina_personalizada(

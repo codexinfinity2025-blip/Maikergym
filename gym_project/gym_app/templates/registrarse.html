@@ -4,7 +4,7 @@
 {% block title %}MaikerGym - Registrarse{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=registro-menores-layout-1">
+    <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=registro-documento-movil-2">
 {% endblock %}
 
 {% block content %}
@@ -43,14 +43,14 @@
                 </div>
             </div>
 
-            <div class="form-row">
+            <div class="form-row document-form-row">
                 <div class="form-group flex-grow">
-                    <label class="form-label">Número de documento</label>
-                    <input class="form-control" type="text" name="documento" value="{{ form_data.documento|default:'' }}" placeholder="Número de documento (opcional)" autocomplete="off" aria-describedby="ayuda-documento">
+                    <label class="form-label" for="registro-documento">Número de documento</label>
+                    <input class="form-control" id="registro-documento" type="text" name="documento" value="{{ form_data.documento|default:'' }}" placeholder="Número de documento (opcional)" autocomplete="off" aria-describedby="ayuda-documento">
                 </div>
                 <div class="form-group document-group">
-                    <label class="form-label">Tipo</label>
-                    <select class="form-control" name="tipo_documento" aria-describedby="ayuda-documento">
+                    <label class="form-label" for="registro-tipo-documento">Tipo de documento</label>
+                    <select class="form-control" id="registro-tipo-documento" name="tipo_documento" aria-describedby="ayuda-documento">
                         <option value="" {% if not form_data.tipo_documento %}selected{% endif %}>Selecciona</option>
                         <option value="CC" {% if form_data.tipo_documento == 'CC' %}selected{% endif %}>Cédula de Ciudadanía (CC)</option>
                         <option value="CE" {% if form_data.tipo_documento == 'CE' %}selected{% endif %}>Cédula de Extranjería (CE)</option>

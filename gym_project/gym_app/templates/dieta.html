@@ -22,13 +22,19 @@
     </section>
 
     <section class="weekly-heading">
-        <div><span class="eyebrow">Siete días, ideas diferentes</span><h2>Sugerencias fáciles para toda la semana</h2></div>
-        <p>Primero elige entre los alimentos sugeridos; después escoge una de las dos ideas de plato. Son alternativas, no tienes que comer ambas. Ajusta ingredientes según tus preferencias, alergias o indicación profesional.</p>
+        <div><span class="eyebrow">Un día a la vez</span><h2>¿Qué te gustaría revisar?</h2></div>
+        <p>Primero verás las ideas para hoy. Puedes adelantar la comida de mañana o abrir el plan semanal cuando te resulte útil. Son sugerencias flexibles, no tienes que comer todos los platos.</p>
     </section>
+
+    <nav class="meal-day-nav" aria-label="Elegir día de sugerencias">
+        <button type="button" data-show-day="{{ dia_hoy_indice }}" aria-pressed="true">Ver hoy · {{ nombre_dia_hoy }}</button>
+        <button type="button" data-show-day="{{ dia_manana_indice }}" aria-pressed="false">Ver mañana</button>
+        <button type="button" data-show-all="true" aria-pressed="false">Ver comida de toda la semana</button>
+    </nav>
 
     <section class="weekly-menu">
         {% for dia in dieta.dias %}
-            <article class="day-menu" data-motion="rise">
+            <article class="day-menu" data-day-index="{{ forloop.counter0 }}" data-motion="rise" {% if forloop.counter0 != dia_hoy_indice %}hidden{% endif %}>
                 <header><span>{{ forloop.counter }}</span><h3>{{ dia.nombre }}</h3></header>
                 {% for comida in dia.comidas %}
                 <section class="meal-suggestions">
@@ -48,4 +54,26 @@
         <form method="post">{% csrf_token %}<button class="continue-btn" type="submit">{% if es_primera_configuracion %}Guardar y continuar{% else %}Volver a mi entrenamiento{% endif %}</button></form>
     </section>
 </main>
+<style>
+.meal-day-nav{display:flex;flex-wrap:wrap;gap:.75rem;margin:1.25rem 0}
+.meal-day-nav button{border:1px solid #f5a623;border-radius:999px;background:#111a28;color:#f6f7fb;padding:.75rem 1.1rem;font:inherit;font-weight:700;cursor:pointer}
+.meal-day-nav button[aria-pressed="true"]{background:linear-gradient(110deg,#ff8a35,#ffc20e);color:#161616;border-color:transparent}
+.day-menu[hidden]{display:none!important}
+</style>
+<script>
+(() => {
+  const days = [...document.querySelectorAll('.day-menu[data-day-index]')];
+  const buttons = [...document.querySelectorAll('.meal-day-nav button')];
+  function showDay(index) {
+    days.forEach(day => { day.hidden = day.dataset.dayIndex !== String(index); });
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.showDay === String(index)));
+  }
+  buttons.forEach(button => button.addEventListener('click', () => {
+    if (button.dataset.showAll) {
+      days.forEach(day => { day.hidden = false; });
+      buttons.forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    } else showDay(button.dataset.showDay);
+  }));
+})();
+</script>
 {% endblock %}

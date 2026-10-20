@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Composición corporal · MaikerGym{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=composicion-paso-separado-1">
+<link rel="stylesheet" href="{% static 'css/progreso_onboarding.css' %}?v=1">
+{% endblock %}
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="onboarding-page">
+    <header class="onboarding-heading">
+        <span class="eyebrow">Tu punto de partida · Paso 6</span>
+        <h1>¿Quieres estimar tu composición corporal?</h1>
+        <p>Tu peso actual es <strong>{{ perfil.peso|floatformat:1 }} kg</strong>. Puedes usar una referencia visual, medir con cinta o seguir sin estimación.</p>
+        {% if edad_actual == 18 or edad_actual == 19 %}<p class="onboarding-note">A los 18 y 19 años, estas referencias solo ofrecen una aproximación general: el cuerpo todavía puede estar completando su desarrollo y la estimación no determina tu salud ni tu composición exacta.</p>{% endif %}
+    </header>
+    {% if error %}<div class="onboarding-alert" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" class="onboarding-card body-composition-card" data-age="{{ perfil.edad|default:0 }}" data-sex="{{ perfil.genero|default:'' }}">
+        {% csrf_token %}
+        {% if edad_actual >= 18 and perfil.genero == 'masculino' or edad_actual >= 18 and perfil.genero == 'femenino' %}
+            <fieldset class="onboarding-choice-group">
+                <legend>Elige una forma de estimarlo (es opcional)</legend>
+                {% for genero, opciones in opciones_visuales.items %}
+                <div class="body-visual-panel" data-visual-gender="{{ genero }}" {% if genero != perfil.genero %}hidden{% endif %}>
+                    <h2>Elige la silueta de referencia que más se aproxima</h2>
+                    <p>Es una autoestimación aproximada; no es una medición exacta ni una valoración de salud.</p>
+                    <div class="body-visual-grid">
+                        {% for opcion in opciones %}
+                        <label class="body-visual-option">
+                            <input type="radio" name="metodo_grasa" value="{{ opcion.seleccion }}" {% if metodo_grasa_seleccionado == opcion.seleccion %}checked{% endif %}>
+                            <span class="body-visual-image" role="img" aria-label="Silueta de referencia aproximada {{ opcion.valor }} por ciento" style="--sprite-position: {{ opcion.posicion }}"></span>
+                            <span class="body-visual-value">≈ {{ opcion.valor }}%</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                <label class="body-method-choice"><input type="radio" name="metodo_grasa" value="navy" {% if metodo_grasa_seleccionado == 'navy' %}checked{% endif %}> Usar cinta métrica (método de circunferencias U.S. Navy)</label>
+                <div class="body-measure-grid" id="medidas-cinta" {% if metodo_grasa_seleccionado != 'navy' %}hidden{% endif %}>
+                    <p>La cinta también entrega solo una estimación. Ingresa medidas en centímetros.</p>
+                    <label>Abdomen a la altura del ombligo (cm)<input class="body-measure" name="medida_abdomen" type="number" min="40" max="200" step="0.1" value="{{ form_data.medida_abdomen|default:'' }}"></label>
+                    <label>Cuello, debajo de la laringe (cm)<input class="body-measure" name="medida_cuello" type="number" min="20" max="80" step="0.1" value="{{ form_data.medida_cuello|default:'' }}"></label>
+                    {% if perfil.genero == 'femenino' %}<label>Cadera, parte más ancha (cm)<input class="body-measure" name="medida_cadera" type="number" min="50" max="220" step="0.1" value="{{ form_data.medida_cadera|default:'' }}"></label>{% endif %}
+                </div>
+                <label class="body-method-choice"><input type="radio" name="metodo_grasa" value="omitir" {% if metodo_grasa_seleccionado == 'omitir' %}checked{% endif %}> Continuar sin estimación</label>
+            </fieldset>
+        {% else %}
+            <p class="onboarding-note">La estimación visual y por circunferencias de esta página está destinada a adultos y no cubre todas las identidades corporales. Puedes avanzar sin estimarla.</p>
+            <input type="hidden" name="metodo_grasa" value="omitir">
+        {% endif %}
+        <p class="onboarding-note">La cinta se procesa para calcular el resultado, pero no guardamos tus circunferencias. Sí guardamos el porcentaje estimado y el método elegido para mostrarlo junto a tu progreso.</p>
+        <button class="onboarding-primary" type="submit">Continuar a mi referencia visual</button>
+    </form>
+</main>
+<script>
+(() => {
+    const form = document.querySelector('.body-composition-card');
+    if (!form) return;
+    const tape = document.getElementById('medidas-cinta');
+    form.querySelectorAll('input[name="metodo_grasa"]').forEach(input => {
+        input.addEventListener('change', () => {
+            if (tape) tape.hidden = input.value !== 'navy' || !input.checked;
+        });
+    });
+})();
+</script>
+{% endblock %}

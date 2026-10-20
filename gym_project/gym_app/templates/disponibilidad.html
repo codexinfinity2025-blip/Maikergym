@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Tu semana · MaikerGym{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/progreso_onboarding.css' %}?v=1">{% endblock %}
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="onboarding-page">
+    <header class="onboarding-heading">
+        <span class="eyebrow">Tu semana · Paso 2</span>
+        <h1>¿Qué días te quedan bien?</h1>
+        <p>Elige una semana realista. Después registraremos tu experiencia y, más adelante, tu objetivo.</p>
+    </header>
+    {% if error %}<div class="onboarding-alert" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" class="onboarding-card">
+        {% csrf_token %}
+        <fieldset class="onboarding-days">
+            <legend>Días disponibles</legend>
+            {% for valor, nombre in dias_semana %}
+            <label><input type="checkbox" name="dias" value="{{ valor }}" {% if valor in dias_seleccionados or valor in perfil.dias_entrenamiento %}checked{% endif %}><span>{{ nombre }}</span></label>
+            {% endfor %}
+        </fieldset>
+        <div class="onboarding-fields">
+            <label class="field-block">Minutos por sesión
+                <input type="number" name="minutos" min="45" step="1" value="{{ form_data.minutos|default:perfil.duracion_sesion_minutos|default:60 }}" required>
+            </label>
+            <label class="field-block">Descanso entre series
+                <span class="onboarding-units">
+                    <input type="number" name="descanso_valor" min="1" max="1800" value="{{ form_data.descanso_valor|default:1 }}" required>
+                    <select name="descanso_unidad" aria-label="Unidad del descanso">
+                        <option value="segundos" {% if form_data.descanso_unidad == 'segundos' %}selected{% endif %}>segundos</option>
+                        <option value="minutos" {% if form_data.descanso_unidad == 'minutos' or not form_data.descanso_unidad %}selected{% endif %}>minutos</option>
+                    </select>
+                </span>
+            </label>
+        </div>
+        <p class="onboarding-note">Los días seleccionados son una disponibilidad, no una obligación. Más adelante puedes cambiarlos.</p>
+        <button class="onboarding-primary" type="submit">Guardar disponibilidad</button>
+    </form>
+</main>
+{% endblock %}

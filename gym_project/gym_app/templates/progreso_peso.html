@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Revisión de progreso · MaikerGym{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/progreso_onboarding.css' %}?v=1">{% endblock %}
+{% block content %}
+{% include "partials/app_nav.html" %}
+<main class="onboarding-page">
+    {% if es_resultado %}
+    <section class="composition-result-card">
+        <span class="eyebrow">Revisión guardada</span>
+        <h1>{{ feedback.titulo }}</h1>
+        <p>{{ feedback.texto }}</p>
+        <dl class="composition-result-measures">
+            {% if peso_registro_previo %}<div><dt>Registro anterior</dt><dd>{{ peso_registro_previo|floatformat:1 }} kg</dd></div>{% endif %}
+            <div><dt>Nuevo registro</dt><dd>{{ peso_actual_registrado|floatformat:1 }} kg</dd></div>
+            <div><dt>Variación</dt><dd>{% if variacion_peso > 0 %}+{% endif %}{{ variacion_peso|floatformat:1 }} kg</dd></div>
+        </dl>
+        <p class="onboarding-note">La báscula es solo una parte de la historia. Compara estos datos con tu objetivo, tu rendimiento y cómo te sientes; MaikerGym no diagnostica ni promete un ritmo de cambio.</p>
+        <a class="onboarding-primary" style="display:inline-block;text-align:center;text-decoration:none" href="{% url 'mi_entrenamiento' %}">Volver a mi entrenamiento</a>
+    </section>
+    {% else %}
+    <header class="onboarding-heading">
+        <span class="eyebrow">Cada dos meses · Seguimiento personal</span>
+        <h1>¿Cómo vas con {{ perfil.get_objetivo_display|lower }}?</h1>
+        <p>Tu último registro fue de {{ ultimo.peso|floatformat:1 }} kg. Actualiza el peso en condiciones parecidas si puedes; no necesitas perseguir un número perfecto.</p>
+    </header>
+    {% if error %}<div class="onboarding-alert" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" class="onboarding-card" id="weight-checkin-form" data-objetivo="{{ perfil.objetivo }}" data-peso-anterior="{{ ultimo.peso }}" data-test-required="{% if mostrar_test %}true{% else %}false{% endif %}">
+        {% csrf_token %}
+        <label class="field-block" for="peso-checkin">Peso actual (kg)
+            <input id="peso-checkin" name="peso" type="number" min="1" max="500" step="0.01" value="{{ form_data.peso|default:perfil.peso|default:'' }}" required>
+        </label>
+        <fieldset class="onboarding-choice-group">
+            <legend>Además del peso, ¿cómo sientes tu progreso?</legend>
+            <label class="body-method-choice"><input type="radio" name="progreso_percibido" value="avanzando" {% if form_data.progreso_percibido == 'avanzando' %}checked{% endif %} required> Sí, noto avances</label>
+            <label class="body-method-choice"><input type="radio" name="progreso_percibido" value="estable" {% if form_data.progreso_percibido == 'estable' %}checked{% endif %}> Me siento igual</label>
+            <label class="body-method-choice"><input type="radio" name="progreso_percibido" value="dificil" {% if form_data.progreso_percibido == 'dificil' %}checked{% endif %}> Me está costando avanzar</label>
+            <label class="body-method-choice"><input type="radio" name="progreso_percibido" value="incierto" {% if form_data.progreso_percibido == 'incierto' %}checked{% endif %}> No estoy seguro/a</label>
+        </fieldset>
+        <section id="habits-check" {% if not mostrar_test %}hidden{% endif %}>
+            <h2>Revisemos juntos qué pudo influir</h2>
+            <p>Estas respuestas no son una prueba médica ni una nota; nos ayudan a pensar en un ajuste realista.</p>
+            <label class="field-block">¿Pudiste completar los entrenamientos que te propusiste?
+                <select name="adherencia_entrenamiento" {% if form_data.adherencia_entrenamiento == 'todas' %}data-selected="todas"{% elif form_data.adherencia_entrenamiento %}data-selected="{{ form_data.adherencia_entrenamiento }}"{% endif %}>
+                    <option value="">Selecciona</option><option value="todas" {% if form_data.adherencia_entrenamiento == 'todas' %}selected{% endif %}>Todas o casi todas</option><option value="mayoria" {% if form_data.adherencia_entrenamiento == 'mayoria' %}selected{% endif %}>La mayoría</option><option value="algunas" {% if form_data.adherencia_entrenamiento == 'algunas' %}selected{% endif %}>Algunas</option><option value="pocas" {% if form_data.adherencia_entrenamiento == 'pocas' %}selected{% endif %}>Pocas o ninguna</option>
+                </select>
+            </label>
+            <label class="field-block">¿Qué tan seguido pudiste seguir las sugerencias de alimentación?
+                <select name="adherencia_alimentacion">
+                    <option value="">Selecciona</option><option value="todas" {% if form_data.adherencia_alimentacion == 'todas' %}selected{% endif %}>Casi siempre</option><option value="mayoria" {% if form_data.adherencia_alimentacion == 'mayoria' %}selected{% endif %}>La mayoría de las veces</option><option value="algunas" {% if form_data.adherencia_alimentacion == 'algunas' %}selected{% endif %}>Algunas veces</option><option value="pocas" {% if form_data.adherencia_alimentacion == 'pocas' %}selected{% endif %}>Pocas veces</option>
+                </select>
+            </label>
+            <label class="field-block">¿Cómo ha sido tu descanso?
+                <select name="descanso"><option value="">Selecciona</option><option value="bueno" {% if form_data.descanso == 'bueno' %}selected{% endif %}>Bueno para mí</option><option value="variable" {% if form_data.descanso == 'variable' %}selected{% endif %}>Variable</option><option value="bajo" {% if form_data.descanso == 'bajo' %}selected{% endif %}>Insuficiente para mí</option></select>
+            </label>
+            <label class="field-block">¿Cómo ha estado tu nivel de estrés?
+                <select name="estres"><option value="">Selecciona</option><option value="bajo" {% if form_data.estres == 'bajo' %}selected{% endif %}>Bajo</option><option value="moderado" {% if form_data.estres == 'moderado' %}selected{% endif %}>Moderado</option><option value="alto" {% if form_data.estres == 'alto' %}selected{% endif %}>Alto</option></select>
+            </label>
+            <fieldset class="onboarding-choice-group">
+                <legend>¿Tuviste alguna molestia o lesión que afectara el entrenamiento?</legend>
+                <label class="body-method-choice"><input type="radio" name="molestias_o_lesiones" value="no" {% if form_data.molestias_o_lesiones == 'no' %}checked{% endif %}> No</label>
+                <label class="body-method-choice"><input type="radio" name="molestias_o_lesiones" value="si" {% if form_data.molestias_o_lesiones == 'si' %}checked{% endif %}> Sí</label>
+            </fieldset>
+        </section>
+        <p class="onboarding-note">Si eliges «Sí, noto avances», registraremos el peso y te mostraremos un mensaje de ánimo. Si el avance se siente difícil o incierto, abriremos el chequeo de hábitos.</p>
+        <button class="onboarding-primary" type="submit">Guardar mi revisión</button>
+    </form>
+    {% endif %}
+</main>
+<script>
+(() => {
+    const form = document.getElementById('weight-checkin-form');
+    const panel = document.getElementById('habits-check');
+    if (!form || !panel) return;
+    const choice = [...form.querySelectorAll('input[name="progreso_percibido"]')];
+    const weight = form.querySelector('input[name="peso"]');
+    const goal = form.dataset.objetivo;
+    const previousWeight = Number(form.dataset.pesoAnterior || 0);
+    const inputs = [...panel.querySelectorAll('input,select')];
+    function update() {
+        const value = choice.find(item => item.checked)?.value || '';
+        const scaleSuggestsReview = goal === 'perder_peso' && Number(weight.value || 0) >= previousWeight + 0.5;
+        const show = form.dataset.testRequired === 'true' || (value !== '' && (value !== 'avanzando' || scaleSuggestsReview));
+        panel.hidden = !show;
+        inputs.forEach(input => { input.required = show; });
+    }
+    choice.forEach(input => input.addEventListener('change', update));
+    weight.addEventListener('input', update);
+    update();
+})();
+</script>
+{% endblock %}

@@ -5,6 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/estilos_registrarse.css' %}?v=resumen-corporal-1">
+<link rel="stylesheet" href="{% static 'css/progreso_onboarding.css' %}?v=1">
 {% endblock %}
 
 {% block content %}
@@ -12,7 +13,7 @@
 
 <main class="composition-result-page">
     <section class="composition-result-card" aria-labelledby="composition-result-title">
-        <span class="composition-result-eyebrow">Tu perfil está listo</span>
+        <span class="composition-result-eyebrow">Tu punto de partida</span>
         <h1 id="composition-result-title">Resumen corporal orientativo</h1>
         <p class="composition-result-intro">Usamos los datos que guardaste para mostrarte una referencia antes de continuar. No es un diagnóstico ni una calificación de tu estado físico.</p>
 
@@ -77,7 +78,49 @@
         {% if evaluacion.estado == 'orientativo' %}
             <p class="composition-result-disclaimer">Estas cifras son aproximaciones de cribado. El IMC no mide músculo ni diagnostica; la comparación visual puede desviarse de la composición real de una persona.</p>
         {% endif %}
-        <a class="composition-result-continue" href="{% url 'mi_entrenamiento' %}">Continuar a mi entrenamiento</a>
+        {% if opciones_meta %}
+        <section class="meta-goal-section" aria-labelledby="meta-goal-title">
+            <h2 id="meta-goal-title">¿Te gustaría acercarte a una de estas referencias?</h2>
+            <p>Las imágenes son ejemplos ilustrativos, no metas ideales ni resultados prometidos. Puedes usarlas como inspiración durante los próximos meses o seguir sin una meta de apariencia.</p>
+            <form method="post" id="meta-goal-form">
+                {% csrf_token %}
+                <div class="meta-choice-grid">
+                    {% for opcion in opciones_meta %}
+                    <label class="meta-choice">
+                        <input type="radio" name="meta_fisica_opcion" value="{{ opcion.numero }}" {% if perfil.meta_fisica_opcion == opcion.numero %}checked{% endif %}>
+                        <span class="meta-choice-image" role="img" aria-label="Ejemplo ilustrativo: {{ opcion.titulo }}" style="background-image:url('{% static imagen_meta %}');--sprite-position:{{ opcion.posicion }}"></span>
+                        <span class="meta-choice-copy"><strong>{{ opcion.titulo }}</strong><small>{{ opcion.detalle }}</small></span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <fieldset class="meta-acceptance" id="meta-acceptance" {% if not perfil.meta_fisica_opcion %}hidden{% endif %}>
+                    <legend>¿Quieres tomar la referencia elegida como meta visual personal?</legend>
+                    <label><input type="radio" name="meta_fisica_aceptada" value="si" {% if perfil.meta_fisica_aceptada %}checked{% endif %}> Sí, me gustaría intentarlo a mi ritmo</label>
+                    <label><input type="radio" name="meta_fisica_aceptada" value="no" {% if perfil.meta_fisica_aceptada == False and perfil.meta_fisica_opcion %}checked{% endif %}> No, prefiero entrenar sin una meta de apariencia</label>
+                </fieldset>
+                <p class="onboarding-note">No fijamos una fecha exacta para alcanzar una apariencia: los cambios varían entre personas. La revisión bimestral sirve para conversar sobre hábitos y progreso, no para calificar tu cuerpo.</p>
+                <button class="onboarding-primary" type="submit">Siguiente</button>
+            </form>
+        </section>
+        {% else %}
+        <p class="onboarding-note">Puedes continuar sin una meta visual. En MaikerGym el objetivo de entrenamiento no depende de escoger una apariencia.</p>
+        <form method="post">{% csrf_token %}<button class="onboarding-primary" type="submit">Continuar sin meta visual</button></form>
+        {% endif %}
     </section>
 </main>
+<script>
+(() => {
+    const form = document.getElementById('meta-goal-form');
+    if (!form) return;
+    const fieldset = document.getElementById('meta-acceptance');
+    const answers = [...fieldset.querySelectorAll('input[name="meta_fisica_aceptada"]')];
+    function sync() {
+        const selected = Boolean(form.querySelector('input[name="meta_fisica_opcion"]:checked'));
+        fieldset.hidden = !selected;
+        answers.forEach(input => { input.required = selected; });
+    }
+    form.querySelectorAll('input[name="meta_fisica_opcion"]').forEach(input => input.addEventListener('change', sync));
+    sync();
+})();
+</script>
 {% endblock %}

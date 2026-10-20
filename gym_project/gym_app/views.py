@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from calendar import monthrange
 import logging
 from .profile_validation import (
     REFERENCIAS_GRASA_VISUAL,
@@ -36,6 +37,7 @@ from gym_project.gym_app.models import (
     MetodoGrasaChoice,
     ObjetivoChoice,
     PerfilUsuario,
+    RegistroProgresoPeso,
     RolChoice,
     SesionEntrenamiento,
     TipoDocumentoChoice,
@@ -175,21 +177,47 @@ def calcular_edad(fecha_nacimiento):
 
 
 def siguiente_paso_personalizacion(perfil):
-    if not perfil.objetivo:
-        return 'objetivo'
+    if not perfil.datos_completos:
+        return 'datos_personales'
+    if not perfil.disponibilidad_completa:
+        return 'disponibilidad'
     if not perfil.nivel_declarado:
         return 'nivel_entrenamiento'
     if not perfil.prueba_nivel_completada or not perfil.nivel_entrenamiento:
         return 'prueba_nivel'
+    if not perfil.objetivo:
+        return 'objetivo'
+    if not perfil.composicion_corporal_completa:
+        return 'composicion_corporal'
     if not perfil.configuracion_entrenamiento_completa:
         if perfil.modalidad_rutina == ModalidadRutinaChoice.PERSONALIZADA:
             return 'crear_rutina'
         return 'configurar_rutina'
     if not perfil.orientacion_nutricional_vista:
         return 'dieta'
-    if not perfil.datos_completos:
-        return 'datos_personales'
     return 'mi_entrenamiento'
+
+
+def fecha_dos_meses_despues(fecha):
+    """Suma dos meses de calendario y conserva el día cuando sea posible."""
+    indice = fecha.month - 1 + 2
+    anio = fecha.year + indice // 12
+    mes = indice % 12 + 1
+    dia = min(fecha.day, monthrange(anio, mes)[1])
+    return fecha.replace(year=anio, month=mes, day=dia)
+
+
+def contexto_revision_peso(usuario):
+    ultimo = RegistroProgresoPeso.objects.filter(usuario=usuario).first()
+    if ultimo is None:
+        return {'revision_peso_pendiente': False, 'proxima_revision_peso': None}
+    fecha_ultimo = timezone.localtime(ultimo.creado).date()
+    proxima = fecha_dos_meses_despues(fecha_ultimo)
+    return {
+        'revision_peso_pendiente': timezone.localdate() >= proxima,
+        'proxima_revision_peso': proxima,
+        'ultimo_registro_peso': ultimo,
+    }
 
 def inicio(request):
     return render(request, 'inicio.html')
@@ -342,6 +370,14 @@ def nutricion(request):
 @proteger_sesion_en_curso
 def objetivo(request):
     perfil = get_perfil(request.user)
+    if not perfil.datos_completos:
+        return redirect('datos_personales')
+    if not perfil.disponibilidad_completa:
+        return redirect('disponibilidad')
+    if not perfil.nivel_declarado:
+        return redirect('nivel_entrenamiento')
+    if not perfil.prueba_nivel_completada or not perfil.nivel_entrenamiento:
+        return redirect('prueba_nivel')
     if request.method == 'POST':
         objetivo_elegido = request.POST.get('objetivo')
         if objetivo_elegido in DIETAS_POR_OBJETIVO:
@@ -352,14 +388,20 @@ def objetivo(request):
             if objetivo_cambio:
                 perfil.configuracion_entrenamiento_completa = False
                 perfil.orientacion_nutricional_vista = False
+                perfil.composicion_corporal_completa = False
+                perfil.meta_fisica_opcion = None
+                perfil.meta_fisica_aceptada = None
             perfil.save(
                 update_fields=[
                     'objetivo',
                     'configuracion_entrenamiento_completa',
                     'orientacion_nutricional_vista',
+                    'composicion_corporal_completa',
+                    'meta_fisica_opcion',
+                    'meta_fisica_aceptada',
                 ]
             )
-            return redirect('nivel_entrenamiento')
+            return redirect('composicion_corporal')
         return render(request, 'objetivo.html', {'error': 'Escoge un objetivo válido.'})
     return render(request, 'objetivo.html', {'perfil': perfil})
 
@@ -369,8 +411,10 @@ def objetivo(request):
 @proteger_sesion_en_curso
 def nivel_entrenamiento_view(request):
     perfil = get_perfil(request.user)
-    if not perfil.objetivo:
-        return redirect('objetivo')
+    if not perfil.datos_completos:
+        return redirect('datos_personales')
+    if not perfil.disponibilidad_completa:
+        return redirect('disponibilidad')
 
     if request.method == 'POST':
         nivel = request.POST.get('nivel')
@@ -395,7 +439,7 @@ def nivel_entrenamiento_view(request):
             'prueba_nivel_completada', 'configuracion_entrenamiento_completa',
         ])
         if perfil.prueba_nivel_completada:
-            return redirect('configurar_rutina')
+            return redirect('objetivo')
         return redirect('prueba_nivel')
 
     return render(request, 'nivel_entrenamiento.html', {
@@ -409,15 +453,19 @@ def nivel_entrenamiento_view(request):
 @proteger_sesion_en_curso
 def prueba_nivel_view(request):
     perfil = get_perfil(request.user)
-    if not perfil.objetivo:
-        return redirect('objetivo')
+    if not perfil.datos_completos:
+        return redirect('datos_personales')
+    if not perfil.disponibilidad_completa:
+        return redirect('disponibilidad')
     if not perfil.nivel_declarado:
         return redirect('nivel_entrenamiento')
     if perfil.nivel_declarado == NivelEjercicioChoice.PRINCIPIANTE:
         perfil.nivel_entrenamiento = NivelEjercicioChoice.PRINCIPIANTE
         perfil.prueba_nivel_completada = True
         perfil.save(update_fields=['nivel_entrenamiento', 'prueba_nivel_completada'])
-        return redirect('configurar_rutina')
+        return redirect('objetivo')
+    if perfil.prueba_nivel_completada and perfil.objetivo:
+        return redirect('objetivo')
 
     contexto = {'perfil': perfil, 'preguntas': PREGUNTAS_NIVEL}
     if request.method == 'POST':
@@ -457,7 +505,7 @@ def prueba_nivel_view(request):
             request,
             f'Tu nivel recomendado es {perfil.get_nivel_entrenamiento_display()}.',
         )
-        return redirect('configurar_rutina')
+        return redirect('objetivo')
 
     return render(request, 'prueba_nivel.html', contexto)
 
@@ -478,82 +526,47 @@ def _normalizar_dias(valores):
 def configurar_rutina_view(request):
     perfil = get_perfil(request.user)
     paso = siguiente_paso_personalizacion(perfil)
-    if paso in ('objetivo', 'nivel_entrenamiento', 'prueba_nivel'):
+    pasos_previos = (
+        'datos_personales', 'disponibilidad', 'nivel_entrenamiento',
+        'prueba_nivel', 'objetivo', 'composicion_corporal',
+    )
+    if paso in pasos_previos:
         return redirect(paso)
 
     contexto = {
         'perfil': perfil,
         'enfoque_actual': perfil.enfoque_corporal,
-        'dias_semana': DiaSemanaChoice.choices,
         'modalidades': ModalidadRutinaChoice.choices,
-        'descanso_valor': max(1, round(perfil.descanso_preferido_segundos / 60)) if perfil.descanso_preferido_segundos % 60 == 0 else perfil.descanso_preferido_segundos,
-        'descanso_unidad': 'minutos' if perfil.descanso_preferido_segundos % 60 == 0 else 'segundos',
+        'dias_disponibles': [
+            DiaSemanaChoice(dia).label for dia in perfil.dias_entrenamiento
+            if dia in DiaSemanaChoice.values
+        ],
     }
     if request.method == 'POST':
-        dias = _normalizar_dias(request.POST.getlist('dias'))
         modalidad = request.POST.get('modalidad')
-        try:
-            minutos = int(request.POST.get('minutos', ''))
-            if 'descanso_valor' in request.POST:
-                descanso_valor = int(request.POST.get('descanso_valor', ''))
-                descanso_unidad = request.POST.get('descanso_unidad', '')
-                if descanso_unidad not in ('segundos', 'minutos'):
-                    raise ValueError
-                descanso = descanso_valor * (60 if descanso_unidad == 'minutos' else 1)
-                contexto['descanso_valor'] = descanso_valor
-                contexto['descanso_unidad'] = descanso_unidad
-            else:
-                # Compatibilidad con formularios abiertos antes del cambio.
-                descanso = int(request.POST.get('descanso', ''))
-                contexto['descanso_valor'] = descanso
-                contexto['descanso_unidad'] = 'segundos'
-        except (TypeError, ValueError):
-            minutos = descanso = 0
-
-        tiempos = {}
-        for dia in dias:
-            try:
-                tiempos[str(dia)] = int(request.POST.get(f'minutos_dia_{dia}') or minutos)
-            except (TypeError, ValueError):
-                tiempos[str(dia)] = 0
-
-        if not 1 <= len(dias) <= 6:
-            contexto['error'] = 'Selecciona entre uno y seis días diferentes.'
-        elif minutos < 45:
-            contexto['error'] = 'El tiempo mínimo por entrenamiento es de 45 minutos.'
-        elif any(valor < 45 for valor in tiempos.values()):
-            contexto['error'] = 'Cada día elegido necesita al menos 45 minutos disponibles.'
-        elif not 15 <= descanso <= 1800:
-            contexto['error'] = 'El descanso debe estar entre 15 y 1800 segundos.'
-        elif modalidad not in ModalidadRutinaChoice.values:
-            contexto['error'] = 'Selecciona cómo deseas construir tu rutina.'
+        enfoque = request.POST.get('enfoque_corporal', perfil.enfoque_corporal)
+        if modalidad not in ModalidadRutinaChoice.values:
+            contexto['error'] = 'Selecciona cómo quieres construir tu rutina.'
+        elif enfoque not in ('inferior', 'superior', 'full_body'):
+            contexto['error'] = 'Selecciona un enfoque corporal válido.'
         else:
-            perfil.dias_entrenamiento = dias
-            enfoque = request.POST.get('enfoque_corporal', perfil.enfoque_corporal)
-            if enfoque not in ('inferior', 'superior', 'full_body'):
-                contexto['error'] = 'Selecciona un enfoque corporal válido.'
-                return render(request, 'configurar_rutina.html', contexto)
+            perfil.modalidad_rutina = modalidad
             perfil.enfoque_corporal = enfoque
             perfil.priorizar_tren_inferior = enfoque == 'inferior'
-            perfil.minutos_por_dia = tiempos
-            perfil.duracion_sesion_minutos = minutos
-            perfil.descanso_preferido_segundos = descanso
-            perfil.modalidad_rutina = modalidad
             perfil.configuracion_entrenamiento_completa = False
             perfil.aviso_rutina_personalizada_aceptado = False
             perfil.save(update_fields=[
-                'dias_entrenamiento', 'duracion_sesion_minutos', 'minutos_por_dia',
-                'descanso_preferido_segundos', 'modalidad_rutina',
-                'configuracion_entrenamiento_completa',
-                'aviso_rutina_personalizada_aceptado',
-                'priorizar_tren_inferior', 'enfoque_corporal',
+                'modalidad_rutina', 'enfoque_corporal', 'priorizar_tren_inferior',
+                'configuracion_entrenamiento_completa', 'aviso_rutina_personalizada_aceptado',
             ])
             if modalidad == ModalidadRutinaChoice.PERSONALIZADA:
                 return redirect('crear_rutina')
             try:
                 crear_rutina_automatica(
                     request.user, perfil.objetivo, perfil.nivel_entrenamiento,
-                    dias, minutos, descanso, minutos_por_dia=tiempos,
+                    perfil.dias_entrenamiento, perfil.duracion_sesion_minutos,
+                    perfil.descanso_preferido_segundos,
+                    minutos_por_dia=perfil.minutos_por_dia,
                     priorizar_tren_inferior=perfil.priorizar_tren_inferior,
                     enfoque_corporal=perfil.enfoque_corporal,
                 )
@@ -563,10 +576,6 @@ def configurar_rutina_view(request):
                 perfil.configuracion_entrenamiento_completa = True
                 perfil.save(update_fields=['configuracion_entrenamiento_completa'])
                 return redirect('dieta')
-        contexto['form_data'] = request.POST
-        contexto['dias_formulario_enviado'] = True
-        contexto['dias_seleccionados'] = [int(dia) for dia in dias]
-        contexto['enfoque_actual'] = request.POST.get('enfoque_corporal', perfil.enfoque_corporal)
 
     return render(request, 'configurar_rutina.html', contexto)
 
@@ -577,7 +586,11 @@ def configurar_rutina_view(request):
 def crear_rutina_view(request):
     perfil = get_perfil(request.user)
     paso = siguiente_paso_personalizacion(perfil)
-    if paso in ('objetivo', 'nivel_entrenamiento', 'prueba_nivel'):
+    pasos_previos = (
+        'datos_personales', 'disponibilidad', 'nivel_entrenamiento',
+        'prueba_nivel', 'objetivo', 'composicion_corporal', 'configurar_rutina',
+    )
+    if paso in pasos_previos:
         return redirect(paso)
     if perfil.modalidad_rutina != ModalidadRutinaChoice.PERSONALIZADA:
         return redirect('configurar_rutina')
@@ -655,8 +668,9 @@ def crear_rutina_view(request):
 @require_http_methods(["GET", "POST"])
 def dieta_view(request):
     perfil = get_perfil(request.user)
-    if not perfil.objetivo:
-        return redirect('objetivo')
+    paso = siguiente_paso_personalizacion(perfil)
+    if paso not in ('dieta', 'mi_entrenamiento'):
+        return redirect(paso)
 
     dieta = obtener_guia_nutricional(perfil.objetivo)
 
@@ -664,12 +678,15 @@ def dieta_view(request):
         perfil.orientacion_nutricional_vista = True
         perfil.dieta_aceptada = True
         perfil.save(update_fields=['orientacion_nutricional_vista', 'dieta_aceptada'])
-        return redirect(siguiente_paso_personalizacion(perfil))
+        return redirect('cuenta')
 
     return render(request, 'dieta.html', {
         'perfil': perfil,
         'dieta': dieta,
         'es_primera_configuracion': not perfil.orientacion_nutricional_vista,
+        'dia_hoy_indice': timezone.localdate().weekday(),
+        'dia_manana_indice': (timezone.localdate().weekday() + 1) % len(dieta['dias']),
+        'nombre_dia_hoy': dieta['dias'][timezone.localdate().weekday() % len(dieta['dias'])]['nombre'],
     })
 
 
@@ -712,66 +729,25 @@ def siguiente_mensaje_view(request):
 @require_http_methods(["GET", "POST"])
 def datos_personales_view(request):
     perfil = get_perfil(request.user)
-    if not perfil.objetivo:
-        return redirect('objetivo')
-    if not perfil.nivel_declarado:
-        return redirect('nivel_entrenamiento')
-    if not perfil.prueba_nivel_completada or not perfil.nivel_entrenamiento:
-        return redirect('prueba_nivel')
-    if not perfil.configuracion_entrenamiento_completa:
-        return redirect('configurar_rutina')
-    if not perfil.orientacion_nutricional_vista:
-        return redirect('dieta')
     if request.method == 'GET' and perfil.datos_completos:
-        return redirect('mi_entrenamiento')
-
-    def render_datos_personales(error=None, status=200):
-        form_data = request.POST if request.method == 'POST' else None
-        if form_data is not None:
-            metodo_seleccionado = form_data.get('metodo_grasa', 'omitir')
-        elif perfil.metodo_estimacion_grasa == MetodoGrasaChoice.VISUAL and perfil.porcentaje_grasa_estimado is not None:
-            metodo_seleccionado = f'visual:{int(perfil.porcentaje_grasa_estimado)}'
-        elif perfil.metodo_estimacion_grasa == MetodoGrasaChoice.NAVY:
-            metodo_seleccionado = 'navy'
-        else:
-            metodo_seleccionado = 'omitir'
-
-        opciones_visuales = {
-            genero: [
-                {
-                    'valor': valor,
-                    'posicion': f'{indice * 100 / 6:.4f}%',
-                    'seleccion': f'visual:{valor}',
-                }
-                for indice, valor in enumerate(valores)
-            ]
-            for genero, valores in REFERENCIAS_GRASA_VISUAL.items()
-        }
-        return render(request, 'datos_personales.html', {
-            'perfil': perfil,
-            'error': error,
-            'form_data': form_data,
-            'metodo_grasa_seleccionado': metodo_seleccionado,
-            'opciones_visuales': opciones_visuales,
-        }, status=status)
+        return redirect(siguiente_paso_personalizacion(perfil))
 
     if request.method == 'POST':
-        perfil.genero = (
-            request.POST.get('genero')
-            or perfil.genero
-            or None
-        )
+        perfil.genero = request.POST.get('genero') or perfil.genero or None
         if perfil.genero not in GeneroChoice.values:
-            return render_datos_personales('Selecciona un género válido para continuar.', 400)
+            error = 'Selecciona un género válido para continuar.'
+            return render(request, 'datos_basicos.html', {
+                'perfil': perfil, 'error': error, 'form_data': request.POST,
+            }, status=400)
         peso_registro = request.POST.get('peso') or None
         from .profile_validation import validar_medida
         try:
             perfil.altura_cm = validar_medida(request.POST.get('altura_cm') or perfil.altura_cm, 'altura_cm')
             perfil.peso = validar_medida(peso_registro or perfil.peso, 'peso')
         except ValidationError as error:
-            return render_datos_personales(error.messages[0], 400)
-        if peso_registro and perfil.peso_inicial is None:
-            perfil.peso_inicial = perfil.peso
+            return render(request, 'datos_basicos.html', {
+                'perfil': perfil, 'error': error.messages[0], 'form_data': request.POST,
+            }, status=400)
 
         fecha_nacimiento = request.POST.get('fecha_nacimiento') or None
         if fecha_nacimiento:
@@ -779,12 +755,16 @@ def datos_personales_view(request):
                 perfil.fecha_nacimiento = validar_fecha_nacimiento(fecha_nacimiento)
                 perfil.edad = calcular_edad(perfil.fecha_nacimiento)
             except ValidationError as error:
-                return render_datos_personales(error.messages[0], 400)
+                return render(request, 'datos_basicos.html', {
+                    'perfil': perfil, 'error': error.messages[0], 'form_data': request.POST,
+                }, status=400)
         elif perfil.fecha_nacimiento is not None:
             try:
                 validar_fecha_nacimiento(perfil.fecha_nacimiento)
             except ValidationError as error:
-                return render_datos_personales(error.messages[0], 400)
+                return render(request, 'datos_basicos.html', {
+                    'perfil': perfil, 'error': error.messages[0], 'form_data': request.POST,
+                }, status=400)
             perfil.edad = calcular_edad(perfil.fecha_nacimiento)
 
         if request.FILES.get('foto'):
@@ -792,61 +772,368 @@ def datos_personales_view(request):
             try:
                 perfil.foto = normalizar_foto(request.FILES['foto'])
             except ValidationError as error:
-                return render_datos_personales(error.messages[0], 400)
+                return render(request, 'datos_basicos.html', {
+                    'perfil': perfil, 'error': error.messages[0], 'form_data': request.POST,
+                }, status=400)
 
-        if not perfil.genero or not perfil.peso or perfil.fecha_nacimiento is None:
-            return render_datos_personales('Completa género, peso y fecha de nacimiento para continuar.', 400)
+        if not perfil.genero or not perfil.peso or not perfil.altura_cm or perfil.fecha_nacimiento is None:
+            return render(request, 'datos_basicos.html', {
+                'perfil': perfil,
+                'error': 'Completa género, peso, estatura y fecha de nacimiento para continuar.',
+                'form_data': request.POST,
+            }, status=400)
 
-        metodo_grasa = request.POST.get('metodo_grasa', 'omitir')
-        edad_actual = calcular_edad(perfil.fecha_nacimiento)
-        perfil.porcentaje_grasa_estimado = None
-        perfil.metodo_estimacion_grasa = ''
-        if edad_actual >= 18:
+        perfil.peso_inicial = perfil.peso_inicial or perfil.peso
+        perfil.datos_completos = True
+        perfil.save()
+        RegistroProgresoPeso.objects.get_or_create(
+            usuario=request.user,
+            es_inicial=True,
+            defaults={'peso': perfil.peso, 'porcentaje_grasa_estimado': perfil.porcentaje_grasa_estimado},
+        )
+        return redirect('disponibilidad')
+
+    return render(request, 'datos_basicos.html', {'perfil': perfil})
+
+
+@login_required(login_url='login')
+@require_http_methods(['GET', 'POST'])
+def disponibilidad_view(request):
+    perfil = get_perfil(request.user)
+    if not perfil.datos_completos:
+        return redirect('datos_personales')
+
+    contexto = {'perfil': perfil, 'dias_semana': DiaSemanaChoice.choices}
+    if request.method == 'POST':
+        dias = _normalizar_dias(request.POST.getlist('dias'))
+        try:
+            minutos = int(request.POST.get('minutos', ''))
+            if 'descanso_valor' in request.POST:
+                descanso_valor = int(request.POST.get('descanso_valor', ''))
+                unidad = request.POST.get('descanso_unidad', '')
+                if unidad not in ('segundos', 'minutos'):
+                    raise ValueError
+                descanso = descanso_valor * (60 if unidad == 'minutos' else 1)
+            else:
+                descanso = int(request.POST.get('descanso', ''))
+            tiempos = {
+                str(dia): int(request.POST.get(f'minutos_dia_{dia}') or minutos)
+                for dia in dias
+            }
+        except (TypeError, ValueError):
+            dias, minutos, descanso, tiempos = [], 0, 0, {}
+
+        if not 1 <= len(dias) <= 6:
+            contexto['error'] = 'Selecciona entre uno y seis días diferentes.'
+        elif minutos < 45 or any(valor < 45 for valor in tiempos.values()):
+            contexto['error'] = 'Cada entrenamiento necesita al menos 45 minutos disponibles.'
+        elif not 15 <= descanso <= 1800:
+            contexto['error'] = 'El descanso debe estar entre 15 y 1800 segundos.'
+        else:
+            perfil.dias_entrenamiento = dias
+            perfil.minutos_por_dia = tiempos
+            perfil.duracion_sesion_minutos = minutos
+            perfil.descanso_preferido_segundos = descanso
+            perfil.disponibilidad_completa = True
+            perfil.save(update_fields=[
+                'dias_entrenamiento', 'minutos_por_dia', 'duracion_sesion_minutos',
+                'descanso_preferido_segundos', 'disponibilidad_completa',
+            ])
+            return redirect('nivel_entrenamiento')
+
+        contexto['dias_seleccionados'] = dias
+        contexto['form_data'] = request.POST
+        return render(request, 'disponibilidad.html', contexto, status=400)
+
+    return render(request, 'disponibilidad.html', contexto)
+
+
+@login_required(login_url='login')
+@require_http_methods(['GET', 'POST'])
+@proteger_sesion_en_curso
+def composicion_corporal_view(request):
+    perfil = get_perfil(request.user)
+    if not perfil.datos_completos:
+        return redirect('datos_personales')
+    if not perfil.disponibilidad_completa:
+        return redirect('disponibilidad')
+    if not perfil.prueba_nivel_completada or not perfil.nivel_entrenamiento:
+        return redirect('nivel_entrenamiento')
+    if not perfil.objetivo:
+        return redirect('objetivo')
+    if request.method == 'GET' and perfil.composicion_corporal_completa:
+        return redirect(siguiente_paso_personalizacion(perfil))
+
+    def render_composicion(error=None, status=200):
+        seleccionado = request.POST.get('metodo_grasa', 'omitir') if request.method == 'POST' else (
+            f'visual:{int(perfil.porcentaje_grasa_estimado)}'
+            if perfil.metodo_estimacion_grasa == MetodoGrasaChoice.VISUAL and perfil.porcentaje_grasa_estimado is not None
+            else 'navy' if perfil.metodo_estimacion_grasa == MetodoGrasaChoice.NAVY else 'omitir'
+        )
+        opciones = {
+            genero: [
+                {'valor': valor, 'posicion': f'{indice * 100 / 6:.4f}%', 'seleccion': f'visual:{valor}'}
+                for indice, valor in enumerate(valores)
+            ]
+            for genero, valores in REFERENCIAS_GRASA_VISUAL.items()
+        }
+        return render(request, 'composicion_corporal.html', {
+            'perfil': perfil, 'error': error, 'form_data': request.POST if request.method == 'POST' else None,
+            'metodo_grasa_seleccionado': seleccionado, 'opciones_visuales': opciones,
+            'edad_actual': calcular_edad(perfil.fecha_nacimiento),
+        }, status=status)
+
+    if request.method == 'POST':
+        metodo = request.POST.get('metodo_grasa', 'omitir')
+        edad = calcular_edad(perfil.fecha_nacimiento)
+        porcentaje = None
+        metodo_guardar = ''
+        if edad >= 18:
             try:
-                if metodo_grasa.startswith('visual:'):
-                    valor = int(metodo_grasa.partition(':')[2])
+                if metodo.startswith('visual:'):
+                    valor = int(metodo.partition(':')[2])
                     if valor not in REFERENCIAS_GRASA_VISUAL.get(perfil.genero, ()):
-                        raise ValidationError('Selecciona una referencia visual que corresponda a la opción de género elegida.')
-                    perfil.porcentaje_grasa_estimado = valor
-                    perfil.metodo_estimacion_grasa = MetodoGrasaChoice.VISUAL
-                elif metodo_grasa == 'navy':
+                        raise ValidationError('Selecciona una silueta válida para la opción de género elegida.')
+                    porcentaje, metodo_guardar = valor, MetodoGrasaChoice.VISUAL
+                elif metodo == 'navy':
                     porcentaje = estimar_grasa_navy(
-                        perfil.genero,
-                        perfil.altura_cm,
+                        perfil.genero, perfil.altura_cm,
                         request.POST.get('medida_abdomen'),
                         request.POST.get('medida_cuello'),
                         request.POST.get('medida_cadera') or None,
                     )
-                    perfil.porcentaje_grasa_estimado = porcentaje
-                    perfil.metodo_estimacion_grasa = MetodoGrasaChoice.NAVY
-                elif metodo_grasa != 'omitir':
-                    raise ValidationError('Selecciona una imagen, las medidas con cinta o continuar sin estimar.')
+                    metodo_guardar = MetodoGrasaChoice.NAVY
+                elif metodo != 'omitir':
+                    raise ValidationError('Elige una referencia, usa la cinta o continúa sin estimar.')
             except (ValidationError, TypeError, ValueError) as error:
-                mensaje = error.messages[0] if isinstance(error, ValidationError) else 'Revisa la selección de composición corporal.'
-                return render_datos_personales(mensaje, 400)
-        elif metodo_grasa != 'omitir':
-            return render_datos_personales(
-                'La estimación de composición corporal está disponible en este formulario solo para personas de 18 años o más.',
-                400,
-            )
+                mensaje = error.messages[0] if isinstance(error, ValidationError) else 'Revisa las medidas ingresadas.'
+                return render_composicion(mensaje, 400)
+        elif metodo != 'omitir':
+            return render_composicion('La estimación de composición corporal está disponible desde los 18 años. Puedes continuar sin estimarla.', 400)
 
-        perfil.datos_completos = True
-        perfil.save()
-        evaluacion = perfil.evaluacion_corporal_interna()
+        perfil.porcentaje_grasa_estimado = porcentaje
+        perfil.metodo_estimacion_grasa = metodo_guardar
+        perfil.composicion_corporal_completa = True
+        perfil.save(update_fields=[
+            'porcentaje_grasa_estimado', 'metodo_estimacion_grasa',
+            'composicion_corporal_completa',
+        ])
+        RegistroProgresoPeso.objects.filter(usuario=request.user, es_inicial=True).update(
+            porcentaje_grasa_estimado=porcentaje,
+        )
         return redirect('resultado_corporal')
 
-    return render_datos_personales()
+    return render_composicion()
 
 
 @login_required(login_url='login')
+@require_http_methods(['GET', 'POST'])
 def resultado_corporal_view(request):
     perfil = get_perfil(request.user)
     if not perfil.datos_completos:
         return redirect('datos_personales')
+    if not perfil.composicion_corporal_completa:
+        return redirect('composicion_corporal')
+    if request.method == 'POST':
+        opcion = request.POST.get('meta_fisica_opcion', '').strip()
+        aceptada = request.POST.get('meta_fisica_aceptada', '').strip()
+        if opcion:
+            try:
+                opcion_numero = int(opcion)
+            except ValueError:
+                opcion_numero = 0
+            if opcion_numero not in (1, 2, 3) or aceptada not in ('si', 'no'):
+                return redirect('resultado_corporal')
+            perfil.meta_fisica_opcion = opcion_numero
+            perfil.meta_fisica_aceptada = aceptada == 'si'
+        else:
+            perfil.meta_fisica_opcion = None
+            perfil.meta_fisica_aceptada = None
+            messages.info(
+                request,
+                'No necesitas tener una meta física definida para continuar. '
+                'Podrás elegir una más adelante si te nace hacerlo.',
+            )
+        perfil.save(update_fields=['meta_fisica_opcion', 'meta_fisica_aceptada'])
+        return redirect('configurar_rutina')
+
+    etiquetas_meta = {
+        ObjetivoChoice.SALUD: (
+            ('Un punto de partida activo', 'Un ejemplo de bienestar cotidiano.'),
+            ('Una apariencia más fuerte', 'Una referencia de fuerza y tono muscular.'),
+            ('Una apariencia más definida', 'Solo una inspiración visual opcional.'),
+        ),
+        ObjetivoChoice.HIPERTROFIA: (
+            ('Construir una base fuerte', 'Cambios graduales de fuerza y volumen.'),
+            ('Más desarrollo muscular', 'Una referencia atlética, no un resultado garantizado.'),
+            ('Mayor definición muscular', 'La definición varía mucho entre personas.'),
+        ),
+        ObjetivoChoice.PERDER_PESO: (
+            ('Cambios sostenibles', 'Una referencia de progreso gradual.'),
+            ('Más fuerza y condición', 'El peso no cuenta toda la historia del progreso.'),
+            ('Una apariencia más definida', 'No es una promesa ni una categoría de salud.'),
+        ),
+        ObjetivoChoice.ESTETICO: (
+            ('Equilibrio y constancia', 'Una referencia visual personal.'),
+            ('Aspecto atlético', 'Una inspiración, no un estándar obligatorio.'),
+            ('Mayor definición', 'La apariencia real y el tiempo varían en cada persona.'),
+        ),
+    }
+    opciones_meta = [
+        {'numero': numero, 'titulo': titulo, 'detalle': detalle,
+         'posicion': f'{(numero - 1) * 50}%'}
+        for numero, (titulo, detalle) in enumerate(
+            etiquetas_meta.get(perfil.objetivo, etiquetas_meta[ObjetivoChoice.SALUD]), 1
+        )
+    ]
+    edad = calcular_edad(perfil.fecha_nacimiento)
+    imagen_meta = {
+        'masculino': 'img/body-composition/meta-fisica-hombre.png',
+        'femenino': 'img/body-composition/meta-fisica-mujer.png',
+    }.get(perfil.genero, 'img/body-composition/meta-fisica-general.png')
     return render(request, 'resultado_corporal.html', {
         'perfil': perfil,
         'evaluacion': perfil.evaluacion_corporal_interna(),
+        'edad_actual': edad,
+        'opciones_meta': opciones_meta if edad >= 18 else [],
+        'imagen_meta': imagen_meta,
+        'objetivo_actual': perfil.get_objetivo_display(),
     })
+
+
+def _resultado_revision_peso(registro, variacion):
+    if registro.molestias_o_lesiones:
+        return {
+            'titulo': 'Tu bienestar va primero',
+            'texto': 'Gracias por contarlo. El peso no nos dice qué hacer con una molestia. Evita forzar movimientos que te causen dolor y busca orientación profesional de salud para decidir cómo continuar.',
+        }
+    if registro.adherencia_entrenamiento == RegistroProgresoPeso.AdherenciaChoice.POCAS:
+        return {
+            'titulo': 'Hagamos que el plan quepa en tu vida',
+            'texto': 'No es un fallo. Por ahora podemos priorizar una cantidad de sesiones que sí sea sostenible y volver a revisar cómo te sientes en el siguiente control.',
+        }
+    if registro.adherencia_alimentacion in (
+        RegistroProgresoPeso.AdherenciaChoice.ALGUNAS,
+        RegistroProgresoPeso.AdherenciaChoice.POCAS,
+    ):
+        return {
+            'titulo': 'Ajustemos un hábito, no todo de golpe',
+            'texto': 'La guía debe ayudarte, no convertirse en una carga. Elige una acción sencilla que puedas mantener esta semana y adapta las opciones de comida a tu realidad.',
+        }
+    if registro.descanso == RegistroProgresoPeso.DescansoChoice.BAJO or registro.estres == RegistroProgresoPeso.EstresChoice.ALTO:
+        return {
+            'titulo': 'La recuperación también cuenta',
+            'texto': 'El descanso y el estrés pueden influir en cómo se siente el entrenamiento. En vez de exigirte más, revisa qué pequeño cambio de recuperación sería posible ahora.',
+        }
+    if registro.progreso_percibido == RegistroProgresoPeso.ProgresoChoice.AVANZANDO:
+        return {
+            'titulo': 'Vas construyendo constancia',
+            'texto': 'No tiene nada de malo avanzar despacio. El progreso no siempre se refleja solo en la báscula: sigue a tu ritmo y observa también tu fuerza, energía y regularidad.',
+        }
+    if registro.progreso_percibido == RegistroProgresoPeso.ProgresoChoice.ESTABLE:
+        return {
+            'titulo': 'Un periodo estable no define todo tu proceso',
+            'texto': 'El peso por sí solo no permite saber si la rutina funciona, especialmente si buscas fuerza, hipertrofia o bienestar. Revisemos tus sesiones, rendimiento y recuperación antes de cambiarlo todo.',
+        }
+    return {
+        'titulo': 'Revisemos el proceso con calma',
+        'texto': 'Con estos datos no se puede concluir que hayas fallado ni que el plan no sirva. Mantén lo que te resulta sostenible y, si la dificultad continúa, consulta con un profesional que pueda valorar tu situación.',
+    }
+
+
+@login_required(login_url='login')
+@require_http_methods(['GET', 'POST'])
+def progreso_peso_view(request):
+    perfil = get_perfil(request.user)
+    registros = RegistroProgresoPeso.objects.filter(usuario=request.user)
+    ultimo = registros.first()
+    if ultimo is None:
+        if perfil.peso is None:
+            return redirect('datos_personales')
+        ultimo = RegistroProgresoPeso.objects.create(
+            usuario=request.user, peso=perfil.peso, es_inicial=True,
+        )
+    fecha_control = fecha_dos_meses_despues(timezone.localtime(ultimo.creado).date())
+    es_resultado = request.GET.get('guardado') == '1'
+    if request.method == 'GET' and not es_resultado and timezone.localdate() < fecha_control:
+        messages.info(request, f'Tu próxima actualización de peso estará disponible el {fecha_control:%d/%m/%Y}.')
+        return redirect('mi_entrenamiento')
+
+    contexto = {
+        'perfil': perfil,
+        'ultimo': ultimo,
+        'fecha_control': fecha_control,
+        'es_resultado': es_resultado,
+        'form_data': request.POST if request.method == 'POST' else None,
+        'mostrar_test': False,
+    }
+    if es_resultado:
+        previos = list(registros[:2])
+        variacion = float(previos[0].peso - previos[1].peso) if len(previos) > 1 else 0
+        contexto['variacion_peso'] = variacion
+        contexto['peso_actual_registrado'] = previos[0].peso
+        contexto['peso_registro_previo'] = previos[1].peso if len(previos) > 1 else None
+        contexto['feedback'] = _resultado_revision_peso(previos[0], variacion)
+        return render(request, 'progreso_peso.html', contexto)
+
+    if request.method == 'POST':
+        from .profile_validation import validar_medida
+        try:
+            peso = validar_medida(request.POST.get('peso'), 'peso')
+        except ValidationError as error:
+            contexto['error'] = error.messages[0]
+            return render(request, 'progreso_peso.html', contexto, status=400)
+
+        progreso = request.POST.get('progreso_percibido', '')
+        if progreso not in RegistroProgresoPeso.ProgresoChoice.values:
+            contexto['error'] = 'Cuéntanos cómo sientes tu avance para continuar.'
+            return render(request, 'progreso_peso.html', contexto, status=400)
+
+        anteriores = list(registros[:2])
+        variacion = float(peso - anteriores[0].peso) if anteriores else 0
+        revisar_habitos = (
+            progreso != RegistroProgresoPeso.ProgresoChoice.AVANZANDO
+            or (
+                perfil.objetivo == ObjetivoChoice.PERDER_PESO
+                and variacion >= 0.5
+            )
+        )
+        answers = {}
+        if revisar_habitos:
+            fields = {
+                'adherencia_entrenamiento': RegistroProgresoPeso.AdherenciaChoice.values,
+                'adherencia_alimentacion': RegistroProgresoPeso.AdherenciaChoice.values,
+                'descanso': RegistroProgresoPeso.DescansoChoice.values,
+                'estres': RegistroProgresoPeso.EstresChoice.values,
+            }
+            for field, values in fields.items():
+                value = request.POST.get(field, '')
+                if value not in values:
+                    contexto['error'] = 'Completa el breve chequeo de hábitos para revisar juntos el plan.'
+                    contexto['mostrar_test'] = True
+                    contexto['form_data'] = request.POST
+                    return render(request, 'progreso_peso.html', contexto, status=400)
+                answers[field] = value
+            molestias = request.POST.get('molestias_o_lesiones', '')
+            if molestias not in ('si', 'no'):
+                contexto['error'] = 'Indica si tuviste molestias o lesiones.'
+                contexto['mostrar_test'] = True
+                contexto['form_data'] = request.POST
+                return render(request, 'progreso_peso.html', contexto, status=400)
+            answers['molestias_o_lesiones'] = molestias == 'si'
+
+        RegistroProgresoPeso.objects.create(
+            usuario=request.user,
+            peso=peso,
+            progreso_percibido=progreso,
+            **answers,
+        )
+        perfil.peso = peso
+        perfil.save(update_fields=['peso'])
+        return redirect(f"{request.path}?guardado=1")
+
+    contexto['mostrar_test'] = False
+    return render(request, 'progreso_peso.html', contexto)
 
 def contacto(request):
     return render(request, 'contacto.html')
@@ -1067,6 +1354,7 @@ def cuenta_view(request):
         'perfil': perfil,
         'peso_inicial_value': f'{peso_inicial:.2f}' if peso_inicial is not None else '',
         'peso_actual_value': f'{perfil.peso:.2f}' if perfil.peso is not None else '',
+        **contexto_revision_peso(request.user),
     }
     return render(request, 'cuenta.html', context)
 @login_required(login_url='login')
@@ -1126,6 +1414,7 @@ def mi_entrenamiento_view(request):
         "fecha_hoy": timezone.localdate(),
         "ciclo_rutina": None,
         "siguiente_sesion": None,
+        **contexto_revision_peso(request.user),
     }
 
     if asignacion is None:

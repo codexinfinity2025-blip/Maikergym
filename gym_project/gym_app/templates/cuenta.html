@@ -7,12 +7,19 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/estilos_cuenta.css' %}?v=eliminar-mensaje-5">
     <link rel="stylesheet" href="{% static 'css/perfil-panel.css' %}?v=1">
+    <link rel="stylesheet" href="{% static 'css/progreso_onboarding.css' %}?v=1">
 {% endblock %}
 
 {% block content %}
 {% include "partials/app_nav.html" %}
 
 <main class="cuenta-page">
+    {% if revision_peso_pendiente %}
+    <aside class="weight-checkin-banner" role="status">
+        <div><strong>Ya puedes actualizar tu progreso</strong><p>Han pasado dos meses desde tu último registro. Actualiza tu peso y, si lo necesitas, revisamos juntos cómo va tu plan.</p></div>
+        <a href="{% url 'progreso_peso' %}">Actualizar mi progreso</a>
+    </aside>
+    {% endif %}
     <section class="account-stage" data-motion="rise">
 
         <form class="photo-box" method="POST" enctype="multipart/form-data" data-ajax-form>

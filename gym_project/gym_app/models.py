@@ -132,6 +132,9 @@ class PerfilUsuario(models.Model):
         blank=True,
         default='',
     )
+    composicion_corporal_completa = models.BooleanField(default=False)
+    meta_fisica_opcion = models.PositiveSmallIntegerField(null=True, blank=True)
+    meta_fisica_aceptada = models.BooleanField(null=True, blank=True)
 
     def evaluacion_corporal_interna(self):
         # Indicador de cribado, no diagnóstico ni estimación de masa muscular.
@@ -211,6 +214,7 @@ class PerfilUsuario(models.Model):
         validators=[MaxValueValidator(30)],
     )
     dias_entrenamiento = models.JSONField(default=list, blank=True)
+    disponibilidad_completa = models.BooleanField(default=False)
     minutos_por_dia = models.JSONField(default=dict, blank=True)
     duracion_sesion_minutos = models.PositiveIntegerField(
         default=60,
@@ -267,12 +271,14 @@ class PerfilUsuario(models.Model):
 
     def personalizacion_completa(self):
         return bool(
-            self.objetivo
+            self.datos_completos
+            and self.disponibilidad_completa
+            and self.composicion_corporal_completa
+            and self.objetivo
             and self.nivel_entrenamiento
             and self.prueba_nivel_completada
             and self.configuracion_entrenamiento_completa
             and self.orientacion_nutricional_vista
-            and self.datos_completos
         )
 
     def __str__(self):
@@ -281,6 +287,69 @@ class PerfilUsuario(models.Model):
     class Meta:
         verbose_name = 'Perfil Usuario'
         verbose_name_plural = 'Perfiles Usuarios'
+
+
+class RegistroProgresoPeso(models.Model):
+    """Puntos de control de peso con contexto de hábitos; no son diagnóstico."""
+    class AdherenciaChoice(models.TextChoices):
+        TODAS = 'todas', 'Todas o casi todas'
+        MAYORIA = 'mayoria', 'La mayoría'
+        ALGUNAS = 'algunas', 'Algunas'
+        POCAS = 'pocas', 'Pocas o ninguna'
+
+    class DescansoChoice(models.TextChoices):
+        BUENO = 'bueno', 'Bueno'
+        VARIABLE = 'variable', 'Variable'
+        BAJO = 'bajo', 'Insuficiente para mí'
+
+    class EstresChoice(models.TextChoices):
+        BAJO = 'bajo', 'Bajo'
+        MODERADO = 'moderado', 'Moderado'
+        ALTO = 'alto', 'Alto'
+
+    class ProgresoChoice(models.TextChoices):
+        AVANZANDO = 'avanzando', 'Sí, noto avances'
+        ESTABLE = 'estable', 'Me siento igual'
+        DIFICIL = 'dificil', 'Me está costando avanzar'
+        INCIERTO = 'incierto', 'No estoy seguro/a'
+
+    usuario = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='registros_progreso_peso'
+    )
+    peso = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        validators=[MinValueValidator(1), MaxValueValidator(500)],
+    )
+    porcentaje_grasa_estimado = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True,
+        validators=[MinValueValidator(2), MaxValueValidator(60)],
+    )
+    es_inicial = models.BooleanField(default=False)
+    progreso_percibido = models.CharField(
+        max_length=12, choices=ProgresoChoice.choices, blank=True, default=''
+    )
+    adherencia_entrenamiento = models.CharField(
+        max_length=12, choices=AdherenciaChoice.choices, blank=True, default=''
+    )
+    adherencia_alimentacion = models.CharField(
+        max_length=12, choices=AdherenciaChoice.choices, blank=True, default=''
+    )
+    descanso = models.CharField(
+        max_length=12, choices=DescansoChoice.choices, blank=True, default=''
+    )
+    estres = models.CharField(
+        max_length=12, choices=EstresChoice.choices, blank=True, default=''
+    )
+    molestias_o_lesiones = models.BooleanField(null=True, blank=True)
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creado', '-pk']
+        verbose_name = 'Registro de progreso de peso'
+        verbose_name_plural = 'Registros de progreso de peso'
+
+    def __str__(self):
+        return f'{self.usuario.username}: {self.peso} kg ({self.creado:%Y-%m-%d})'
 
 
 class Ejercicio(models.Model):

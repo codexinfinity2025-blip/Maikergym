@@ -5,12 +5,19 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/mi_entrenamiento.css' %}?v=evidence-1">
+<link rel="stylesheet" href="{% static 'css/progreso_onboarding.css' %}?v=1">
 {% endblock %}
 
 {% block content %}
 {% include "partials/app_nav.html" %}
 
 <main class="training-page">
+    {% if revision_peso_pendiente %}
+    <aside class="weight-checkin-banner" role="status">
+        <div><strong>Tu revisión bimestral está lista</strong><p>Registra tu peso y revisa tus hábitos para entender mejor tu evolución. No es una calificación ni un diagnóstico.</p></div>
+        <a href="{% url 'progreso_peso' %}">Hacer revisión</a>
+    </aside>
+    {% endif %}
     <a href="{% url 'preferencias' %}" style="display:inline-block;color:#ffc34a;margin-bottom:18px">Mis datos y preferencias →</a>
     <a class="flow-btn" style="display:inline-block;background:#ffb000;color:#111;padding:12px 20px;border-radius:12px;margin:0 0 20px 12px" href="{% url 'modificar_rutina' %}">Modificar mi rutina</a>
         {% if messages %}

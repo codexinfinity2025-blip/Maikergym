@@ -66,5 +66,5 @@ def revisar_registro(request):
         except IntegrityError:
             form.add_error('email', 'Ese correo no está disponible.')
         else:
-            return redirect('objetivo')
+            return redirect('datos_personales')
     return render(request, 'revisar_registro.html', {'form': form})

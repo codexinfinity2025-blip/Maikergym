@@ -2,132 +2,47 @@
 {% load static %}
 
 {% block title %}MaikerGym - Configurar rutina{% endblock %}
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v2">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/personalizacion_entrenamiento.css' %}?v=personalizacion-v3">{% endblock %}
 
 {% block content %}
 {% include "partials/app_nav.html" %}
 <main class="flow-page">
     <header class="flow-heading" data-motion="rise">
-        <span class="eyebrow">Personalización · Paso 3 de 5</span>
-        <h1>Haz que la rutina encaje en tu semana</h1>
-        <p>Tu objetivo es <strong>{{ perfil.get_objetivo_display }}</strong> y tu nivel recomendado es <strong>{{ perfil.get_nivel_entrenamiento_display }}</strong>. Ahora dinos cuánto espacio real tienes.</p>
-        <div class="flow-progress"><span class="active"></span><span class="active"></span><span class="active"></span><span></span><span></span></div>
+        <span class="eyebrow">Tu plan · Configuración final</span>
+        <h1>Ahora sí, diseñemos tu rutina</h1>
+        <p>Ya guardamos tu disponibilidad: <strong>{{ dias_disponibles|join:", " }}</strong>, {{ perfil.duracion_sesion_minutos }} minutos por sesión y {{ perfil.descanso_preferido_segundos }} segundos de descanso.</p>
     </header>
-    {% for message in messages %}<div class="flow-alert" style="background:#efffed;border-color:#80bf75;color:#24591d">{{ message }}</div>{% endfor %}
+    {% for message in messages %}<div class="flow-alert" role="status">{{ message }}</div>{% endfor %}
     {% if error %}<div class="flow-alert" role="alert">{{ error }}</div>{% endif %}
     <form method="post">
         {% csrf_token %}
         <section class="config-card" style="margin-bottom:16px">
             <h2>Tu enfoque personal</h2>
-            <label class="field-block">¿Dónde quieres enfocar tu entrenamiento?
+            <label class="field-block">¿Qué zona quieres priorizar?
                 {% include 'partials/enfoque_select.html' %}
-            </label><p>Tú eliges la zona que quieres priorizar, independientemente de tu género o nivel. Adaptamos la distribución semanal de la rutina automática sin excluir por completo el resto del cuerpo. Con un solo día disponible, la sesión es de cuerpo completo.</p>
+            </label>
+            <p>Priorizamos esa zona sin abandonar el resto del cuerpo. Con un solo día disponible, la rutina será de cuerpo completo.</p>
         </section>
-        <section class="config-grid">
-            <div class="config-card">
-                <h2>Días disponibles</h2>
-                <p>Selecciona los días que tienes disponibles para entrenar.</p>
-                <button type="button" class="flow-btn secondary" id="solo-fin-semana">Solo sábado y domingo</button>
-                <div class="days-grid">
-                    {% for valor, nombre in dias_semana %}
-                        <label class="day-chip"><input type="checkbox" name="dias" value="{{ valor }}" {% if dias_formulario_enviado %}{% if valor in dias_seleccionados %}checked{% endif %}{% elif valor in perfil.dias_entrenamiento %}checked{% endif %}><span>{{ nombre }}</span></label>
-                    {% endfor %}
-                </div>
-                <p id="resumen-dias" aria-live="polite"></p>
-                <p>Si faltas un día, podrás reponer esa sesión en otro día de la misma semana, hasta el domingo, o continuar con tu entrenamiento habitual.</p>
-                <details style="margin-top:1rem">
-                    <summary>Personalizar minutos de cada día (opcional)</summary>
-                    <p>Si dejas un día vacío, usaremos los minutos por sesión indicados abajo.</p>
-                    <div class="number-grid">
-                    {% for valor, nombre in dias_semana %}
-                        <label class="field-block">{{ nombre }}
-                            <input type="number" name="minutos_dia_{{ valor }}" min="45" step="1" placeholder="Usar tiempo general">
-                        </label>
-                    {% endfor %}
-                    </div>
-                </details>
-                {{ perfil.minutos_por_dia|json_script:"tiempos-guardados" }}
-                <div class="number-grid" style="margin-top:1rem">
-                    <label class="field-block">Minutos por sesión
-                        <input type="number" name="minutos" min="45" step="1" value="{{ perfil.duracion_sesion_minutos|default:60 }}" required>
-                        <small class="helper">Mínimo 45 minutos; puedes dedicar el tiempo que necesites.</small>
-                    </label>
-                    <label class="field-block">Descanso entre series
-                        <div class="time-unit-grid">
-                            <input type="number" id="descanso-valor" name="descanso_valor" min="1" max="1800" step="1" value="{{ descanso_valor|default:1 }}" required>
-                            <select id="descanso-unidad" name="descanso_unidad" aria-label="Tipo de tiempo para el descanso">
-                                <option value="segundos" {% if descanso_unidad == 'segundos' %}selected{% endif %}>segundos</option>
-                                <option value="minutos" {% if descanso_unidad != 'segundos' %}selected{% endif %}>minutos</option>
-                            </select>
-                        </div>
-                        <small class="helper">Elige segundos o minutos; se convertirá automáticamente al guardar.</small>
-                    </label>
-                </div>
-            </div>
-            <div class="config-card">
-                <h2>¿Quién construye la rutina?</h2>
-                <p>Puedes recibir una propuesta coherente o elegir cada ejercicio manualmente.</p>
-                <div class="mode-stack">
-                    <label class="choice-card mode-card">
-                        <input type="radio" name="modalidad" value="automatica" {% if perfil.modalidad_rutina != 'personalizada' %}checked{% endif %} required>
-                        <span class="choice-icon">✨</span><strong>Recomendada por MaikerGym</strong>
-                        <p>Combina objetivo, nivel, días, tiempo y descanso, usando guías generales de salud y ejercicio (incluida la OMS) como contexto. No es una prescripción clínica ni está certificada por la OMS; puedes elegir la opción manual si prefieres.</p>
-                    </label>
-                    <label class="choice-card mode-card">
-                        <input type="radio" name="modalidad" value="personalizada" {% if perfil.modalidad_rutina == 'personalizada' %}checked{% endif %} required>
-                        <span class="choice-icon">🧩</span><strong>Crear mi propia rutina</strong>
-                        <p>Tú eliges ejercicios, series, cantidades y descansos.</p>
-                    </label>
-                </div>
+        <section class="config-card">
+            <h2>¿Quién construye la rutina?</h2>
+            <p>Puedes recibir una propuesta coherente o elegir cada ejercicio manualmente.</p>
+            <div class="mode-stack">
+                <label class="choice-card mode-card">
+                    <input type="radio" name="modalidad" value="automatica" {% if perfil.modalidad_rutina != 'personalizada' %}checked{% endif %} required>
+                    <span class="choice-icon">✨</span><strong>Recomendada por MaikerGym</strong>
+                    <p>Combina objetivo, nivel, días, tiempo y descanso. Toma como contexto guías generales de actividad física, incluida la OMS; no es una prescripción clínica ni una rutina certificada por la OMS.</p>
+                </label>
+                <label class="choice-card mode-card">
+                    <input type="radio" name="modalidad" value="personalizada" {% if perfil.modalidad_rutina == 'personalizada' %}checked{% endif %} required>
+                    <span class="choice-icon">🧩</span><strong>Crear mi propia rutina</strong>
+                    <p>Tú eliges ejercicios, series, cantidades y descansos.</p>
+                </label>
             </div>
         </section>
         <div class="flow-actions">
-            <button type="button" class="flow-btn secondary" onclick="location.href='{% url 'nivel_entrenamiento' %}'">Volver</button>
+            <button type="button" class="flow-btn secondary" onclick="location.href='{% url 'resultado_corporal' %}'">Volver</button>
             <button class="flow-btn" type="submit">Construir mi rutina</button>
         </div>
     </form>
 </main>
-<script>
-const tiemposGuardados = JSON.parse(document.getElementById('tiempos-guardados').textContent);
-const opcionesDias = [...document.querySelectorAll('input[name="dias"]')];
-function actualizarDias() {
-    const elegidos = opcionesDias.filter(c => c.checked);
-    const nombres = elegidos.map(c => c.closest('label').querySelector('span').textContent.trim());
-    document.getElementById('resumen-dias').textContent = elegidos.length
-        ? `${elegidos.length} ${elegidos.length === 1 ? 'día seleccionado' : 'días seleccionados'}: ${nombres.join(', ')}`
-        : 'Aún no has seleccionado días.';
-}
-opcionesDias.forEach(c => c.addEventListener('change', () => {
-    if (opcionesDias.filter(opcion => opcion.checked).length > 6) c.checked = false;
-    actualizarDias();
-}));
-document.getElementById('solo-fin-semana').addEventListener('click', () => {
-    opcionesDias.forEach(c => { c.checked = ['5', '6'].includes(c.value); });
-    actualizarDias();
-});
-actualizarDias();
-const descansoUnidad = document.getElementById('descanso-unidad');
-const descansoValor = document.getElementById('descanso-valor');
-let unidadDescansoAnterior = descansoUnidad.value;
-function actualizarRangoDescanso() {
-    const enMinutos = descansoUnidad.value === 'minutos';
-    const actual = Number(descansoValor.value);
-    if (descansoUnidad.value !== unidadDescansoAnterior && actual > 0) {
-        descansoValor.value = descansoUnidad.value === 'minutos'
-            ? String(Math.max(1, Math.round(actual / 60)))
-            : String(actual * 60);
-    }
-    descansoValor.min = enMinutos ? '1' : '15';
-    descansoValor.max = enMinutos ? '30' : '1800';
-    descansoValor.step = enMinutos ? '1' : '5';
-    descansoValor.setCustomValidity('');
-    unidadDescansoAnterior = descansoUnidad.value;
-}
-descansoUnidad.addEventListener('change', actualizarRangoDescanso);
-actualizarRangoDescanso();
-Object.entries(tiemposGuardados).forEach(([dia, minutos]) => {
-    const campo = document.querySelector(`[name="minutos_dia_${dia}"]`);
-    if (campo) campo.value = minutos;
-});
-</script>
 {% endblock %}
