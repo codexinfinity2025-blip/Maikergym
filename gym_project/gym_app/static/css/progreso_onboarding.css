@@ -1,8 +1,9 @@
+body:has(.onboarding-page),body:has(.composition-result-page){min-height:100vh;background:radial-gradient(ellipse at top,#172b45 0%,#0b1524 58%,#07111e 100%);color:#f3f5f9}
 .onboarding-page{width:min(920px,92%);margin:0 auto;padding:clamp(2rem,5vw,4rem) 0 5rem;color:#f3f5f9}
 .onboarding-heading{max-width:760px;margin:0 auto 1.6rem;text-align:center}
 .onboarding-heading .eyebrow{display:inline-block;color:#ffb11b;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
-.onboarding-heading h1{margin:.55rem 0;font-size:clamp(2rem,5vw,3rem);line-height:1.08}
-.onboarding-heading p{margin:.5rem auto;color:#c3ccda;font-size:1.05rem;line-height:1.6}
+.onboarding-heading h1{margin:.55rem 0;color:#f8fafc;font-size:clamp(2rem,5vw,3rem);line-height:1.08}
+.onboarding-heading p{margin:.5rem auto;color:#d2dbea;font-size:1.05rem;line-height:1.6}
 .onboarding-card{display:grid;gap:1.2rem;padding:clamp(1.1rem,3vw,2rem);border:1px solid #29384d;border-radius:22px;background:#101a2a;box-shadow:0 20px 55px #0004}
 .onboarding-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
 .field-block{display:grid;gap:.5rem;color:#dce2ed;font-weight:700}
@@ -25,7 +26,7 @@
 .body-visual-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem}
 .body-visual-option{display:grid;gap:.35rem;padding:.45rem;border:1px solid #3c4858;border-radius:10px;text-align:center;cursor:pointer}
 .body-visual-option:has(input:checked){border-color:#ffad18;box-shadow:0 0 0 2px #ffad1850}
-.body-visual-image{min-height:130px;background-size:700% 100%;background-repeat:no-repeat;background-position:var(--sprite-position);border-radius:7px}
+.body-visual-image{display:block;width:100%;min-height:130px;background-size:700% 100%;background-repeat:no-repeat;background-position:var(--sprite-position);border-radius:7px}
 .body-visual-value{font-weight:800}
 .body-method-choice{display:flex;gap:.65rem;align-items:flex-start;padding:.8rem;border:1px solid #3a4658;border-radius:12px;cursor:pointer}
 .body-method-choice input{margin-top:.3rem;accent-color:#ffae13}

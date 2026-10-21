@@ -210,8 +210,8 @@ body {
     background-color: #fff;
     border-radius: 9px;
 }
-[data-visual-gender="masculino"] .body-visual-image { background-image: url("../img/body-composition/referencia_grasa_masculina.png"); }
-[data-visual-gender="femenino"] .body-visual-image { background-image: url("../img/body-composition/referencia_grasa_femenina.png"); }
+[data-visual-gender="masculino"] .body-visual-image { background-image: url("../img/body-composition/referencia_grasa_masculina.png?v=paneles-espaciados-2"); }
+[data-visual-gender="femenino"] .body-visual-image { background-image: url("../img/body-composition/referencia_grasa_femenina.png?v=paneles-espaciados-2"); }
 .body-visual-value { display: block; padding-top: 0.25rem; font-size: 0.86rem; font-weight: 800; }
 .body-method-choice { display: flex; align-items: flex-start; gap: 0.6rem; margin: 0.5rem 0; color: #f8fafc; cursor: pointer; }
 .body-method-choice input { flex: 0 0 auto; margin-top: 0.25rem; accent-color: #f59e0b; }
